@@ -1,0 +1,18 @@
+---
+description: Não alterar o sistema de posicionamento filial ao lado do pai sem autorização do usuário
+alwaysApply: true
+---
+
+# Mapa mental: posicionamento da filial ao lado do pai
+
+O sistema que faz a **filial aparecer ao lado do pai** no mapa mental está definido e não deve ser alterado sem autorização explícita do usuário.
+
+## O que está protegido
+
+- **addChildBranch** (dashboard.js): uso de `branchesEl.getBoundingClientRect()` para conversão; quando o pai é `position: fixed`, a filial é criada também fixa ao lado (viewport).
+- **makeMentalBranchDraggable** (dashboard.js): ao arrastar um ramo que era fixo, as filhas que estavam fixas são convertidas para `absolute` e posicionadas ao lado do pai na nova posição.
+- Constante **BRANCH_CHILD_OFFSET_PX** e a lógica de posição (à direita do pai, alinhamento vertical).
+
+## Regra
+
+Antes de **qualquer alteração** nessa lógica (funções, fórmulas de posição, conversão viewport/container, fixo vs absolute), o agente deve **pedir autorização ao usuário**. Exemplo: "Preciso alterar o posicionamento da filial no mapa mental. Autoriza?"

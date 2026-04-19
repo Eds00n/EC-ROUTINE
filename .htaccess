@@ -1,0 +1,16 @@
+RewriteEngine On
+
+# Landing page
+RewriteRule ^$ index.html [L]
+
+# Friendly routes
+RewriteRule ^login/?$ auth.html?view=login [L,QSA]
+RewriteRule ^register/?$ auth.html?view=register [L,QSA]
+RewriteRule ^dashboard/?$ dashboard.html [L,QSA]
+RewriteRule ^create/?$ create.html [L,QSA]
+RewriteRule ^routine-detail/?$ routine-detail.html [L,QSA]
+
+# Existing files/folders
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]

@@ -1,0 +1,32 @@
+{
+  "name": "ec-routine",
+  "version": "1.0.0",
+  "description": "EC CODE - Sistema de registro e agendamento",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "node --test tests/api.test.cjs",
+    "client": "npx http-server . -p 3001 -o"
+  },
+  "keywords": [
+    "ec-code",
+    "registro",
+    "jwt"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.0",
+    "bcryptjs": "^2.4.3",
+    "chartist": "^1.5.0",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "express-rate-limit": "^8.3.2",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.1.1",
+    "pg": "^8.13.1",
+    "supertest": "^7.2.2"
+  }
+}

@@ -1,0 +1,235 @@
+/* Completar perfil — mesmo fundo e sistema de botões que auth.css (login) */
+
+/* Form mais alto que o ecrã: permitir scroll (auth.css fixa overflow no html) */
+html:has(body.ps-setup-page) {
+    height: auto;
+    min-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+body.ps-setup-page.auth-page {
+    height: auto;
+    min-height: 100vh;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.ps-setup-page .auth-main {
+    min-height: 100vh;
+    overflow: visible;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Estado “A carregar…” centrado no ecrã */
+.ps-setup-page #psLoading.ps-state {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+.ps-setup-page #psLoading.ps-state.hidden {
+    display: none !important;
+}
+
+/* Conteúdo centrado (só um card, sem coluna hero) */
+.ps-auth-stack {
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding-top: max(clamp(20px, 4vh, 48px), env(safe-area-inset-top, 0px));
+    padding-right: max(clamp(20px, 4vw, 40px), env(safe-area-inset-right, 0px));
+    padding-bottom: max(clamp(28px, 5vh, 56px), env(safe-area-inset-bottom, 0px));
+    padding-left: max(clamp(20px, 4vw, 40px), env(safe-area-inset-left, 0px));
+    box-sizing: border-box;
+}
+
+.ps-wrap {
+    width: 100%;
+    max-width: 440px;
+}
+
+.ps-card-narrow {
+    max-width: 440px;
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.ps-card-lead {
+    margin: -8px 0 18px;
+    text-align: center;
+    font-size: clamp(0.9rem, 2vw, 1rem);
+    font-weight: 500;
+    line-height: 1.55;
+    color: #525252;
+}
+
+.ps-field-label {
+    display: block;
+    margin: 0 0 8px 2px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: #525252;
+}
+
+.ps-profile-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-top: 4px;
+}
+
+.ps-profile-actions .auth-btn:first-of-type {
+    margin-top: 14px;
+}
+
+/* Select sem “caixa” interior (Chrome/Edge) — igual ao resto do auth-field */
+.auth-field .ps-select {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+    margin: 0;
+    padding: 14px 30px 14px 0;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    border-radius: 0;
+    background-color: transparent;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 4px center;
+    background-size: 16px 16px;
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--auth-black-soft);
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+}
+
+.auth-field .ps-select::-ms-expand {
+    display: none;
+}
+
+.auth-field .ps-select:focus {
+    outline: none !important;
+}
+
+.auth-field .ps-select option {
+    color: var(--auth-black);
+    background: #fff;
+}
+
+.auth-field .ps-date {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+    padding: 14px 0;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--auth-black-soft);
+    color-scheme: light;
+}
+
+.auth-field .ps-date:focus {
+    outline: none;
+}
+
+.ps-after-save {
+    margin: 0 0 16px;
+    text-align: center;
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.45;
+    color: var(--auth-black-soft);
+}
+
+.ps-state {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.95);
+    text-shadow: 0 2px 16px rgba(0, 0, 0, 0.45);
+    padding: clamp(32px, 8vh, 80px) 24px;
+}
+
+.ps-offline-title {
+    margin: 0 0 14px;
+    font-size: clamp(1.35rem, 3.5vw, 1.75rem);
+    font-weight: 700;
+    color: var(--auth-black);
+    text-align: center;
+}
+
+.ps-offline-lead {
+    margin: 0 0 12px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    line-height: 1.55;
+    color: #404040;
+    text-align: center;
+}
+
+.ps-offline-lead code {
+    font-size: 0.85em;
+    word-break: break-all;
+    background: #f0f0f0;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.ps-privacy-hint {
+    font-size: 0.78rem;
+    line-height: 1.45;
+    color: #6b7280;
+    margin: 0 0 12px;
+}
+
+.ps-privacy-hint a {
+    color: #374151;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+@media (max-width: 414px) {
+    .ps-auth-stack {
+        padding-top: max(16px, env(safe-area-inset-top, 0px));
+        padding-right: max(12px, env(safe-area-inset-right, 0px));
+        padding-bottom: max(24px, env(safe-area-inset-bottom, 0px));
+        padding-left: max(12px, env(safe-area-inset-left, 0px));
+    }
+
+    .ps-card-lead {
+        font-size: 0.88rem;
+    }
+
+    .ps-profile-actions .auth-btn {
+        width: 100%;
+        max-width: 100%;
+    }
+}
+
+.hidden {
+    display: none !important;
+}

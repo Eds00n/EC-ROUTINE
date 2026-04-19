@@ -1,0 +1,31 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "EC ROUTINE: Iniciar servidor",
+      "type": "shell",
+      "command": "node server.js",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "isBackground": true
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "runOptions": {
+        "runOn": "manual"
+      }
+    },
+    {
+      "label": "EC ROUTINE: Abrir Dashboard no Cursor",
+      "type": "shell",
+      "command": "echo Abra a Paleta de Comandos (Ctrl+Shift+P), digite 'Simple Browser' e escolha 'Simple Browser: Show'. URL: http://localhost:3000/dashboard",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always"
+      }
+    }
+  ]
+}

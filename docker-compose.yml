@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ecroutine
+      POSTGRES_PASSWORD: ecroutine
+      POSTGRES_DB: ecroutine
+    ports:
+      - '5432:5432'
+    volumes:
+      - ec_routine_pg:/var/lib/postgresql/data
+
+volumes:
+  ec_routine_pg:

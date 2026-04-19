@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="ec-api-base" content="https://ec-routine-api.onrender.com/api" />
+    <link rel="stylesheet" href="ec-global-responsive.css?v=20260419responsive">
+    <script src="api-base.js?v=20260419deploy"></script>
+    <script src="auth-guard.js?v=20260418guard"></script>
+    <title>EC ROUTINE — Completar perfil</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%231a1a2e' rx='4'/><text x='16' y='22' font-family='sans-serif' font-size='14' fill='%23eee' text-anchor='middle'>EC</text></svg>" type="image/svg+xml">
+    <link rel="stylesheet" href="auth.css?v=20260419responsive">
+    <link rel="stylesheet" href="profile-setup.css?v=20260419responsive">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="auth-page ps-setup-page">
+    <div class="auth-main">
+        <div class="auth-bg" aria-hidden="true">
+            <div class="auth-bg__img"></div>
+            <div class="auth-bg__overlay"></div>
+        </div>
+
+        <div id="psLoading" class="ps-state" role="status">A carregar…</div>
+
+        <div id="psOffline" class="ps-auth-stack hidden">
+            <div class="ps-wrap">
+                <div class="auth-card ps-card-narrow">
+                    <div class="auth-card-inner">
+                        <h2 class="ps-offline-title">Não foi possível falar com a API</h2>
+                        <p class="ps-offline-lead">O servidor na Render ainda pode estar sem as rotas <code>GET/PUT /api/profile</code>. Faça <strong>deploy</strong> do <code>server.js</code> mais recente e volte a esta página.</p>
+                        <p class="ps-offline-lead" style="margin-bottom: 20px;">Se já atualizou a API, confira o URL em <code>profile-setup.js</code> e o token de sessão.</p>
+                        <button type="button" class="auth-btn auth-btn--login auth-btn--login-pro" id="psBtnOfflineDash"><span class="auth-btn-text">Ver rotinas (cards)</span></button>
+                        <button type="button" class="auth-btn auth-btn--login" id="psBtnOfflineAuth"><span class="auth-btn-text">Voltar ao login</span></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="psMain" class="ps-auth-stack hidden">
+            <div class="ps-wrap">
+                <div class="auth-card ps-card-narrow">
+                    <div class="auth-card-inner">
+                        <h2 class="auth-card-title">Complete o seu perfil</h2>
+                        <p class="ps-card-lead" id="psCardLead">Indique nome, sexualidade e data de nascimento. Pode alterar mais tarde em Perfil, no dashboard.</p>
+
+                        <div id="psStepEdit">
+                            <p id="psFormError" class="auth-form-error" role="alert"></p>
+                            <form class="auth-form" id="psForm" onsubmit="return false;">
+                                <div class="auth-field-wrap">
+                                    <span class="ps-field-label" id="lblName">Nome</span>
+                                    <div class="auth-field">
+                                        <input type="text" id="psName" class="auth-input" placeholder="Seu nome" maxlength="200" autocomplete="name" />
+                                    </div>
+                                </div>
+                                <div class="auth-field-wrap">
+                                    <span class="ps-field-label" id="lblSex">Sexualidade</span>
+                                    <div class="auth-field">
+                                        <select id="psSexuality" class="ps-select" aria-labelledby="lblSex">
+                                            <option value="">Prefiro não informar</option>
+                                            <option value="homem">Masculino</option>
+                                            <option value="mulher">Feminino</option>
+                                            <option value="outro">Outro</option>
+                                            <option value="nao_binario">Não-binário</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="auth-field-wrap">
+                                    <span class="ps-field-label" id="lblBirth">Data de nascimento</span>
+                                    <div class="auth-field">
+                                        <input type="date" id="psBirth" class="ps-date" aria-labelledby="lblBirth" />
+                                    </div>
+                                </div>
+                            </form>
+                            <p class="ps-privacy-hint">Campos opcionais (sexualidade, data de nascimento) são tratados conforme a <a href="privacidade.html" target="_blank" rel="noopener noreferrer">Política de Privacidade</a>.</p>
+
+                            <div class="ps-profile-actions">
+                                <button type="button" class="auth-btn auth-btn--login auth-btn--login-pro" id="psBtnSave"><span class="auth-btn-text">Guardar e continuar</span></button>
+                                <button type="button" class="auth-btn auth-btn--login" id="psBtnLater"><span class="auth-btn-text">Agora não</span></button>
+                            </div>
+                        </div>
+
+                        <div id="psStepPhoto" class="hidden" aria-live="polite">
+                            <p class="ps-after-save" id="psAfterSaveText">Perfil guardado. Quer adicionar uma foto de perfil?</p>
+                            <p id="psFormErrorPhoto" class="auth-form-error" role="alert"></p>
+                            <div class="ps-profile-actions">
+                                <button type="button" class="auth-btn auth-btn--login auth-btn--login-pro" id="psBtnPhoto"><span class="auth-btn-text">Mudar foto</span></button>
+                                <button type="button" class="auth-btn auth-btn--login" id="psBtnGoDash"><span class="auth-btn-text">Ir ao dashboard</span></button>
+                            </div>
+                            <input type="file" id="psPhotoInput" class="hidden" accept="image/jpeg,image/png,image/webp,image/gif" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="profile-setup.js?v=20260418profilecards"></script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+/* EC ROUTINE — baseline responsivo (carregar antes do CSS da página) */
+
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+img,
+video,
+canvas {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Flex/grid no Safari: permite encolher abaixo do tamanho intrínseco do conteúdo */
+.main-content {
+    min-width: 0;
+}

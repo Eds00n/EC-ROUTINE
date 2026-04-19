@@ -1,0 +1,119 @@
+/* Tema escuro — variáveis (cores base em dashboard.css :root) */
+html[data-theme="dark"] {
+    color-scheme: dark;
+    --ec-body-bg: #09090b;
+    --ec-body-text: #e4e4e7;
+    --ec-header-bg: #0f0f12;
+    --ec-header-border: #27272a;
+    --ec-heading: #fafafa;
+    --ec-hero: #f4f4f5;
+    --ec-surface: #141416;
+    --ec-surface-2: #1a1a1e;
+    --ec-surface-3: #222226;
+    --ec-surface-4: #2a2a30;
+    --ec-border: #3f3f46;
+    --ec-border-2: #3f3f46;
+    --ec-border-subtle: #3f3f46;
+    --ec-muted: #a1a1aa;
+    --ec-muted-2: #71717a;
+    --ec-hint-text: #a1a1aa;
+    --ec-strong: #fafafa;
+    --ec-card-title: #f4f4f5;
+    --ec-badge-text: #d4d4d8;
+    --ec-input-bg: #18181b;
+    --ec-input-border: #3f3f46;
+    --ec-profile-panel: #141416;
+    --ec-close-muted: #d4d4d8;
+    --ec-close-hover: #27272a;
+    --ec-day-summary-bg: #141416;
+    --ec-day-summary-border: #3f3f46;
+    --ec-day-summary-strong: #f4f4f5;
+    --ec-view-toggle-bg: #1f1f23;
+    --ec-view-btn: #a1a1aa;
+    --ec-view-btn-active-bg: #f4f4f5;
+    --ec-view-btn-active-fg: #18181b;
+    --ec-view-btn-hover-bg: #2a2a30;
+    --ec-calendar-title: #f4f4f5;
+    --ec-dl-dt: #a1a1aa;
+    --ec-dl-dd: #f4f4f5;
+    --ec-stat-bg: #1a1a1e;
+    --ec-stat-border: #3f3f46;
+    --ec-stat-value: #fafafa;
+    --ec-profile-email: #a1a1aa;
+    --ec-privacy: #a1a1aa;
+    --ec-privacy-a: #d4d4d8;
+    --ec-btn-ghost-bg: #18181b;
+    --ec-btn-ghost-hover: #27272a;
+    --ec-btn-primary-bg: #f4f4f5;
+    --ec-btn-primary-hover: #e4e4e7;
+    --ec-notification-bg: #18181b;
+    --ec-notification-border: #f4f4f5;
+    --ec-notification-text: #f4f4f5;
+    --ec-user-avatar-border: #3f3f46;
+    --ec-focus-ring: #a1a1aa;
+    --ec-onboarding-card: #0f0f12;
+    --ec-onboarding-text: #fafafa;
+    --ec-onboarding-heading: #fafafa;
+    --ec-onboarding-muted: rgba(244, 244, 245, 0.6);
+    --ec-onboarding-sub: rgba(244, 244, 245, 0.45);
+    --ec-routine-count-bg: #f4f4f5;
+    --ec-routine-count-fg: #18181b;
+    --ec-day-info-close: #f4f4f5;
+    --ec-day-info-close-hover: #27272a;
+    --color-bg-neutral: #1a1a1e;
+    --color-border-neutral: #3f3f46;
+    --color-done-bg: rgba(22, 163, 74, 0.22);
+    --color-info-bg: rgba(63, 63, 70, 0.5);
+}
+
+html[data-theme="dark"] .user-profile-theme-toggle {
+    background: #3f3f46;
+    border-color: #52525b;
+}
+
+html[data-theme="dark"] .user-profile-theme-toggle__thumb {
+    background: #f4f4f5;
+    border-color: #d4d4d8;
+}
+
+html[data-theme="dark"] .user-profile-theme-toggle__icon-host {
+    color: #18181b;
+}
+
+html[data-theme="dark"] .user-profile-btn--primary {
+    color: #18181b;
+}
+
+html[data-theme="dark"] .user-profile-btn--logout {
+    border-color: #f87171;
+    color: #fca5a5;
+}
+
+html[data-theme="dark"] .user-profile-btn--logout:hover {
+    background: rgba(127, 29, 29, 0.35);
+    color: #fecaca;
+}
+
+/* Calendário: estados verdes legíveis no escuro */
+html[data-theme="dark"] .calendar-day.calendar-day--all-done {
+    border-color: #22c55e;
+    background: rgba(22, 163, 74, 0.22);
+    box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.25);
+}
+
+html[data-theme="dark"] .calendar-day.calendar-day--partial-done {
+    border-color: #4ade80;
+    background: rgba(22, 163, 74, 0.12);
+}
+
+html[data-theme="dark"] .calendar-day-task-row--done .calendar-day-task-name {
+    color: #86efac;
+}
+
+html[data-theme="dark"] .month-amplified-weekday {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .day-info-status {
+    color: var(--ec-muted);
+}
