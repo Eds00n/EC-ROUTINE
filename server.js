@@ -20,7 +20,13 @@ const authRouteLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: 'Demasiados pedidos de autenticação. Tente novamente dentro de alguns minutos.' },
-    skip: (req) => process.env.NODE_ENV === 'test'
+    skip: (req) => process.env.NODE_ENV === 'test',
+    /** Evita ValidationError + 500 HTML atrás de proxies (Render) se X-Forwarded-For / Forwarded variarem. */
+    validate: {
+        xForwardedForHeader: false,
+        forwardedHeader: false,
+        default: true
+    }
 });
 
 app.use(

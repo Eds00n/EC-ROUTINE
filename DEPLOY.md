@@ -84,6 +84,6 @@ Execute manualmente na URL de produção:
 
 - **Login Google:** foi removido do projeto. Se ainda existir `GOOGLE_CLIENT_ID` no painel do host (Render, etc.), pode apagá-la — já não é usada.
 - **Cold start (Render free):** o primeiro pedido após inatividade pode ser lento.
-- **Proxy:** o servidor define `trust proxy` (1 hop por defeito) para conviver com `X-Forwarded-For` da Render e com **express-rate-limit v8**; sem isto, `POST /api/login` podia responder **500**. Opcional: `TRUST_PROXY_HOPS` no ambiente se tiver mais de um proxy.
+- **Proxy:** o servidor define `trust proxy` (1 hop por defeito) para conviver com `X-Forwarded-For` da Render e com **express-rate-limit v8**; sem isto, `POST /api/login` podia responder **500**. Opcional: `TRUST_PROXY_HOPS` no ambiente se tiver mais de um proxy. O limitador de `/api/login` também desactiva validações `xForwardedForHeader` / `forwardedHeader` que em alguns proxies ainda geravam erro.
 - **CI:** [`.github/workflows/ci.yml`](.github/workflows/ci.yml) corre `npm test` em push/PR; **não faz deploy** automático.
 - **Legal:** personalizar o contacto do responsável em [privacidade.html](privacidade.html) antes de tráfego público alargado (ver [README.md](README.md)).
