@@ -194,6 +194,29 @@
         window.location.href = 'dashboard.html';
     }
 
+    function clearEntryTransitionFlags() {
+        try {
+            sessionStorage.removeItem('ec_force_daily_onboarding');
+            sessionStorage.removeItem('ec_post_login_welcome');
+            sessionStorage.removeItem('ec_show_login_boot_loader');
+            sessionStorage.removeItem('ec_entry_transition_mode');
+            sessionStorage.removeItem('ec_adm_quick_login');
+        } catch (e) {}
+    }
+
+    function setEntryTransitionFlags(mode, options) {
+        var opts = options || {};
+        try {
+            sessionStorage.setItem('ec_entry_transition_mode', String(mode || 'login'));
+            if (opts.showBootLoader) sessionStorage.setItem('ec_show_login_boot_loader', '1');
+            else sessionStorage.removeItem('ec_show_login_boot_loader');
+            if (opts.forceDaily) sessionStorage.setItem('ec_force_daily_onboarding', '1');
+            else sessionStorage.removeItem('ec_force_daily_onboarding');
+            if (opts.postLoginWelcome) sessionStorage.setItem('ec_post_login_welcome', '1');
+            else sessionStorage.removeItem('ec_post_login_welcome');
+        } catch (e) {}
+    }
+
     /** Data de nascimento em falta → página dedicada antes do dashboard. */
     function userNeedsProfileSetup(user) {
         if (!user) return false;
@@ -207,30 +230,25 @@
     }
 
     function redirectToProfileSetupFromLogin() {
-        try {
-            sessionStorage.setItem('ec_force_daily_onboarding', '1');
-            sessionStorage.removeItem('ec_post_login_welcome');
-        } catch (e) {}
+        clearEntryTransitionFlags();
+    setEntryTransitionFlags('login', { showBootLoader: false, forceDaily: true, postLoginWelcome: false });
         window.location.href = 'profile-setup.html';
     }
 
     function redirectToProfileSetupFromRegister() {
-        try {
-            sessionStorage.setItem('ec_post_login_welcome', '1');
-            sessionStorage.removeItem('ec_force_daily_onboarding');
-        } catch (e) {}
+        clearEntryTransitionFlags();
+        // Cadastro: se estiver vazio, dashboard mostra boas-vindas; caso contrário, diária.
+        setEntryTransitionFlags('register', { showBootLoader: true, forceDaily: true, postLoginWelcome: true });
         window.location.href = 'profile-setup.html';
     }
 
     /**
      * Login (utilizador que ja tem conta):
-     * força apresentacao diaria antes de mostrar o dashboard.
+     * mostra EC ROUTINE e depois apresentação diária antes do dashboard.
      */
     function redirectAfterLogin() {
-        try {
-            sessionStorage.setItem('ec_force_daily_onboarding', '1');
-            sessionStorage.removeItem('ec_post_login_welcome');
-        } catch (e) {}
+        clearEntryTransitionFlags();
+    setEntryTransitionFlags('login', { showBootLoader: false, forceDaily: true, postLoginWelcome: false });
         redirectDashboard();
     }
 
@@ -239,36 +257,13 @@
      * ativa boas-vindas de primeiro uso, que pode levar para criar a primeira rotina.
      */
     function redirectAfterRegister() {
-        try {
-            sessionStorage.setItem('ec_post_login_welcome', '1');
-            sessionStorage.removeItem('ec_force_daily_onboarding');
-        } catch (e) {}
+        clearEntryTransitionFlags();
+        // Cadastro: se estiver vazio, dashboard mostra boas-vindas; caso contrário, diária.
+        setEntryTransitionFlags('register', { showBootLoader: true, forceDaily: true, postLoginWelcome: true });
         redirectDashboard();
     }
 
-    async function handleLogin(e) {
-        e.preventDefault();
-        clearText(document.getElementById('loginEmailError'));
-        clearText(document.getElementById('loginPasswordError'));
-        clearText(document.getElementById('loginFormError'));
-
-        var email = (document.getElementById('loginEmail').value || '').trim().toLowerCase();
-        var password = document.getElementById('loginPassword').value || '';
-
-        var ok = true;
-        if (!email) {
-            document.getElementById('loginEmailError').textContent = 'Informe o e-mail.';
-            ok = false;
-        } else if (!validateEmail(email)) {
-            document.getElementById('loginEmailError').textContent = 'E-mail inválido.';
-            ok = false;
-        }
-        if (!password) {
-            document.getElementById('loginPasswordError').textContent = 'Informe a senha.';
-            ok = false;
-        }
-        if (!ok) return;
-
+    async function performLoginWithCredentials(email, password) {
         setLoginLoading(true);
         try {
             var res = await fetch(API_BASE + '/login', {
@@ -293,7 +288,10 @@
                 return;
             }
             persistSession(parsed.data);
-            await syncLocalRoutinesToServer();
+            // Não bloquear a transição visual do login.
+            Promise.resolve()
+                .then(syncLocalRoutinesToServer)
+                .catch(function () {});
             var loginUser = parsed.data && parsed.data.user;
             if (userNeedsProfileSetup(loginUser)) {
                 redirectToProfileSetupFromLogin();
@@ -305,6 +303,32 @@
         } finally {
             setLoginLoading(false);
         }
+    }
+
+    async function handleLogin(e) {
+        e.preventDefault();
+        clearText(document.getElementById('loginEmailError'));
+        clearText(document.getElementById('loginPasswordError'));
+        clearText(document.getElementById('loginFormError'));
+
+        var email = (document.getElementById('loginEmail').value || '').trim().toLowerCase();
+        var password = document.getElementById('loginPassword').value || '';
+
+        var ok = true;
+        if (!email) {
+            document.getElementById('loginEmailError').textContent = 'Informe o e-mail.';
+            ok = false;
+        } else if (!validateEmail(email)) {
+            document.getElementById('loginEmailError').textContent =
+                'Use o endereço de e-mail completo (ex.: nome@gmail.com), não o seu nome.';
+            ok = false;
+        }
+        if (!password) {
+            document.getElementById('loginPasswordError').textContent = 'Informe a senha.';
+            ok = false;
+        }
+        if (!ok) return;
+        await performLoginWithCredentials(email, password);
     }
 
     async function handleRegister(e) {
@@ -370,7 +394,10 @@
                 return;
             }
             persistSession(parsed.data);
-            await syncLocalRoutinesToServer();
+            // Cadastro também não deve esperar sincronização para transicionar.
+            Promise.resolve()
+                .then(syncLocalRoutinesToServer)
+                .catch(function () {});
             var regUser = parsed.data && parsed.data.user;
             if (userNeedsProfileSetup(regUser)) {
                 redirectToProfileSetupFromRegister();
@@ -433,7 +460,8 @@
                         }
                     } catch (e0) {}
                     try {
-                        sessionStorage.setItem('ec_force_daily_onboarding', '1');
+                        clearEntryTransitionFlags();
+                        setEntryTransitionFlags('login', { showBootLoader: false, forceDaily: true, postLoginWelcome: false });
                     } catch (e1) {}
                     window.location.replace('dashboard.html');
                 })();
