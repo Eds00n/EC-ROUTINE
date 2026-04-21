@@ -3,6 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const fs = require('fs').promises;
+const fsSync = require('fs');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -871,6 +872,14 @@ async function startServer() {
         console.log(`Servidor na porta ${PORT} · armazenamento: ${backend}`);
         console.log(`Anexos em: ${ATTACHMENTS_DIR}`);
         console.log(`Raiz do servidor (confirme que é a pasta EC ROUTINE): ${__dirname}`);
+        const adminPath = path.join(__dirname, 'admin.html');
+        if (fsSync.existsSync(adminPath)) {
+            console.log('Painel admin: ficheiro admin.html presente — rotas /admin e /admin.html activas.');
+        } else {
+            console.warn(
+                'Painel admin: admin.html NÃO encontrado nesta pasta — /admin responde 404 até fazer deploy com esse ficheiro.'
+            );
+        }
         const adm = parseAdminEmailSet();
         if (adm.size === 0) {
             console.log(
