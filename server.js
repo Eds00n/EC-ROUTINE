@@ -31,12 +31,17 @@ const PORT = Number(process.env.PORT) || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-only-secret-change-me';
 /** Em produção defina CORS_ORIGIN no ambiente (ver DEPLOY.md e .env.example). */
 const CORS_ORIGIN = process.env.CORS_ORIGIN || '';
+/** Na Render o URL público do serviço vem injectado — útil monólito sem CORS_ORIGIN. */
+const renderPublicOrigin = String(process.env.RENDER_EXTERNAL_URL || '')
+    .trim()
+    .replace(/\/$/, '');
 const allowedOrigins = new Set(
     String(CORS_ORIGIN || '')
         .split(',')
-        .map(s => s.trim())
+        .map(s => s.trim().replace(/\/$/, ''))
         .filter(Boolean)
         .concat(['http://localhost:3000', 'http://127.0.0.1:3000'])
+        .concat(renderPublicOrigin ? [renderPublicOrigin] : [])
 );
 
 app.use(express.json({ limit: '10mb' }));
@@ -52,6 +57,8 @@ app.use(cors({
 }));
 
 app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
+app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
+app.get('/admin.html', (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
 app.get('/create', (req, res) => res.sendFile(path.join(__dirname, 'create.html')));
 app.get('/login', (req, res) => res.redirect('/auth.html?view=login'));
 app.get('/register', (req, res) => res.sendFile(path.join(__dirname, 'auth.html')));
@@ -175,6 +182,36 @@ function publicUserFields(user) {
     };
 }
 
+/** ID do ficheiro em /api/attachments/:id — devolve null se não for anexo interno. */
+function attachmentIdFromPictureUrl(pic) {
+    if (!pic || typeof pic !== 'string') return null;
+    const t = pic.trim();
+    if (!t) return null;
+    const marker = '/api/attachments/';
+    let pathPart = '';
+    if (t.indexOf(marker) !== -1) {
+        pathPart = t.slice(t.indexOf(marker) + marker.length);
+    } else if (/^https?:\/\//i.test(t)) {
+        try {
+            pathPart = (new URL(t).pathname || '').replace(/^\/+|\/+$/g, '');
+            const idx = pathPart.indexOf('api/attachments/');
+            if (idx === -1) return null;
+            pathPart = pathPart.slice(idx + 'api/attachments/'.length);
+        } catch {
+            return null;
+        }
+    } else {
+        return null;
+    }
+    pathPart = pathPart.split(/[?#]/)[0];
+    if (!pathPart || pathPart.indexOf('..') !== -1 || /[\\/]/.test(pathPart)) return null;
+    try {
+        return decodeURIComponent(pathPart);
+    } catch {
+        return pathPart;
+    }
+}
+
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -190,6 +227,29 @@ function authenticateToken(req, res, next) {
         req.user = user;
         next();
     });
+}
+
+/** E-mails com acesso a GET /api/admin/* (variável ADMIN_EMAILS, separados por vírgula, minúsculas). */
+function parseAdminEmailSet() {
+    const s = new Set();
+    for (const part of String(process.env.ADMIN_EMAILS || '').split(',')) {
+        const em = String(part || '').trim().toLowerCase();
+        if (em) s.add(em);
+    }
+    return s;
+}
+
+function isAdminEmail(email) {
+    const set = parseAdminEmailSet();
+    if (set.size === 0) return false;
+    return set.has(String(email || '').trim().toLowerCase());
+}
+
+function requireAdmin(req, res, next) {
+    if (!isAdminEmail(req.user && req.user.email)) {
+        return res.status(403).json({ error: 'Acesso reservado a administradores.' });
+    }
+    next();
 }
 
 function uploadSingle(req, res, next) {
@@ -283,7 +343,13 @@ app.post('/api/login', authRouteLimiter, async (req, res) => {
             });
         }
 
-        const validPassword = await bcrypt.compare(password, user.password);
+        let validPassword = false;
+        try {
+            validPassword = await bcrypt.compare(password, user.password);
+        } catch (bcryptErr) {
+            console.error('Erro ao comparar palavra-passe (hash inválido na BD?):', bcryptErr && bcryptErr.message);
+            return res.status(401).json({ error: 'Email ou senha incorretos' });
+        }
 
         if (!validPassword) {
             return res.status(401).json({ error: 'Email ou senha incorretos' });
@@ -297,7 +363,7 @@ app.post('/api/login', authRouteLimiter, async (req, res) => {
             user: publicUserFields(user)
         });
     } catch (error) {
-        console.error('Erro ao fazer login:', error);
+        console.error('Erro ao fazer login:', error && error.message, error && error.stack);
         res.status(500).json({ error: 'Erro ao fazer login' });
     }
 });
@@ -363,7 +429,24 @@ app.put('/api/profile', authenticateToken, async (req, res) => {
             }
         }
         if (picture !== undefined) {
-            user.picture = String(picture || '').trim().slice(0, 2000);
+            const pic = String(picture || '').trim().slice(0, 2000);
+            if (!pic) {
+                user.picture = '';
+            } else {
+                const attId = attachmentIdFromPictureUrl(pic);
+                if (attId) {
+                    const meta = await store.getAttachmentMeta(attId);
+                    if (!meta || String(meta.userId) !== String(req.user.id)) {
+                        return res.status(400).json({
+                            error:
+                                'Foto inválida: o ficheiro não foi encontrado ou não pertence à sua conta. Volte a enviar a imagem.'
+                        });
+                    }
+                } else if (!/^https?:\/\//i.test(pic) && pic.indexOf('data:') !== 0) {
+                    return res.status(400).json({ error: 'URL da foto inválida.' });
+                }
+                user.picture = pic;
+            }
         }
         await store.updateUser(user);
         const fresh = await store.findUserById(req.user.id);
@@ -371,6 +454,25 @@ app.put('/api/profile', authenticateToken, async (req, res) => {
     } catch (error) {
         console.error('Erro ao atualizar perfil:', error);
         res.status(500).json({ error: 'Erro ao atualizar perfil' });
+    }
+});
+
+// ==================== ADMIN (métricas; apenas e-mails em ADMIN_EMAILS) ====================
+
+app.get('/api/admin/ping', authenticateToken, requireAdmin, (req, res) => {
+    res.json({ ok: true });
+});
+
+app.get('/api/admin/summary', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const summary = await store.getAdminSummary();
+        res.json({
+            generatedAt: new Date().toISOString(),
+            ...summary
+        });
+    } catch (err) {
+        console.error('Erro ao obter resumo admin:', err);
+        res.status(500).json({ error: 'Erro ao obter estatísticas.' });
     }
 });
 
@@ -769,6 +871,14 @@ async function startServer() {
         console.log(`Servidor na porta ${PORT} · armazenamento: ${backend}`);
         console.log(`Anexos em: ${ATTACHMENTS_DIR}`);
         console.log(`Raiz do servidor (confirme que é a pasta EC ROUTINE): ${__dirname}`);
+        const adm = parseAdminEmailSet();
+        if (adm.size === 0) {
+            console.log(
+                'Painel admin: nenhum e-mail em ADMIN_EMAILS — GET /api/admin/* responde 403 para todos.'
+            );
+        } else {
+            console.log(`Painel admin: ${adm.size} e-mail(is) em ADMIN_EMAILS.`);
+        }
     });
 }
 
