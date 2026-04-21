@@ -10,6 +10,7 @@ Um único serviço (ex.: **Render Web Service**) corre `npm start` e serve **HTM
 
 - Vantagens: menos problemas de CORS; [api-base.js](api-base.js) em `localhost:3000` já usa `/api` no mesmo host; em produção HTTPS o meta `ec-api-base` pode apontar para a mesma origem.
 - Configure `CORS_ORIGIN` com o URL público HTTPS do **próprio** serviço (ex.: `https://ec-routine.onrender.com`). Inclua variante `www.` se existir, separada por vírgula.
+- Na **Render**, se esquecer `CORS_ORIGIN`, o servidor passa a aceitar também a variável automática **`RENDER_EXTERNAL_URL`** (o URL `onrender.com` do serviço). Com **domínio próprio**, continue a definir `CORS_ORIGIN` com esse URL exacto.
 
 ### Modelo B — Front estático + API separada
 
@@ -29,12 +30,20 @@ Crie um ficheiro `.env` na raiz (nunca commite segredos) ou configure no painel 
 | `CORS_ORIGIN` | **Recomendado em produção** | Origens do front, separadas por vírgula, exatamente como o browser envia |
 | `NODE_ENV` | Produção: `production` | Ativa validações no arranque |
 | `PORT` | Opcional | Predefinição `3000`; muitos hosts injetam `PORT` |
+| `ADMIN_EMAILS` | Opcional | E-mails com acesso ao painel admin (`/admin`, `GET /api/admin/*`). Vários: separados por vírgula, **minúsculas**, igual ao e-mail da conta. **Não** commite e-mails reais no repositório — defina só no painel do PaaS. Se vazio, todas as rotas admin respondem 403 |
 
 O servidor recusa arrancar em produção sem `DATABASE_URL`, ou com `JWT_SECRET` fraco, quando aplicável (ver [server.js](server.js)).
 
+### Painel administrativo (métricas)
+
+- URL (monólito): `https://O-TEU-SERVICO/admin` ou `admin.html` na mesma origem.
+- **Autenticação:** inicie sessão com uma conta cujo e-mail esteja em `ADMIN_EMAILS`; o browser envia o JWT nas chamadas a `/api/admin/summary` e `/api/admin/ping`.
+- **Segurança:** o servidor valida o e-mail do token em cada pedido; não basta «esconder» o link no HTML.
+- No arranque, os logs indicam se `ADMIN_EMAILS` está vazio (ninguém é admin) ou quantos e-mails foram configurados.
+
 ## 3. URL da API no front-end (sem editar `api-base.js` em cada deploy)
 
-Em **cada** HTML que carrega [api-base.js](api-base.js) (`dashboard.html`, `auth.html`, `create.html`, `routine-detail.html`, `profile-setup.html`), pode definir no `<head>`:
+Em **cada** HTML que carrega [api-base.js](api-base.js) (`dashboard.html`, `auth.html`, `create.html`, `routine-detail.html`, `profile-setup.html`, `admin.html`), pode definir no `<head>`:
 
 ```html
 <meta name="ec-api-base" content="https://O-TEU-SERVICO.onrender.com/api" />
@@ -69,10 +78,12 @@ Execute manualmente na URL de produção:
 - [ ] Perfil: ver dados, tema claro/escuro, guardar perfil
 - [ ] Anotação (tipo caderno / digital / diagrama) e guardar
 - [ ] Upload de imagem (perfil ou anexo) e verificar se persiste após redeploy (se usar disco efémero, pode falhar — ver secção 5)
+- [ ] `ADMIN_EMAILS` definido; abrir `/admin` com sessão desse e-mail e confirmar estatísticas; com outra conta, confirmar 403 em `/api/admin/summary`
 
 ## 7. Outros
 
 - **Login Google:** foi removido do projeto. Se ainda existir `GOOGLE_CLIENT_ID` no painel do host (Render, etc.), pode apagá-la — já não é usada.
 - **Cold start (Render free):** o primeiro pedido após inatividade pode ser lento.
+- **Proxy:** o servidor define `trust proxy` (1 hop por defeito) para conviver com `X-Forwarded-For` da Render e com **express-rate-limit v8**; sem isto, `POST /api/login` podia responder **500**. Opcional: `TRUST_PROXY_HOPS` no ambiente se tiver mais de um proxy.
 - **CI:** [`.github/workflows/ci.yml`](.github/workflows/ci.yml) corre `npm test` em push/PR; **não faz deploy** automático.
 - **Legal:** personalizar o contacto do responsável em [privacidade.html](privacidade.html) antes de tráfego público alargado (ver [README.md](README.md)).

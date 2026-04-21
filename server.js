@@ -11,6 +11,8 @@ const multer = require('multer');
 const store = require('./lib/store');
 
 const app = express();
+/** Render / proxies enviam X-Forwarded-For; express-rate-limit v8 exige isto para não lançar ValidationError. */
+app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS) || 1);
 
 const authRouteLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
