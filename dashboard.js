@@ -945,6 +945,63 @@ function withTimeout(promise, timeoutMs) {
 
 var ENTRY_BOOT_LOADER_MS = 3400;
 var ENTRY_ROUTINES_WAIT_MS = 1200;
+/** Texto da marca (único sítio para animação typewriter + aria). */
+var EC_ROUTINE_BRAND_TEXT = 'EC ROUTINE';
+var TYPEWRITER_MS_PER_CHAR = 55;
+/** Header anima depois do overlay de boot + tempo para o fade (~350 ms no loader). */
+var HEADER_TYPEWRITER_DELAY_AFTER_BOOT_MS = 450;
+
+/**
+ * Efeito máquina de escrever; caret via CSS (.typewriter-active / ::after).
+ * @returns {Promise<void>}
+ */
+function runTypewriter(element, fullText, options) {
+    options = options || {};
+    var msPerChar = options.msPerChar != null ? options.msPerChar : TYPEWRITER_MS_PER_CHAR;
+    return new Promise(function (resolve) {
+        if (!element) {
+            resolve();
+            return;
+        }
+        fullText = String(fullText || '');
+        element.textContent = '';
+        element.classList.add('typewriter-active');
+        element.classList.remove('typewriter-done');
+        var i = 0;
+        function tick() {
+            if (i >= fullText.length) {
+                element.classList.remove('typewriter-active');
+                element.classList.add('typewriter-done');
+                resolve();
+                return;
+            }
+            element.textContent += fullText.charAt(i);
+            i += 1;
+            setTimeout(tick, msPerChar);
+        }
+        tick();
+    });
+}
+
+/** Arranque: boot overlay + header conforme flags.session boot loader. */
+function scheduleEcRoutineBrandAnimations(entryFlags) {
+    var bootEl = document.querySelector('.dashboard-boot-loader__brand-text');
+    var headerEl = document.querySelector('.header-title-text');
+    if (entryFlags.showBootLoader && bootEl) {
+        runTypewriter(bootEl, EC_ROUTINE_BRAND_TEXT, { msPerChar: TYPEWRITER_MS_PER_CHAR });
+        if (headerEl) {
+            setTimeout(function () {
+                runTypewriter(headerEl, EC_ROUTINE_BRAND_TEXT, { msPerChar: TYPEWRITER_MS_PER_CHAR });
+            }, ENTRY_BOOT_LOADER_MS + HEADER_TYPEWRITER_DELAY_AFTER_BOOT_MS);
+        }
+        return;
+    }
+    if (headerEl) {
+        setTimeout(function () {
+            runTypewriter(headerEl, EC_ROUTINE_BRAND_TEXT, { msPerChar: TYPEWRITER_MS_PER_CHAR });
+        }, 80);
+    }
+}
 
 function readAndClearEntryTransitionFlags() {
     var flags = {
@@ -1045,6 +1102,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         showDashboardBootLoader();
         bootDelayPromise = waitMs(ENTRY_BOOT_LOADER_MS);
     }
+    scheduleEcRoutineBrandAnimations(entryFlags);
     // Failsafe extremo para não prender o ecrã em erro inesperado.
     setTimeout(hideDashboardBootLoader, 11000);
     try {

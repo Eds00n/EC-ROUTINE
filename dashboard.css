@@ -168,6 +168,43 @@ html {
     line-height: 1.1;
 }
 
+/* Marca — máquina de escrever (caret em ::after) */
+.header-title-text,
+.dashboard-boot-loader__brand-text {
+    display: inline-block;
+    min-height: 1.15em;
+    vertical-align: bottom;
+}
+
+.header-title-text.typewriter-active::after,
+.dashboard-boot-loader__brand-text.typewriter-active::after {
+    content: '';
+    display: inline-block;
+    width: 0.09em;
+    min-width: 2px;
+    height: 0.85em;
+    margin-left: 2px;
+    vertical-align: -0.1em;
+    background: currentColor;
+    animation: ecTypewriterCaret 0.9s steps(1, end) infinite;
+}
+
+.header-title-text.typewriter-done::after,
+.dashboard-boot-loader__brand-text.typewriter-done::after {
+    display: none;
+}
+
+@keyframes ecTypewriterCaret {
+    0%,
+    49% {
+        opacity: 1;
+    }
+    50%,
+    100% {
+        opacity: 0;
+    }
+}
+
 .header-subtitle {
     margin: 0;
     margin-top: 6px;
@@ -5211,10 +5248,12 @@ body.dashboard-overview-visible {
     border: 1px solid var(--ec-border-2, #e5e7eb);
     background: var(--ec-surface, #ffffff);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    /* Última linha do mês (ex.: dia 31) não encosta à borda inferior da caixa */
+    padding: 10px 12px 18px;
 }
 
 #rotinasView .routine-card-heatmap .heatmap-nav {
-    margin-top: 6px;
+    margin-top: 10px;
     justify-content: center;
     width: 100%;
 }
@@ -5227,6 +5266,7 @@ body.dashboard-overview-visible {
 #rotinasView .routine-card-heatmap--carousel .calendar-months-container {
     height: auto;
     align-items: flex-start;
+    padding-bottom: 4px;
 }
 
 #rotinasView .routine-card-heatmap--carousel .calendar-month[data-month-index] {
@@ -8900,7 +8940,7 @@ html:has(body.annotation-modal-open) {
 
     #rotinasView .routine-card-heatmap .large-heatmap-block {
         min-height: 176px;
-        padding: 10px 12px 10px;
+        padding: 10px 12px 18px;
     }
 
     /* Carrossel 13 meses: em ≤900px a faixa usa width: 1300% no bloco ≤900px (sem clip em px). */
