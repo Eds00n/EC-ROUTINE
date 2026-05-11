@@ -204,7 +204,11 @@
                         return {};
                     });
                     if (!res.ok) throw new Error(j.error || 'Falha no upload');
-                    var putPic = await putProfile({ picture: j.url || '' });
+                    var picUrl = typeof j.url === 'string' ? j.url.trim() : '';
+                    if (!picUrl || picUrl.indexOf('/api/attachments/') === -1) {
+                        throw new Error((j && j.error) || 'O servidor não devolveu o endereço do ficheiro.');
+                    }
+                    var putPic = await putProfile({ picture: picUrl });
                     if (!putPic.ok) {
                         showErrPhoto(profileSaveErrorMessage(putPic));
                         return;

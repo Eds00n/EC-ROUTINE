@@ -14,6 +14,87 @@ function getLocalDateStr(d) {
     return `${y}-${m}-${day}`;
 }
 
+function isRoutineWeekday(dateStr, routine) {
+    if (!routine || !routine.schedule) return true;
+    const weekDays = routine.schedule.weekDays;
+    const planType = routine.planType || 'daily';
+    if (!weekDays || !Array.isArray(weekDays)) return true;
+    const d = new Date(dateStr + 'T12:00:00');
+    const dayOfWeek = d.getDay();
+    return weekDays.indexOf(dayOfWeek) !== -1;
+}
+
+function isRoutineDate(dateStr, routine) {
+    if (!routine || !routine.schedule) return false;
+    const d = new Date(dateStr + 'T12:00:00');
+    const planType = routine.planType || 'daily';
+    const s = routine.schedule;
+    if (planType === 'monthly' && s.monthlyType === 'dayOfMonth' && s.dayOfMonth != null) {
+        return d.getDate() === Number(s.dayOfMonth);
+    }
+    if (planType === 'monthly' && s.monthlyType === 'weekOfMonth' && (s.weekOfMonth != null || s.dayOfWeek != null)) {
+        const dayOfWeek = d.getDay();
+        const weekOfMonth = s.weekOfMonth === 'last' ? 5 : parseInt(s.weekOfMonth, 10);
+        const targetDow = s.dayOfWeek != null ? Number(s.dayOfWeek) : dayOfWeek;
+        if (dayOfWeek !== targetDow) return false;
+        const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+        if (s.weekOfMonth === 'last') {
+            let lastMatch = null;
+            for (let day = lastDay.getDate(); day >= 1; day--) {
+                const dt = new Date(d.getFullYear(), d.getMonth(), day);
+                if (dt.getDay() === targetDow) {
+                    lastMatch = day;
+                    break;
+                }
+            }
+            return lastMatch !== null && d.getDate() === lastMatch;
+        }
+        let n = 0;
+        for (let day = 1; day <= d.getDate(); day++) {
+            const dt = new Date(d.getFullYear(), d.getMonth(), day);
+            if (dt.getDay() === targetDow) n++;
+        }
+        return n === weekOfMonth;
+    }
+    return isRoutineWeekday(dateStr, routine);
+}
+
+function isRoutineDayClosedOut(routine, dateStr) {
+    if (!routine || !dateStr) return false;
+    const checkIns = routine.checkIns || [];
+    if (checkIns.indexOf(dateStr) !== -1) return true;
+    const tasks = routine.tasks || [];
+    if (tasks.length === 0) return false;
+    return tasks.every(function (t) {
+        const dates = t.completedDates || [];
+        return dates.indexOf(dateStr) !== -1;
+    });
+}
+
+function scheduleTimeHasPassedToday(schedule) {
+    if (!schedule || !schedule.time) return false;
+    const now = new Date();
+    const parts = String(schedule.time).trim().split(':');
+    const h = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10) || 0;
+    const hour = isNaN(h) ? 0 : h;
+    const min = isNaN(m) ? 0 : m;
+    const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, min, 0, 0);
+    return now.getTime() >= target.getTime();
+}
+
+function shouldShowTaskAwaitingConfirmHint(routine, task, dateStr) {
+    if (!routine || !routine.schedule || !routine.schedule.time) return false;
+    const todayStr = getLocalDateStr(new Date());
+    if (dateStr !== todayStr) return false;
+    if (!isRoutineDate(dateStr, routine)) return false;
+    if (!scheduleTimeHasPassedToday(routine.schedule)) return false;
+    if (isRoutineDayClosedOut(routine, dateStr)) return false;
+    if (task && task._synthetic) return true;
+    const dates = task && task.completedDates ? task.completedDates : [];
+    return dates.indexOf(dateStr) === -1;
+}
+
 let currentRoutine = null;
 
 /** Estado em memória do cronómetro por tarefa (categoria Estudos) */
@@ -669,6 +750,14 @@ function getLucideIconName(icon) {
 function renderRoutine() {
     if (!currentRoutine) return;
 
+    const todayForTasks = getLocalDateStr(new Date());
+    if (currentRoutine.tasks) {
+        currentRoutine.tasks.forEach(function (t) {
+            const d = t.completedDates || [];
+            t.completed = d.indexOf(todayForTasks) !== -1;
+        });
+    }
+
     // Título e ícone da categoria (Lucide)
     document.getElementById('routineTitle').textContent = currentRoutine.title;
     const iconEl = document.getElementById('routineIcon');
@@ -795,6 +884,10 @@ function renderTasks() {
         const datesHtml = datesFormatted.length > 0
             ? `<div class="task-completed-dates" title="Datas de conclusão: ${datesFormatted.join(', ')}">📅 ${datesFormatted.join(', ')}</div>`
             : '';
+        const today = getLocalDateStr(new Date());
+        const awaitingHintHtml = shouldShowTaskAwaitingConfirmHint(currentRoutine, task, today)
+            ? '<div class="task-awaiting-confirm-hint" role="status">Pendente: confirme se cumpriu a rotina hoje (responda ao lembrete ou marque esta tarefa).</div>'
+            : '';
 
         return `
         <div class="task-item ${task.completed ? 'completed' : ''}" data-task-id="${escapeHtml(String(task.id))}">
@@ -802,6 +895,7 @@ function renderTasks() {
                 <div class="task-checkbox ${task.completed ? 'checked' : ''}" data-task-id="${escapeHtml(String(task.id))}" role="checkbox" aria-checked="${task.completed ? 'true' : 'false'}"></div>
                 <div class="task-content">
                     <span class="task-text">${escapeHtml(task.text)}</span>
+                    ${awaitingHintHtml}
                     ${datesHtml}
                 </div>
                 ${typeof trashBinButtonHTML === 'function' ? trashBinButtonHTML({ className: 'task-delete delete', modifier: 'uiverse-trash-btn--task', dataAttrs: { 'data-task-id': String(task.id) }, ariaLabel: 'Excluir tarefa', title: 'Excluir tarefa' }) : `<button type="button" class="task-delete" data-task-id="${escapeHtml(String(task.id))}" aria-label="Excluir tarefa">×</button>`}

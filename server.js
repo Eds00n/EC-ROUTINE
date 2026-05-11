@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const ipKeyGenerator = rateLimit.ipKeyGenerator;
+const { isIP } = require('node:net');
 const fs = require('fs').promises;
 const fsSync = require('fs');
 const path = require('path');
@@ -14,6 +16,25 @@ const app = express();
 /** Render / proxies enviam X-Forwarded-For; express-rate-limit v8 exige isto para não lançar ValidationError. */
 app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS) || 1);
 
+/** Chave estável para o limitador de /api/login e /api/register (evita 500 se request.ip vier vazio ou inválido atrás de proxies). */
+function authRateLimitKey(req) {
+    let raw = req.ip;
+    if (raw === undefined || raw === null || raw === '') {
+        raw = req.socket && req.socket.remoteAddress;
+    }
+    raw = String(raw || 'unknown').trim();
+    const ipv4WithPort = raw.match(/^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/);
+    if (ipv4WithPort) raw = ipv4WithPort[1];
+    if (raw !== 'unknown' && !isIP(raw)) {
+        raw = 'unknown';
+    }
+    try {
+        return ipKeyGenerator(raw, 56);
+    } catch {
+        return raw.slice(0, 128) || 'unknown';
+    }
+}
+
 const authRouteLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 40,
@@ -21,12 +42,10 @@ const authRouteLimiter = rateLimit({
     legacyHeaders: false,
     message: { error: 'Demasiados pedidos de autenticação. Tente novamente dentro de alguns minutos.' },
     skip: (req) => process.env.NODE_ENV === 'test',
-    /** Evita ValidationError + 500 HTML atrás de proxies (Render) se X-Forwarded-For / Forwarded variarem. */
-    validate: {
-        xForwardedForHeader: false,
-        forwardedHeader: false,
-        default: true
-    }
+    keyGenerator: req => authRateLimitKey(req),
+    passOnStoreError: true,
+    /** Desliga validações internas: em alguns proxies request.ip falha e o limitador podia contribuir para respostas 500. */
+    validate: false
 });
 
 app.use(
@@ -242,7 +261,10 @@ function authenticateToken(req, res, next) {
 function parseAdminEmailSet() {
     const s = new Set();
     for (const part of String(process.env.ADMIN_EMAILS || '').split(',')) {
-        const em = String(part || '').trim().toLowerCase();
+        let em = String(part || '').trim().toLowerCase();
+        if ((em.startsWith('"') && em.endsWith('"')) || (em.startsWith("'") && em.endsWith("'"))) {
+            em = em.slice(1, -1).trim().toLowerCase();
+        }
         if (em) s.add(em);
     }
     return s;
@@ -259,6 +281,13 @@ function requireAdmin(req, res, next) {
         return res.status(403).json({ error: 'Acesso reservado a administradores.' });
     }
     next();
+}
+
+/** Campos públicos do utilizador + `isAdmin` (mesma regra que ADMIN_EMAILS). */
+function userPayloadForClient(user) {
+    const pub = publicUserFields(user);
+    if (!pub) return null;
+    return Object.assign({}, pub, { isAdmin: isAdminEmail(pub.email) });
 }
 
 function uploadSingle(req, res, next) {
@@ -320,7 +349,7 @@ app.post('/api/register', authRouteLimiter, async (req, res) => {
         res.status(201).json({
             message: 'Usuário criado com sucesso',
             token,
-            user: publicUserFields(newUser)
+            user: userPayloadForClient(newUser)
         });
     } catch (error) {
         console.error('Erro ao registrar usuário:', error);
@@ -369,10 +398,22 @@ app.post('/api/login', authRouteLimiter, async (req, res) => {
         res.json({
             message: 'Login realizado com sucesso',
             token,
-            user: publicUserFields(user)
+            user: userPayloadForClient(user)
         });
     } catch (error) {
         console.error('Erro ao fazer login:', error && error.message, error && error.stack);
+        const code = error && error.code;
+        if (
+            code === 'ECONNREFUSED' ||
+            code === 'ETIMEDOUT' ||
+            code === 'ENOTFOUND' ||
+            code === '57P03' ||
+            code === 'EAI_AGAIN'
+        ) {
+            return res.status(503).json({
+                error: 'Serviço temporariamente indisponível. Tente novamente dentro de instantes.'
+            });
+        }
         res.status(500).json({ error: 'Erro ao fazer login' });
     }
 });
@@ -385,8 +426,9 @@ app.get('/api/verify', authenticateToken, async (req, res) => {
             return res.status(404).json({ error: 'Usuário não encontrado' });
         }
 
+        res.set('Cache-Control', 'private, no-store');
         res.json({
-            user: publicUserFields(user)
+            user: userPayloadForClient(user)
         });
     } catch (error) {
         console.error('Erro ao verificar token:', error);
@@ -401,8 +443,9 @@ app.get('/api/profile', authenticateToken, async (req, res) => {
             return res.status(404).json({ error: 'Usuário não encontrado' });
         }
         const routines = await store.listRoutinesForUser(req.user.id);
+        res.set('Cache-Control', 'private, no-store');
         res.json({
-            user: publicUserFields(user),
+            user: userPayloadForClient(user),
             stats: computeProfileStats(routines)
         });
     } catch (error) {
@@ -459,7 +502,8 @@ app.put('/api/profile', authenticateToken, async (req, res) => {
         }
         await store.updateUser(user);
         const fresh = await store.findUserById(req.user.id);
-        res.json({ user: publicUserFields(fresh) });
+        res.set('Cache-Control', 'private, no-store');
+        res.json({ user: userPayloadForClient(fresh) });
     } catch (error) {
         console.error('Erro ao atualizar perfil:', error);
         res.status(500).json({ error: 'Erro ao atualizar perfil' });

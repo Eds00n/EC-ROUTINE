@@ -494,6 +494,38 @@ html {
     display: none;
 }
 
+/* Segundo CTA no login — logo abaixo de «Entrar» (cadastro) */
+.auth-btn--secondary-login {
+    margin-top: 10px;
+    padding: 13px 20px;
+    border-radius: 10px;
+    border: 1px solid var(--auth-border);
+    background: var(--auth-white);
+    color: var(--auth-black-soft);
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    font-size: clamp(0.8125rem, 1.8vw, 0.9375rem);
+    box-shadow: none;
+}
+
+.auth-btn--secondary-login::before {
+    display: none;
+}
+
+.auth-btn--secondary-login:hover:not(:disabled) {
+    background: #f4f4f5;
+    border-color: #b3b3b3;
+}
+
+.auth-btn--secondary-login:focus-visible:not(:disabled) {
+    outline: 2px solid var(--auth-black);
+    outline-offset: 2px;
+}
+
+.auth-btn--secondary-login:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
 .auth-btn--login {
     --auth-btn-shine: rgba(255, 255, 255, 0.85);
     background: var(--auth-white);

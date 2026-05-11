@@ -439,6 +439,12 @@
         document.getElementById('goRegister').addEventListener('click', function () {
             showRegisterView();
         });
+        var loginBtnBelowEnter = document.getElementById('loginBtnBelowEnter');
+        if (loginBtnBelowEnter) {
+            loginBtnBelowEnter.addEventListener('click', function () {
+                showRegisterView();
+            });
+        }
         document.getElementById('goLogin').addEventListener('click', function () {
             showLoginView();
         });

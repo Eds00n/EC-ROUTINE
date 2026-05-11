@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('ecRoutineTheme') === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+                if (localStorage.getItem('ecRoutineShowDayNumbers') === '0') document.documentElement.setAttribute('data-ec-day-numbers', 'off');
+            } catch (e) {}
+        })();
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="ec-api-base" content="https://ec-routine-api.onrender.com/api" />
@@ -8,8 +16,9 @@
     <script src="api-base.js?v=20260419deploy"></script>
     <script src="auth-guard.js?v=20260418guard"></script>
     <title>EC ROUTINE - Criar Rotina</title>
-    <link rel="stylesheet" href="dashboard.css?v=20260419preview-large">
-    <link rel="stylesheet" href="create.css?v=20260419responsive">
+    <link rel="stylesheet" href="dashboard.css?v=20260420profile-admin">
+    <link rel="stylesheet" href="dashboard-theme.css?v=20260420profile-admin">
+    <link rel="stylesheet" href="create.css?v=20260420create-theme">
     <link rel="stylesheet" href="uiverse-trash-bin.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,11 +29,17 @@
         <div class="header-left">
         </div>
         <div class="header-center">
-            <h1>EC ROUTINE</h1>
+            <h1 class="header-title">EC ROUTINE</h1>
         </div>
         <div class="header-right">
-            <span class="username" id="username">USUÁRIO</span>
-            <div class="user-icon"></div>
+            <button type="button" class="header-admin-btn hidden" id="headerAdminBtn" hidden aria-hidden="true" title="Painel de administrador">ADM</button>
+            <button type="button" class="header-profile-trigger" id="headerProfileTrigger" aria-haspopup="dialog" aria-expanded="false" aria-controls="userProfileModal" title="Ver perfil">
+                <span class="username" id="username">USUÁRIO</span>
+                <span class="user-avatar-wrap" aria-hidden="true">
+                    <img id="headerUserAvatarImg" class="user-avatar-img hidden" alt="" width="32" height="32" decoding="async" />
+                    <span id="headerUserAvatarFall" class="user-avatar-fallback"></span>
+                </span>
+            </button>
         </div>
     </header>
 
@@ -356,6 +371,101 @@
         </div>
     </main>
 
+    <!-- Modal de perfil (antes dos scripts que o inicializam) -->
+    <div class="user-profile-modal hidden" id="userProfileModal" role="dialog" aria-modal="true" aria-labelledby="userProfileModalTitle" aria-hidden="true">
+        <div class="user-profile-overlay" id="userProfileOverlay"></div>
+        <div class="user-profile-panel" id="userProfilePanel">
+            <button type="button" class="user-profile-settings-btn" id="userProfileSettingsBtn" aria-expanded="false" aria-haspopup="true" aria-controls="userProfileSettingsMenu" aria-label="Configurações" title="Configurações">
+                <i data-lucide="settings" class="user-profile-settings-btn__icon" aria-hidden="true"></i>
+            </button>
+            <div class="user-profile-settings-menu hidden" id="userProfileSettingsMenu" role="region" aria-label="Configurações">
+                <div class="user-profile-settings-row">
+                    <span class="user-profile-settings-label" id="userProfileSettingsThemeLabel">Tema claro / escuro</span>
+                    <button type="button" class="user-profile-theme-toggle user-profile-theme-toggle--in-menu" id="userProfileThemeToggle" role="switch" aria-checked="false" aria-labelledby="userProfileSettingsThemeLabel" title="Alternar tema">
+                        <span class="user-profile-theme-toggle__thumb" aria-hidden="true"><span id="userProfileThemeToggleIconHost" class="user-profile-theme-toggle__icon-host"><i data-lucide="sun" class="user-profile-theme-toggle__lucide" aria-hidden="true"></i></span></span>
+                    </button>
+                </div>
+                <div class="user-profile-settings-row user-profile-settings-row--last">
+                    <span class="user-profile-settings-label" id="userProfileSettingsDayNumbersLabel">Mostrar números dos dias nas tarefas</span>
+                    <button type="button" class="user-profile-theme-toggle user-profile-theme-toggle--in-menu user-profile-day-numbers-toggle" id="userProfileDayNumbersToggle" role="switch" aria-checked="true" aria-labelledby="userProfileSettingsDayNumbersLabel" title="Alternar números dos dias">
+                        <span class="user-profile-theme-toggle__thumb" aria-hidden="true"><span id="userProfileDayNumbersToggleIconHost" class="user-profile-theme-toggle__icon-host"><i data-lucide="calendar-days" class="user-profile-theme-toggle__lucide" aria-hidden="true"></i></span></span>
+                    </button>
+                </div>
+            </div>
+            <button type="button" class="user-profile-close" id="userProfileClose" aria-label="Fechar perfil">×</button>
+            <div class="user-profile-head">
+                <div class="user-profile-avatar-block">
+                    <img id="profileModalAvatar" class="user-profile-avatar-img hidden" alt="" width="76" height="76" decoding="async" />
+                    <div id="profileModalAvatarFall" class="user-profile-avatar-fallback" aria-hidden="true"></div>
+                </div>
+                <p class="user-profile-eyebrow">Perfil</p>
+                <h2 class="user-profile-display-name" id="userProfileModalTitle">—</h2>
+                <p class="user-profile-email" id="profileModalEmail"></p>
+            </div>
+            <div class="user-profile-body" id="userProfileViewMode">
+                <dl class="user-profile-dl">
+                    <dt>Nome</dt><dd id="profileViewName">—</dd>
+                    <dt>Gênero</dt><dd id="profileViewSexuality">—</dd>
+                    <dt>Idade</dt><dd id="profileViewAge">—</dd>
+                </dl>
+                <div class="user-profile-stats" aria-label="Estatísticas">
+                    <div class="user-profile-stat">
+                        <span class="user-profile-stat-icon" aria-hidden="true"><i data-lucide="clipboard-list"></i></span>
+                        <span class="user-profile-stat-value" id="profileStatTasks">0</span>
+                        <span class="user-profile-stat-label">Tarefas</span>
+                    </div>
+                    <div class="user-profile-stat">
+                        <span class="user-profile-stat-icon" aria-hidden="true"><i data-lucide="calendar-days"></i></span>
+                        <span class="user-profile-stat-value" id="profileStatRoutines">0</span>
+                        <span class="user-profile-stat-label">Hábitos criados</span>
+                    </div>
+                    <div class="user-profile-stat">
+                        <span class="user-profile-stat-icon" aria-hidden="true"><i data-lucide="flame"></i></span>
+                        <span class="user-profile-stat-value" id="profileStatSeqActive">0</span>
+                        <span class="user-profile-stat-label">Hábitos em progresso</span>
+                    </div>
+                    <div class="user-profile-stat">
+                        <span class="user-profile-stat-icon" aria-hidden="true"><i data-lucide="trophy"></i></span>
+                        <span class="user-profile-stat-value" id="profileStatSeqMax">0</span>
+                        <span class="user-profile-stat-label">Melhor sequência (dias)</span>
+                    </div>
+                </div>
+                <p class="user-profile-privacy-note">Dados de perfil (incluindo campos opcionais sensíveis) tratam-se conforme a <a href="privacidade.html" target="_blank" rel="noopener noreferrer">Política de Privacidade</a>.</p>
+                <div class="user-profile-actions">
+                    <button type="button" class="user-profile-btn user-profile-btn--primary user-profile-btn--with-icon" id="profileBtnEdit">
+                        <i data-lucide="pencil" class="user-profile-btn__icon" aria-hidden="true"></i>
+                        <span>Editar perfil</span>
+                    </button>
+                    <button type="button" class="user-profile-btn user-profile-btn--admin user-profile-btn--with-icon hidden" id="profileBtnAdmin" hidden aria-hidden="true">
+                        <i data-lucide="layout-dashboard" class="user-profile-btn__icon" aria-hidden="true"></i>
+                        <span>Painel admin</span>
+                    </button>
+                    <button type="button" class="user-profile-btn user-profile-btn--logout" id="profileBtnLogout">Sair</button>
+                </div>
+            </div>
+            <div class="user-profile-body hidden" id="userProfileEditMode">
+                <label class="user-profile-label" for="profileEditName">Nome</label>
+                <input type="text" id="profileEditName" class="user-profile-input" maxlength="200" autocomplete="name" />
+                <label class="user-profile-label" for="profileEditSexuality">Gênero</label>
+                <select id="profileEditSexuality" class="user-profile-input">
+                    <option value="">Prefiro não informar</option>
+                    <option value="homem">Masculino</option>
+                    <option value="mulher">Feminino</option>
+                    <option value="outro">Outro</option>
+                    <option value="nao_binario">Não-binário</option>
+                </select>
+                <label class="user-profile-label" for="profileEditBirth">Data de nascimento</label>
+                <input type="date" id="profileEditBirth" class="user-profile-input" />
+                <div class="user-profile-actions user-profile-actions--edit">
+                    <button type="button" class="user-profile-btn user-profile-btn--primary" id="profileBtnSave">Guardar</button>
+                    <button type="button" class="user-profile-btn" id="profileBtnPhoto">Mudar foto</button>
+                    <button type="button" class="user-profile-btn" id="profileBtnCancelEdit">Cancelar</button>
+                </div>
+            </div>
+            <input type="file" id="profilePhotoInput" class="hidden" accept="image/jpeg,image/png,image/webp,image/gif" />
+        </div>
+    </div>
+
     <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
     <!-- Wizard de passos: funciona mesmo se create.js falhar ao carregar -->
     <script>
@@ -540,6 +650,7 @@
     })();
     </script>
     <script src="trash-bin-button.js"></script>
-    <script src="create.js?v=20260418toast"></script>
+    <script src="create.js?v=20260420create-theme"></script>
+    <script src="user-profile-modal-setup.js?v=20260420profile-admin-race"></script>
 </body>
 </html>

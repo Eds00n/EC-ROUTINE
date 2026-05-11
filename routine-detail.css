@@ -871,6 +871,19 @@
     font-weight: 500;
 }
 
+.task-awaiting-confirm-hint {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #92400e;
+    line-height: 1.35;
+    margin-top: 4px;
+    padding: 6px 10px;
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+    border-radius: 6px;
+    max-width: 100%;
+}
+
 .task-item.completed .task-text {
     text-decoration: line-through;
     color: #666;

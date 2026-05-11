@@ -54,6 +54,42 @@
         return 'ec' + ((global.Date && Date.now()) || 0) + '_' + Math.floor(Math.random() * 1e6);
     }
 
+    /** Cor dos pontos da grelha consoante o fundo (hex ou rgb do computed). */
+    function svgDotFillForCanvasBg(fillStr) {
+        if (!fillStr || typeof fillStr !== 'string') return 'rgba(255,255,255,0.171)';
+        var s = fillStr.trim();
+        var r = 0.22;
+        var g = 0.24;
+        var b = 0.27;
+        var m = s.match(/^#([0-9a-fA-F]{6})$/);
+        if (m) {
+            r = parseInt(m[1].slice(0, 2), 16) / 255;
+            g = parseInt(m[1].slice(2, 4), 16) / 255;
+            b = parseInt(m[1].slice(4, 6), 16) / 255;
+        } else {
+            var rm = s.match(/rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+            if (rm) {
+                r = parseInt(rm[1], 10) / 255;
+                g = parseInt(rm[2], 10) / 255;
+                b = parseInt(rm[3], 10) / 255;
+            }
+        }
+        var L = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        return L > 0.52 ? 'rgba(15,23,42,0.2)' : 'rgba(255,255,255,0.19)';
+    }
+
+    function svgResolveCanvasBgFill(data, panLayerEl) {
+        var c = data && data.canvasBg && /^#[0-9A-Fa-f]{6}$/.test(String(data.canvasBg)) ? String(data.canvasBg).toLowerCase() : '';
+        if (c) return c;
+        if (panLayerEl) {
+            try {
+                var cs = global.getComputedStyle(panLayerEl);
+                if (cs && cs.backgroundColor && cs.backgroundColor !== 'transparent') return cs.backgroundColor;
+            } catch (_e) {}
+        }
+        return '#3a404a';
+    }
+
     function hrefToDataUrl(href) {
         if (!href || typeof href !== 'string') return Promise.resolve('');
         if (href.indexOf('data:') === 0) return Promise.resolve(href);
@@ -109,13 +145,16 @@
     /**
      * Pattern, sombra e marcador de seta (unidades = espaço de conteúdo do diagrama).
      */
-    function buildDefs(uid) {
+    function buildDefs(uid, dotFill) {
+        var dot = dotFill != null && String(dotFill) !== '' ? String(dotFill) : 'rgba(255,255,255,0.171)';
         return (
             '<defs>' +
             '<pattern id="' +
             uid +
             'Dot" width="30" height="30" patternUnits="userSpaceOnUse" patternTransform="translate(-5,-5)">' +
-            '<circle cx="15" cy="15" r="2" fill="rgba(255,255,255,0.171)"/>' +
+            '<circle cx="15" cy="15" r="2" fill="' +
+            escapeXmlAttr(dot) +
+            '"/>' +
             '</pattern>' +
             '<filter id="' +
             uid +
@@ -165,6 +204,9 @@
         var outHpx = Math.max(1, Math.round((outWpx * outH) / outW));
 
         var uid = makeUid();
+        var panLayer = canvas.querySelector ? canvas.querySelector('.annotation-mental-pan-layer') : null;
+        var canvasBgFill = svgResolveCanvasBgFill(data, panLayer);
+        var dotFillPat = svgDotFillForCanvasBg(canvasBgFill);
         var branchEls = branchesEl ? branchesEl.querySelectorAll('.annotation-mental-branch') : [];
         var branchById = {};
         branchEls.forEach(function (div) {
@@ -397,7 +439,7 @@
             viewBoxStr +
             '" preserveAspectRatio="none" overflow="hidden" ' +
             'role="img" aria-label="Diagrama mental">\n' +
-            buildDefs(uid) +
+            buildDefs(uid, dotFillPat) +
             '<rect x="' +
             vx +
             '" y="' +
@@ -406,7 +448,9 @@
             vw +
             '" height="' +
             vh +
-            '" fill="#313131"/>' +
+            '" fill="' +
+            escapeXmlAttr(canvasBgFill) +
+            '"/>' +
             '<rect x="' +
             vx +
             '" y="' +
@@ -509,6 +553,8 @@
         var vbH = Math.max(1, b.maxY - b.minY);
         var viewBoxStr = b.minX + ' ' + b.minY + ' ' + vbW + ' ' + vbH;
         var uid = makeUid();
+        var canvasBgFillJson = svgResolveCanvasBgFill(parsed, null);
+        var dotFillJson = svgDotFillForCanvasBg(canvasBgFillJson);
 
         var edgePaths = '';
         edges.forEach(function (edge) {
@@ -675,7 +721,7 @@
             viewBoxStr +
             '" preserveAspectRatio="xMidYMid meet" overflow="hidden" ' +
             'role="img" aria-label="Diagrama mental">\n' +
-            buildDefs(uid) +
+            buildDefs(uid, dotFillJson) +
             '<rect x="' +
             b.minX +
             '" y="' +
@@ -684,7 +730,9 @@
             vbW +
             '" height="' +
             vbH +
-            '" fill="#313131"/>' +
+            '" fill="' +
+            escapeXmlAttr(canvasBgFillJson) +
+            '"/>' +
             '<rect x="' +
             b.minX +
             '" y="' +

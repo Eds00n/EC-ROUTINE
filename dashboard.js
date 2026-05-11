@@ -10,6 +10,65 @@ function getApiBaseUrl() {
 }
 
 var EC_ROUTINE_THEME_KEY = 'ecRoutineTheme';
+var EC_ROUTINE_DAY_NUMBERS_KEY = 'ecRoutineShowDayNumbers';
+
+function getEcRoutineShowDayNumbers() {
+    try {
+        var v = localStorage.getItem(EC_ROUTINE_DAY_NUMBERS_KEY);
+        return v !== '0' && v !== 'false';
+    } catch (e) {
+        return true;
+    }
+}
+
+function syncUserProfileDayNumbersToggle() {
+    var btn = document.getElementById('userProfileDayNumbersToggle');
+    if (!btn) return;
+    var show = getEcRoutineShowDayNumbers();
+    btn.setAttribute('aria-checked', show ? 'true' : 'false');
+    btn.setAttribute(
+        'aria-label',
+        show
+            ? 'Números dos dias visíveis. Clicar para ocultar.'
+            : 'Números dos dias ocultos. Clicar para mostrar.'
+    );
+    btn.title = show ? 'Ocultar números dos dias' : 'Mostrar números dos dias';
+    var host = document.getElementById('userProfileDayNumbersToggleIconHost');
+    if (host) {
+        var iconName = show ? 'calendar-days' : 'eye-off';
+        host.innerHTML =
+            '<i data-lucide="' +
+            iconName +
+            '" class="user-profile-theme-toggle__lucide" aria-hidden="true"></i>';
+        var lucideLib = typeof lucide !== 'undefined' ? lucide : typeof Lucide !== 'undefined' ? Lucide : null;
+        if (lucideLib && lucideLib.createIcons) lucideLib.createIcons();
+    }
+}
+
+function applyEcRoutineDayNumbersFromStorage() {
+    var show = getEcRoutineShowDayNumbers();
+    var root = document.documentElement;
+    if (show) root.removeAttribute('data-ec-day-numbers');
+    else root.setAttribute('data-ec-day-numbers', 'off');
+    syncUserProfileDayNumbersToggle();
+}
+
+function setEcRoutineShowDayNumbers(show) {
+    try {
+        localStorage.setItem(EC_ROUTINE_DAY_NUMBERS_KEY, show ? '1' : '0');
+    } catch (e) {}
+    var root = document.documentElement;
+    if (show) root.removeAttribute('data-ec-day-numbers');
+    else root.setAttribute('data-ec-day-numbers', 'off');
+    syncUserProfileDayNumbersToggle();
+}
+
+function closeUserProfileSettingsMenu() {
+    var menu = document.getElementById('userProfileSettingsMenu');
+    var btn = document.getElementById('userProfileSettingsBtn');
+    if (menu) menu.classList.add('hidden');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+}
 
 function getEcRoutineTheme() {
     try {
@@ -81,6 +140,14 @@ function getAvatarImageUrl(raw) {
     if (low.indexOf('/api/register') !== -1) return '';
     if (low.indexOf('/api/routines') !== -1) return '';
     if (low.indexOf('/api/') !== -1 && low.indexOf('/api/attachments/') === -1) return '';
+    // Evita tentar carregar valores inválidos (ex.: tokens/ids soltos sem caminho de arquivo).
+    var isAbsolute = low.indexOf('http://') === 0 || low.indexOf('https://') === 0 || low.indexOf('data:') === 0;
+    var hasAttachmentPath =
+        low.indexOf('/api/attachments/') !== -1 ||
+        low.indexOf('/attachments/') !== -1 ||
+        low.indexOf('attachments/') === 0;
+    var looksLikeImageFile = /\.(png|jpe?g|webp|gif|svg)(\?.*)?$/i.test(u);
+    if (!isAbsolute && !hasAttachmentPath && !looksLikeImageFile) return '';
     return getAttachmentFullUrl(u);
 }
 
@@ -844,9 +911,142 @@ function stripBase64FromRoutines(routines) {
     return out;
 }
 
+var _dashboardBootLoaderHidden = false;
+
+function waitMs(ms) {
+    return new Promise(function (resolve) {
+        setTimeout(resolve, ms);
+    });
+}
+
+function withTimeout(promise, timeoutMs) {
+    return new Promise(function (resolve, reject) {
+        var finished = false;
+        var timer = setTimeout(function () {
+            if (finished) return;
+            finished = true;
+            resolve(false);
+        }, timeoutMs);
+        Promise.resolve(promise)
+            .then(function (value) {
+                if (finished) return;
+                finished = true;
+                clearTimeout(timer);
+                resolve(value);
+            })
+            .catch(function (err) {
+                if (finished) return;
+                finished = true;
+                clearTimeout(timer);
+                reject(err);
+            });
+    });
+}
+
+var ENTRY_BOOT_LOADER_MS = 3400;
+var ENTRY_ROUTINES_WAIT_MS = 1200;
+
+function readAndClearEntryTransitionFlags() {
+    var flags = {
+        mode: 'default',
+        showBootLoader: false,
+        forceDailyOnboarding: false,
+        postLoginWelcome: false
+    };
+    try {
+        flags.mode = String(sessionStorage.getItem('ec_entry_transition_mode') || 'default');
+        flags.showBootLoader = sessionStorage.getItem('ec_show_login_boot_loader') === '1';
+        flags.forceDailyOnboarding = sessionStorage.getItem('ec_force_daily_onboarding') === '1';
+        flags.postLoginWelcome = sessionStorage.getItem('ec_post_login_welcome') === '1';
+        sessionStorage.removeItem('ec_entry_transition_mode');
+        sessionStorage.removeItem('ec_show_login_boot_loader');
+        sessionStorage.removeItem('ec_force_daily_onboarding');
+        sessionStorage.removeItem('ec_post_login_welcome');
+        sessionStorage.removeItem('ec_adm_quick_login');
+    } catch (e) {}
+    return flags;
+}
+
+function showDashboardBootLoader() {
+    try {
+        var loader = document.getElementById('dashboardBootLoader');
+        if (!loader) return false;
+        _dashboardBootLoaderHidden = false;
+        loader.classList.remove('is-hidden');
+        loader.setAttribute('aria-hidden', 'false');
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+function hideDashboardBootLoader() {
+    if (_dashboardBootLoaderHidden) return;
+    try {
+        var loader = document.getElementById('dashboardBootLoader');
+        if (!loader) return;
+        _dashboardBootLoaderHidden = true;
+        loader.classList.add('is-hidden');
+        loader.setAttribute('aria-hidden', 'true');
+        setTimeout(function () {
+            try {
+                if (loader && loader.parentNode) loader.parentNode.removeChild(loader);
+            } catch (_) {}
+        }, 450);
+    } catch (e) {}
+}
+
+async function runEntryTransitionFlow(entryFlags, routinesLoadPromise, bootDelayPromise) {
+    var dashboardOverview = document.getElementById('dashboardOverview');
+    var rotinasView = document.getElementById('rotinasView');
+    if (dashboardOverview && dashboardOverview.classList) dashboardOverview.classList.add('hidden');
+    if (rotinasView && rotinasView.classList) rotinasView.classList.add('hidden');
+
+    if (entryFlags.showBootLoader && bootDelayPromise) {
+        await bootDelayPromise;
+        hideDashboardBootLoader();
+    }
+
+    // Dá um tempo curto para dados chegarem sem prender o fluxo visual.
+    await withTimeout(routinesLoadPromise, ENTRY_ROUTINES_WAIT_MS);
+
+    var routinesLoaded = Array.isArray(allRoutines);
+    var noRoutines = routinesLoaded && allRoutines.length === 0;
+    var redirectingToCreateAfterWelcome = false;
+    try {
+        if (entryFlags.postLoginWelcome && noRoutines) {
+            if (typeof runPostLoginWelcomeOnboarding === 'function') {
+                redirectingToCreateAfterWelcome = !!(await runPostLoginWelcomeOnboarding());
+            }
+        } else {
+            if (typeof runDailyOnboarding === 'function') {
+                await runDailyOnboarding(true);
+            }
+        }
+    } catch (e) {
+        if (dashboardOverview && dashboardOverview.classList) dashboardOverview.classList.add('hidden');
+        if (rotinasView && rotinasView.classList) rotinasView.classList.add('hidden');
+    }
+
+    return { redirectingToCreateAfterWelcome: redirectingToCreateAfterWelcome };
+}
+
 // Verificar autenticação e carregar dados
 document.addEventListener('DOMContentLoaded', async () => {
     applyEcRoutineThemeFromStorage();
+    applyEcRoutineDayNumbersFromStorage();
+    var dashboardOverview = document.getElementById('dashboardOverview');
+    var rotinasView = document.getElementById('rotinasView');
+    if (dashboardOverview && dashboardOverview.classList) dashboardOverview.classList.add('hidden');
+    if (rotinasView && rotinasView.classList) rotinasView.classList.add('hidden');
+    var entryFlags = readAndClearEntryTransitionFlags();
+    var bootDelayPromise = null;
+    if (entryFlags.showBootLoader) {
+        showDashboardBootLoader();
+        bootDelayPromise = waitMs(ENTRY_BOOT_LOADER_MS);
+    }
+    // Failsafe extremo para não prender o ecrã em erro inesperado.
+    setTimeout(hideDashboardBootLoader, 11000);
     try {
         var saved = localStorage.getItem('ecRoutineSyncQueue');
         if (saved) window._syncQueue = JSON.parse(saved);
@@ -856,6 +1056,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, SYNC_QUEUE_INTERVAL_MS);
 
     setupAnnotationDownloadUi();
+    ensureCarouselClipResizeListener();
 
     // Anexar botões de navegação logo no início para não depender do resto do carregamento
     const btnVerRotinas = document.getElementById('btnVerRotinas');
@@ -976,6 +1177,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             if (response.user) {
                 setHeaderAvatar(response.user.picture || '');
+                syncProfileAdminButton(response.user);
             }
             var ru = response.user;
             var uidStore = localStorage.getItem('userId');
@@ -1014,54 +1216,24 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     setupUserProfileModal();
 
-    // Carregar rotinas (sempre, mesmo sem token)
-    await loadRoutines();
+    // Carrega em paralelo: a tela EC ROUTINE não fica presa nesse processo.
+    var routinesLoadPromise = withTimeout(loadRoutines(), 4500).catch(function (eLoad) {
+        console.warn('Falha ao carregar rotinas no tempo esperado:', eLoad);
+        return false;
+    });
 
     // Configurar controles (com checagem para não quebrar se algum elemento não existir)
     setupControls();
     setupDetailListFilters();
     if (typeof setupAnnotationModal === 'function') setupAnnotationModal();
-
-    // Boas-vindas pós-login (1ª tarefa) ou apresentação diária — após gate de perfil
-    const dashboardOverview = document.getElementById('dashboardOverview');
-    const rotinasView = document.getElementById('rotinasView');
-    var onboardingRan = false;
-    var redirectingToCreateAfterWelcome = false;
-    try {
-        var postLoginWelcome = false;
-        var forceDailyOnboarding = false;
-        try {
-            postLoginWelcome = sessionStorage.getItem('ec_post_login_welcome') === '1';
-            forceDailyOnboarding = sessionStorage.getItem('ec_force_daily_onboarding') === '1';
-        } catch (e) {}
-        var noRoutines = !allRoutines || allRoutines.length === 0;
-        if (postLoginWelcome && noRoutines) {
-            try {
-                sessionStorage.removeItem('ec_post_login_welcome');
-            } catch (e) {}
-            if (typeof runPostLoginWelcomeOnboarding === 'function') {
-                redirectingToCreateAfterWelcome = !!(await runPostLoginWelcomeOnboarding());
-                onboardingRan = redirectingToCreateAfterWelcome;
-            }
-        } else {
-            if (postLoginWelcome) {
-                try {
-                    sessionStorage.removeItem('ec_post_login_welcome');
-                } catch (e) {}
-            }
-            if (forceDailyOnboarding) {
-                try {
-                    sessionStorage.removeItem('ec_force_daily_onboarding');
-                } catch (e) {}
-            }
-            if (typeof runDailyOnboarding === 'function') onboardingRan = await runDailyOnboarding(forceDailyOnboarding);
-        }
-    } catch (e) {}
+    // Ordem fixa e centralizada: EC ROUTINE -> overlay -> dashboard.
+    var transitionState = await runEntryTransitionFlow(entryFlags, routinesLoadPromise, bootDelayPromise);
+    dashboardOverview = document.getElementById('dashboardOverview');
+    rotinasView = document.getElementById('rotinasView');
+    var redirectingToCreateAfterWelcome = !!(transitionState && transitionState.redirectingToCreateAfterWelcome);
 
     // Evita mostrar o dashboard por um instante antes do redirect para /create
-    if (redirectingToCreateAfterWelcome) {
-        return;
-    }
+    if (redirectingToCreateAfterWelcome) return;
 
     // Visão geral primeiro, ou grelha de cards se ?view=cards (ex.: ← Voltar no detalhe da rotina)
     var openCardsFromUrl = false;
@@ -1614,16 +1786,41 @@ async function apiRequest(endpoint, options = {}) {
     }
 }
 
-var _profileState = { open: false, edit: false, last: null };
+var _profileState = { open: false, edit: false, last: null, loadGeneration: 0 };
 
-function formatProfileBirthDisplay(iso) {
+/** Idade a partir de YYYY-MM-DD (referência: data local de hoje). */
+function formatProfileAgeFromBirth(iso) {
     if (!iso) return '—';
     try {
-        var p = String(iso).split('-');
-        if (p.length !== 3) return iso;
-        return p[2] + '/' + p[1] + '/' + p[0];
+        var p = String(iso).trim().split('-');
+        if (p.length < 3) return '—';
+        var y = parseInt(p[0], 10);
+        var m = parseInt(p[1], 10) - 1;
+        var d = parseInt(p[2], 10);
+        if (!isFinite(y) || !isFinite(m) || !isFinite(d)) return '—';
+        var birth = new Date(y, m, d);
+        if (isNaN(birth.getTime())) return '—';
+        var today = new Date();
+        var age = today.getFullYear() - birth.getFullYear();
+        var md = today.getMonth() - birth.getMonth();
+        if (md < 0 || (md === 0 && today.getDate() < birth.getDate())) age--;
+        if (age < 0 || age > 130) return '—';
+        return String(age);
     } catch (e) {
-        return iso;
+        return '—';
+    }
+}
+
+function setProfileStatValue(el, rawNum) {
+    if (!el) return;
+    var n = rawNum != null && rawNum !== '' ? Number(rawNum) : 0;
+    if (isNaN(n)) n = 0;
+    if (n === 0) {
+        el.textContent = 'Comece agora';
+        el.classList.add('user-profile-stat-value--zero');
+    } else {
+        el.textContent = String(Math.round(n));
+        el.classList.remove('user-profile-stat-value--zero');
     }
 }
 
@@ -1646,16 +1843,35 @@ function setModalAvatar(picture) {
     applyAvatarPicture('modal', picture);
 }
 
+function syncProfileAdminButton(user) {
+    var show = !!(user && user.isAdmin === true);
+    ['profileBtnAdmin', 'headerAdminBtn'].forEach(function (id) {
+        var btn = document.getElementById(id);
+        if (!btn) return;
+        if (show) {
+            btn.classList.remove('hidden');
+            btn.removeAttribute('hidden');
+            btn.setAttribute('aria-hidden', 'false');
+        } else {
+            btn.classList.add('hidden');
+            btn.setAttribute('hidden', 'hidden');
+            btn.setAttribute('aria-hidden', 'true');
+        }
+    });
+}
+
 function openUserProfileModal() {
     var modal = document.getElementById('userProfileModal');
     var trig = document.getElementById('headerProfileTrigger');
     if (!modal) return;
+    closeUserProfileSettingsMenu();
     modal.classList.remove('hidden');
     modal.setAttribute('aria-hidden', 'false');
     if (trig) trig.setAttribute('aria-expanded', 'true');
     _profileState.open = true;
     document.body.style.overflow = 'hidden';
     syncEcRoutineThemeToggle();
+    syncUserProfileDayNumbersToggle();
     loadUserProfileIntoModal();
 }
 
@@ -1663,6 +1879,7 @@ function closeUserProfileModal() {
     var modal = document.getElementById('userProfileModal');
     var trig = document.getElementById('headerProfileTrigger');
     if (!modal) return;
+    closeUserProfileSettingsMenu();
     modal.classList.add('hidden');
     modal.setAttribute('aria-hidden', 'true');
     if (trig) trig.setAttribute('aria-expanded', 'false');
@@ -1680,25 +1897,31 @@ function setProfileModalMode(edit) {
     if (e) e.classList.toggle('hidden', !edit);
 }
 
-function applyProfileModalData(data) {
-    var u = data.user || {};
+function applyProfileModalData(data, prevUserSnap) {
+    var du = data.user;
+    var raw = du || {};
+    var u = Object.assign({}, raw);
+    var prev = prevUserSnap || null;
+    if (prev && prev.isAdmin === true && du && !Object.prototype.hasOwnProperty.call(du, 'isAdmin')) {
+        u.isAdmin = true;
+        du.isAdmin = true;
+    }
     var s = data.stats || {};
+    var displayName = (u.name && String(u.name).trim()) || '—';
     var em = document.getElementById('profileModalEmail');
     if (em) em.textContent = u.email || '';
+    var ht = document.getElementById('userProfileModalTitle');
+    if (ht) ht.textContent = displayName;
     var vn = document.getElementById('profileViewName');
-    if (vn) vn.textContent = u.name || '—';
+    if (vn) vn.textContent = displayName;
     var vs = document.getElementById('profileViewSexuality');
     if (vs) vs.textContent = sexualityLabel(u.sexuality);
-    var vb = document.getElementById('profileViewBirth');
-    if (vb) vb.textContent = formatProfileBirthDisplay(u.birthDate);
-    var st = document.getElementById('profileStatTasks');
-    if (st) st.textContent = String(s.tasksTotal != null ? s.tasksTotal : 0);
-    var sr = document.getElementById('profileStatRoutines');
-    if (sr) sr.textContent = String(s.routinesCount != null ? s.routinesCount : 0);
-    var sa = document.getElementById('profileStatSeqActive');
-    if (sa) sa.textContent = String(s.activeSequences != null ? s.activeSequences : 0);
-    var sm = document.getElementById('profileStatSeqMax');
-    if (sm) sm.textContent = String(s.maxStreak != null ? s.maxStreak : 0);
+    var va = document.getElementById('profileViewAge');
+    if (va) va.textContent = formatProfileAgeFromBirth(u.birthDate);
+    setProfileStatValue(document.getElementById('profileStatTasks'), s.tasksTotal);
+    setProfileStatValue(document.getElementById('profileStatRoutines'), s.routinesCount);
+    setProfileStatValue(document.getElementById('profileStatSeqActive'), s.activeSequences);
+    setProfileStatValue(document.getElementById('profileStatSeqMax'), s.maxStreak);
     setModalAvatar(u.picture);
     var en = document.getElementById('profileEditName');
     if (en) en.value = u.name || '';
@@ -1706,18 +1929,33 @@ function applyProfileModalData(data) {
     if (es) es.value = u.sexuality || '';
     var eb = document.getElementById('profileEditBirth');
     if (eb) eb.value = u.birthDate || '';
+    syncProfileAdminButton(u);
+    try {
+        var modal = document.getElementById('userProfileModal');
+        if (modal && !modal.classList.contains('hidden')) {
+            var lucideLib = typeof lucide !== 'undefined' ? lucide : typeof Lucide !== 'undefined' ? Lucide : null;
+            if (lucideLib && lucideLib.createIcons) lucideLib.createIcons({ attrs: { 'stroke-width': 1.75 } });
+        }
+    } catch (e) {
+        /* ignore */
+    }
 }
 
 async function loadUserProfileIntoModal() {
     var token = localStorage.getItem('token');
-    if (!token) return;
+    if (!token) return Promise.resolve();
+    var gen = ++_profileState.loadGeneration;
+    var prevUserSnap =
+        _profileState.last && _profileState.last.user ? Object.assign({}, _profileState.last.user) : null;
     try {
         var data = await apiRequest('/profile');
+        if (gen !== _profileState.loadGeneration) return;
         _profileState.last = data;
-        applyProfileModalData(data);
+        applyProfileModalData(data, prevUserSnap);
     } catch (err) {
         try {
             var alt = await apiRequest('/verify');
+            if (gen !== _profileState.loadGeneration) return;
             if (alt && alt.user) {
                 var prev = (_profileState.last && _profileState.last.stats) || {};
                 var merged = {
@@ -1730,12 +1968,13 @@ async function loadUserProfileIntoModal() {
                     }
                 };
                 _profileState.last = merged;
-                applyProfileModalData(merged);
+                applyProfileModalData(merged, prevUserSnap);
                 return;
             }
         } catch (e2) {
             /* ignora */
         }
+        if (gen !== _profileState.loadGeneration) return;
         showToast(String((err && err.message) || 'Não foi possível carregar o perfil'), 5000);
     }
 }
@@ -1745,8 +1984,14 @@ function setupUserProfileModal() {
     var modal = document.getElementById('userProfileModal');
     var overlay = document.getElementById('userProfileOverlay');
     var themeToggle = document.getElementById('userProfileThemeToggle');
+    var settingsBtn = document.getElementById('userProfileSettingsBtn');
+    var settingsMenu = document.getElementById('userProfileSettingsMenu');
+    var panel = document.getElementById('userProfilePanel');
+    var dayNumbersToggle = document.getElementById('userProfileDayNumbersToggle');
     var closeBtn = document.getElementById('userProfileClose');
     var btnEdit = document.getElementById('profileBtnEdit');
+    var btnAdmin = document.getElementById('profileBtnAdmin');
+    var btnHeaderAdmin = document.getElementById('headerAdminBtn');
     var btnPhoto = document.getElementById('profileBtnPhoto');
     var btnSave = document.getElementById('profileBtnSave');
     var btnCancel = document.getElementById('profileBtnCancelEdit');
@@ -1765,18 +2010,48 @@ function setupUserProfileModal() {
     }
     if (overlay) overlay.addEventListener('click', closeUserProfileModal);
     if (closeBtn) closeBtn.addEventListener('click', closeUserProfileModal);
+    if (settingsBtn && settingsMenu) {
+        settingsBtn.addEventListener('click', function (ev) {
+            ev.stopPropagation();
+            settingsMenu.classList.toggle('hidden');
+            settingsBtn.setAttribute('aria-expanded', settingsMenu.classList.contains('hidden') ? 'false' : 'true');
+        });
+    }
+    if (panel && settingsMenu && settingsBtn) {
+        panel.addEventListener('click', function (ev) {
+            if (settingsMenu.classList.contains('hidden')) return;
+            if (settingsBtn.contains(ev.target) || settingsMenu.contains(ev.target)) return;
+            closeUserProfileSettingsMenu();
+        });
+    }
     if (themeToggle) {
         themeToggle.addEventListener('click', function (ev) {
             ev.stopPropagation();
             applyEcRoutineTheme(getEcRoutineTheme() === 'dark' ? 'light' : 'dark');
         });
     }
+    if (dayNumbersToggle) {
+        dayNumbersToggle.addEventListener('click', function (ev) {
+            ev.stopPropagation();
+            setEcRoutineShowDayNumbers(!getEcRoutineShowDayNumbers());
+        });
+    }
     syncEcRoutineThemeToggle();
+    syncUserProfileDayNumbersToggle();
     if (btnEdit) {
         btnEdit.addEventListener('click', async function () {
             await loadUserProfileIntoModal();
             setProfileModalMode(true);
         });
+    }
+    function goAdminPanel() {
+        window.location.href = getApiBaseUrl() + '/admin';
+    }
+    if (btnAdmin) {
+        btnAdmin.addEventListener('click', goAdminPanel);
+    }
+    if (btnHeaderAdmin) {
+        btnHeaderAdmin.addEventListener('click', goAdminPanel);
     }
     if (btnCancel) btnCancel.addEventListener('click', function () { setProfileModalMode(false); });
     if (btnSave) {
@@ -1847,7 +2122,12 @@ function setupUserProfileModal() {
                 });
                 var j = await res.json().catch(function () { return {}; });
                 if (!res.ok) throw new Error(j.error || 'Falha no upload');
-                var urlPath = j.url || '';
+                var urlPath = typeof j.url === 'string' ? j.url.trim() : '';
+                if (!urlPath || urlPath.indexOf('/api/attachments/') === -1) {
+                    throw new Error(
+                        (j && j.error) || 'O servidor não devolveu o endereço do ficheiro. Tente outra vez.'
+                    );
+                }
                 var out2 = await apiRequest('/profile', {
                     method: 'PUT',
                     body: JSON.stringify({ picture: urlPath })
@@ -2130,11 +2410,20 @@ function renderRoutines(routines) {
     const routinesGrid = document.getElementById('routinesGrid');
 
     if (routines.length === 0) {
+        var viewFilterBtnEmpty = document.querySelector('#rotinasView .filter-btn.active');
+        var viewFilterEmpty =
+            viewFilterBtnEmpty && viewFilterBtnEmpty.dataset && viewFilterBtnEmpty.dataset.filter
+                ? String(viewFilterBtnEmpty.dataset.filter)
+                : 'all';
+        var emptyListMsg =
+            viewFilterEmpty === 'sequences' ? 'Nenhuma sequência ativa.' : 'Nenhuma tarefa criada';
         routinesGrid.innerHTML =
             '<div class="routines-empty-state">' +
             '<div class="add-routine-card routines-empty-combined" role="link" tabindex="0" aria-label="Criar nova rotina ou tarefa" onclick="window.location.href=\'create.html\'" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();window.location.href=\'create.html\';}">' +
             '<div class="add-routine-content">' +
-            '<p class="routines-empty-msg" role="status">Nenhuma tarefa criada</p>' +
+            '<p class="routines-empty-msg" role="status">' +
+            emptyListMsg +
+            '</p>' +
             '<div class="add-routine-icon" aria-hidden="true">+</div>' +
             '</div></div></div>';
         return;
@@ -2149,7 +2438,8 @@ function renderRoutines(routines) {
     
     // Adicionar event listeners aos cards
     routines.forEach(routine => {
-        const card = document.querySelector(`[data-routine-id="${routine.id}"]`);
+        const ridEsc = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(String(routine.id)) : String(routine.id);
+        const card = document.querySelector('.routine-card[data-routine-id="' + ridEsc + '"]');
         if (card) {
             card.addEventListener('click', (e) => {
                 if (!e.target.closest('.routine-card-actions')) {
@@ -2247,6 +2537,69 @@ function isRoutineDate(dateStr, routine) {
         return n === weekOfMonth;
     }
     return isRoutineWeekday(dateStr, routine);
+}
+
+/** Dia considerado fechado: check-in na data ou todas as tarefas concluídas nesse dia. */
+function isRoutineDayClosedOut(routine, dateStr) {
+    if (!routine || !dateStr) return false;
+    const checkIns = routine.checkIns || [];
+    if (checkIns.indexOf(dateStr) !== -1) return true;
+    const tasks = routine.tasks || [];
+    if (tasks.length === 0) return false;
+    return tasks.every(function (t) {
+        const d = t.completedDates || [];
+        return d.indexOf(dateStr) !== -1;
+    });
+}
+
+function scheduleTimeHasPassedToday(schedule) {
+    if (!schedule || !schedule.time) return false;
+    const now = new Date();
+    const parts = String(schedule.time).trim().split(':');
+    const h = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10) || 0;
+    const hour = isNaN(h) ? 0 : h;
+    const min = isNaN(m) ? 0 : m;
+    const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, min, 0, 0);
+    return now.getTime() >= target.getTime();
+}
+
+/** Lembrete por tarefa: rotina com horário, já passou o horário de hoje, dia de rotina, dia ainda não fechado, tarefa não concluída nessa data. */
+function shouldShowTaskAwaitingConfirmHint(routine, task, dateStr) {
+    if (!routine || !routine.schedule || !routine.schedule.time) return false;
+    const todayStr = getLocalDateStr(new Date());
+    if (dateStr !== todayStr) return false;
+    if (!isRoutineDate(dateStr, routine)) return false;
+    if (!scheduleTimeHasPassedToday(routine.schedule)) return false;
+    if (isRoutineDayClosedOut(routine, dateStr)) return false;
+    if (task && task._synthetic) return true;
+    const dates = task && task.completedDates ? task.completedDates : [];
+    return dates.indexOf(dateStr) === -1;
+}
+
+function taskAwaitingConfirmHintHtml() {
+    return '<div class="task-awaiting-confirm-hint" role="status">Pendente: confirme se cumpriu a rotina hoje (responda ao lembrete ou marque esta tarefa).</div>';
+}
+
+/** Vista Cards: rotina sem horário fixo, é dia de hoje e ainda não foi concluída — aviso acima dos botões. */
+function shouldShowRoutineNoFixedTimeAwaitingHint(routine) {
+    if (!routine) return false;
+    const todayStr = getLocalDateStr(new Date());
+    if (!isRoutineDate(todayStr, routine)) return false;
+    if (getRoutineCompletedDates(routine).has(todayStr)) return false;
+    const sch = routine.schedule || {};
+    const t = sch.time != null ? String(sch.time).trim() : '';
+    if (t) return false;
+    return true;
+}
+
+function routineNoFixedTimeAwaitingHintHtml() {
+    return (
+        '<div class="routine-card-no-time-awaiting" role="status">' +
+        '<span class="routine-card-no-time-awaiting__icon" aria-hidden="true"><i data-lucide="alert-circle"></i></span>' +
+        '<span class="routine-card-no-time-awaiting__text">À espera que concluas esta tarefa — não tem horário definido.</span>' +
+        '</div>'
+    );
 }
 
 // Conta rotinas com pelo menos um dia atrasado nos últimos 7 dias
@@ -2500,7 +2853,8 @@ function renderFrequencyChart() {
     const goalValue = 3;
     const maxYVisible = Math.max(goalValue, ...series.flatMap(s => s.values), 1);
 
-    const palette = series.map(() => '#000000');
+    /* Cor da série: no tema claro preto; no escuro o CSS força traço/legenda brancos. */
+    const palette = series.map(() => '#0f172a');
 
     const w = 960;
     const h = 260;
@@ -2650,12 +3004,22 @@ function renderFrequencyChart() {
     const finalPointX = x(visEnd);
     const finalPointY = finalSeriesIdx >= 0 ? y(series[finalSeriesIdx].values[visEnd] || 0) : y(0);
 
+    const legendRows = series
+        .map(
+            (s, si) =>
+                `<span class="dashboard-frequency-legend-item" data-series="${si}" tabindex="0" role="button" aria-label="Destacar linha no gráfico"><span class="dashboard-frequency-legend-dot" style="background:${palette[si % palette.length]}"></span>${escapeHtml(
+                    s.name
+                )}</span>`
+        )
+        .join('');
+
     el.innerHTML = `
     <div class="dashboard-frequency-chart-wrap">
         <div class="dashboard-frequency-controls">
             <button type="button" class="dashboard-frequency-toggle ${period === '7d' ? 'is-active' : ''}" data-period="7d">7d</button>
             <button type="button" class="dashboard-frequency-toggle ${period === '30d' ? 'is-active' : ''}" data-period="30d">30d</button>
         </div>
+        <div class="dashboard-frequency-legend dashboard-frequency-legend--top" role="list" aria-label="Linhas por tarefa">${legendRows}</div>
         <div class="dashboard-frequency-chart-tooltip" id="dashboardFrequencyTooltip" hidden></div>
         <svg class="dashboard-frequency-chart-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet" aria-label="Produtividade acumulada por tarefa em linhas">
             ${yTicks.map(t => `<line x1="${pad.left}" y1="${y(t)}" x2="${w - pad.right}" y2="${y(t)}" class="dashboard-frequency-grid-line"/>`).join('')}
@@ -2676,44 +3040,26 @@ function renderFrequencyChart() {
     const endLabelEls = el.querySelectorAll('.dashboard-frequency-end-label');
     const toggles = el.querySelectorAll('.dashboard-frequency-toggle');
     const finalFocusEl = el.querySelector('.dashboard-frequency-final-focus');
+    const legendItems = el.querySelectorAll('.dashboard-frequency-legend-item');
+
+    legendItems.forEach(item => {
+        const si = Number(item.dataset.series);
+        if (Number.isNaN(si)) return;
+        item.addEventListener('mouseenter', () => setSeriesHighlight(si));
+        item.addEventListener('mouseleave', () => setSeriesHighlight(null));
+        item.addEventListener('focus', () => setSeriesHighlight(si));
+        item.addEventListener('blur', () => setSeriesHighlight(null));
+        item.addEventListener('keydown', ev => {
+            if (ev.key === 'Enter' || ev.key === ' ') {
+                ev.preventDefault();
+                setSeriesHighlight(si);
+            }
+        });
+    });
 
     function runCinematicZoom() {
-        if (!svg) return;
-        if (!window._dashboardFrequencyCinematicPlayed) window._dashboardFrequencyCinematicPlayed = {};
-        const key = period;
-        if (window._dashboardFrequencyCinematicPlayed[key]) return;
-        window._dashboardFrequencyCinematicPlayed[key] = true;
-
-        const startVB = { x: 0, y: 0, w: w, h: h };
-        const targetW = w * 0.56;
-        const targetH = h * 0.70;
-        const targetX = Math.max(0, Math.min(w - targetW, finalPointX - targetW * 0.78));
-        const targetY = Math.max(0, Math.min(h - targetH, finalPointY - targetH * 0.42));
-        const endVB = { x: targetX, y: targetY, w: targetW, h: targetH };
-
-        const easeInOut = (t) => (t < 0.5)
-            ? 4 * t * t * t
-            : 1 - Math.pow(-2 * t + 2, 3) / 2;
-
-        if (finalFocusEl) finalFocusEl.classList.remove('is-active');
-        const duration = 1650;
-        const t0 = performance.now();
-
-        function frame(nowTs) {
-            const raw = Math.max(0, Math.min(1, (nowTs - t0) / duration));
-            const k = easeInOut(raw);
-            const vbX = startVB.x + (endVB.x - startVB.x) * k;
-            const vbY = startVB.y + (endVB.y - startVB.y) * k;
-            const vbW = startVB.w + (endVB.w - startVB.w) * k;
-            const vbH = startVB.h + (endVB.h - startVB.h) * k;
-            svg.setAttribute('viewBox', `${vbX} ${vbY} ${vbW} ${vbH}`);
-            if (raw < 1) {
-                requestAnimationFrame(frame);
-                return;
-            }
-            if (finalFocusEl) finalFocusEl.classList.add('is-active');
-        }
-        requestAnimationFrame(frame);
+        // Zoom cinemático desativado: mantém o gráfico estático.
+        if (finalFocusEl) finalFocusEl.classList.add('is-active');
     }
 
     function setSeriesHighlight(seriesIdx) {
@@ -2838,7 +3184,7 @@ function renderStatsCharts(routinesToday, completedCountToday) {
         </div>`;
     }
 
-    // 2) Barras: últimos 7 dias — visual uniforme + contorno sutil no dia atual
+    // 2) Barras: últimos 7 dias — mesma altura em todos os dias; % = concluídas/total do dia
     const weekDataDone = [];
     for (let i = 6; i >= 0; i--) {
         const d = new Date();
@@ -2849,7 +3195,6 @@ function renderStatsCharts(routinesToday, completedCountToday) {
         const done = routinesOnDay.filter((r) => getRoutineCompletedDates(r).has(dateStr)).length;
         weekDataDone.push({ dateStr, total, done, pending: Math.max(0, total - done) });
     }
-    const maxWeek = Math.max(1, ...weekDataDone.map(x => x.total));
     const barEl = document.getElementById('dashboardBarWeekContent');
     if (barEl) {
         const w = 220;
@@ -2864,15 +3209,12 @@ function renderStatsCharts(routinesToday, completedCountToday) {
             done: '#16a34a',
             pending: '#d1d5db'
         };
-        const todayBarDate = getLocalDateStr(new Date());
         const bars = weekDataDone.map((item, i) => {
             const x = pad.left + i * (plotW / 7) + gap / 2;
             const dayName = dayLabels[new Date(item.dateStr + 'T12:00:00').getDay()];
-            const isToday = item.dateStr === todayBarDate;
             let stacks = '';
-            // Barra base para todos os dias (inclusive sem tarefas), mantendo visual consistente.
-            const emptyBaseH = Math.max(8, plotH * 0.18);
-            const barTotalH = item.total > 0 ? (item.total / maxWeek) * plotH : emptyBaseH;
+            // Todas as barras com a mesma altura; só a repartição verde/cinza reflete concluídas/pendentes.
+            const barTotalH = plotH;
             const hDone = item.total > 0 ? (item.done / item.total) * barTotalH : 0;
             const hPen = item.total > 0 ? (item.pending / item.total) * barTotalH : 0;
             const y0 = pad.top + plotH;
@@ -3355,55 +3697,85 @@ function getReferenceDate() {
     return now;
 }
 
-// Gerar heatmap para uma única rotina (13 meses: 6 anteriores + atual + 6 próximos)
-function generateRoutineHeatmap(routine, offset = 0) {
+/** Um mês no formato heatmap dos cards (grelha + classes heatmap-square). */
+function buildRoutineCardCarouselMonthHTML(routine, monthStartDate, allCheckIns, opts) {
+    const y = monthStartDate.getFullYear();
+    const m = monthStartDate.getMonth();
+    const monthData = generateMonthCalendar(y, m, allCheckIns, routine);
+    const monthIndex = opts.monthIndex;
+    const isCurrent = !!opts.isCurrent;
+    const header = monthData.monthName + ' ' + monthData.year;
+    const weekdays = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+    const weekdaysHTML = weekdays
+        .map(function (day) {
+            return '<div class="calendar-weekday">' + escapeHtml(day) + '</div>';
+        })
+        .join('');
+    const daysHTML = monthData.weeks
+        .map(function (week) {
+            return week
+                .map(function (dayData) {
+                    if (dayData === null) {
+                        return '<div class="heatmap-square empty" aria-hidden="true"></div>';
+                    }
+                    const classes = ['heatmap-square'];
+                    if (dayData.routineDay) classes.push('routine-day');
+                    if (dayData.checked) classes.push('checked');
+                    return (
+                        '<div class="' +
+                        classes.join(' ') +
+                        '" data-date="' +
+                        escapeHtml(dayData.date) +
+                        '" title="' +
+                        escapeHtml(dayData.date) +
+                        '"><span class="heatmap-day-number">' +
+                        String(dayData.day) +
+                        '</span></div>'
+                    );
+                })
+                .join('');
+        })
+        .join('');
+    const monthClass = 'calendar-month' + (isCurrent ? ' calendar-month--current' : '');
+    return (
+        '<div class="' +
+        monthClass +
+        '" data-month-index="' +
+        String(monthIndex) +
+        '" aria-label="' +
+        escapeHtml(header) +
+        '">' +
+        '<div class="calendar-month-header">' +
+        escapeHtml(header) +
+        '</div>' +
+        '<div class="calendar-weekdays">' +
+        weekdaysHTML +
+        '</div>' +
+        '<div class="calendar-days-grid">' +
+        daysHTML +
+        '</div></div>'
+    );
+}
+
+/** Vista Cards: 13 meses (6 atrás + atual + 6 à frente) para arrasto contínuo; índice 6 = heatmapOffsets. */
+function generateRoutineCardHeatmapCarousel(routine, offset) {
     const allCheckIns = getRoutineCompletedDates(routine);
     const referenceDate = getReferenceDate();
-    const centerDate = new Date(referenceDate.getFullYear(), referenceDate.getMonth() + offset, 1);
-    const monthDataList = [];
-    for (let i = -6; i <= 6; i++) {
-        const d = new Date(centerDate.getFullYear(), centerDate.getMonth() + i, 1);
-        monthDataList.push(generateMonthCalendar(d.getFullYear(), d.getMonth(), allCheckIns, routine));
+    let inner = '';
+    for (let i = 0; i < 13; i++) {
+        const delta = offset + (i - 6);
+        const d = new Date(referenceDate.getFullYear(), referenceDate.getMonth() + delta, 1);
+        inner += buildRoutineCardCarouselMonthHTML(routine, d, allCheckIns, {
+            monthIndex: i,
+            isCurrent: i === 6
+        });
     }
-    const monthsHTML = monthDataList.map((monthData, index) => {
-        const monthIndex = index - 6; // -6 a 6 (0 = centro)
-        const isCurrentMonth = monthIndex === 0;
-        const weekdays = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
-        const weekdaysHTML = weekdays.map(day => `<div class="calendar-weekday">${day}</div>`).join('');
-        const daysHTML = monthData.weeks.map(week => {
-            return week.map(dayData => {
-                if (dayData === null) {
-                    return '<div class="heatmap-square empty"></div>';
-                }
-                const date = new Date(dayData.date);
-                const dateFormatted = date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-                const classes = ['heatmap-square'];
-                if (dayData.routineDay) classes.push('routine-day');
-                if (dayData.checked) classes.push('checked');
-                return `
-                    <div class="${classes.join(' ')}" 
-                         data-date="${dayData.date}"
-                         data-date-formatted="${dateFormatted}">
-                        <span class="heatmap-day-number">${dayData.day}</span>
-                    </div>
-                `;
-            }).join('');
-        }).join('');
-        return `
-            <div class="calendar-month${isCurrentMonth ? ' calendar-month--current' : ''}" data-month-index="${monthIndex}">
-                <div class="calendar-month-header">${monthData.monthName}</div>
-                <div class="calendar-weekdays">${weekdaysHTML}</div>
-                <div class="calendar-days-grid">${daysHTML}</div>
-            </div>
-        `;
-    }).join('');
-    return `
-        <div class="large-heatmap-block" data-routine-id="${routine.id}">
-            <div class="calendar-months-container">
-                ${monthsHTML}
-            </div>
-        </div>
-    `;
+    return (
+        '<div class="large-heatmap-block" aria-label="Calendário de meses">' +
+        '<div class="calendar-months-container">' +
+        inner +
+        '</div></div>'
+    );
 }
 
 // Label do tipo de planejamento para exibição
@@ -3689,6 +4061,9 @@ function createAgendaCard(routine, dateStr) {
             html += '<button type="button" class="agenda-task-menu-btn" data-routine-id="' + escapeHtml(routine.id) + '" data-task-id="' + escapeHtml(task.id) + '" data-annotation-date="' + escapeHtml(dateStr) + '" title="Menu" aria-label="Menu de anotações">⋮</button>';
         }
         html += '</span></div>';
+        if (shouldShowTaskAwaitingConfirmHint(routine, task, dateStr)) {
+            html += taskAwaitingConfirmHintHtml();
+        }
         if (annotationsList.length > 0) {
             var sortedWithIdx = annotationsList.map(function(ann, idx) { return { ann: ann, idx: idx }; }).sort(function(a, b) {
                 var ta = a.ann.lastUpdated ? new Date(a.ann.lastUpdated).getTime() : 0;
@@ -3730,6 +4105,10 @@ function createRoutineCard(routine, options) {
     }
     const allowedBulletTypes = ['reminder', 'task', 'commitment', 'important'];
     const bulletType = allowedBulletTypes.includes(routine.bulletType) ? routine.bulletType : 'task';
+    const noTimeAwaitingBlock =
+        !(options && options.agendaTasksHtml) && shouldShowRoutineNoFixedTimeAwaitingHint(routine)
+            ? routineNoFixedTimeAwaitingHintHtml()
+            : '';
 
     return `
         <div class="routine-card-wrapper">
@@ -3744,18 +4123,21 @@ function createRoutineCard(routine, options) {
                         <h3 class="routine-card-title">${escapeHtml(routine.title)}</h3>
                     </div>
                     ${routine.description ? `<p class="routine-card-description">${escapeHtml(routine.description)}</p>` : ''}
-                    ${planType === 'daily' ? `<div class="routine-card-streak">
+                    <div class="routine-card-streak">
                         <span class="routine-card-streak-label">Sequência de dias</span>
                         <span class="routine-card-streak-number">${streak}</span>
-                    </div>` : ''}
+                    </div>
                     ${(options && options.agendaTasksHtml) ? options.agendaTasksHtml : ''}
-                    <div class="routine-card-actions">
-                        <button type="button" class="card-action-btn" data-edit-id="${routine.id}" title="Editar">✎</button>
+                    <div class="routine-card-footer">
+                        ${noTimeAwaitingBlock}
+                        <div class="routine-card-actions">
+                        <button type="button" class="card-action-btn" data-edit-id="${routine.id}" title="Editar" aria-label="Editar rotina"><i data-lucide="pencil" class="card-action-btn__lucide" aria-hidden="true"></i></button>
                         ${typeof trashBinButtonHTML === 'function' ? trashBinButtonHTML({ className: 'card-action-btn delete', modifier: 'uiverse-trash-btn--card', dataAttrs: { 'data-delete-id': routine.id }, title: 'Excluir', ariaLabel: 'Excluir rotina' }) : `<button type="button" class="card-action-btn delete" data-delete-id="${routine.id}" title="Excluir">×</button>`}
+                        </div>
                     </div>
                 </div>
-                <div class="routine-card-heatmap">
-                    ${generateRoutineHeatmap(routine, heatmapOffsets[routine.id] ?? 0)}
+                <div class="routine-card-heatmap routine-card-heatmap--carousel">
+                    ${generateRoutineCardHeatmapCarousel(routine, heatmapOffsets[routine.id] ?? 0)}
                     <div class="heatmap-nav">
                         <button type="button" class="heatmap-nav-btn heatmap-prev" data-routine-id="${routine.id}" title="Mês anterior" aria-label="Mês anterior">‹</button>
                         <button type="button" class="heatmap-nav-btn heatmap-next" data-routine-id="${routine.id}" title="Próximo mês" aria-label="Próximo mês">›</button>
@@ -3776,7 +4158,8 @@ async function updateHeatmapForRoutine(routineId, newOffset, fromButtonAnimation
     const routine = allRoutines.find(r => r.id === routineId);
     if (!routine) return;
 
-    const card = document.querySelector(`[data-routine-id="${routineId}"]`);
+    const ridEsc = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(String(routineId)) : String(routineId);
+    const card = document.querySelector('.routine-card[data-routine-id="' + ridEsc + '"]');
     if (!card) return;
 
     const heatmapContainer = card.querySelector('.routine-card-heatmap');
@@ -3789,7 +4172,7 @@ async function updateHeatmapForRoutine(routineId, newOffset, fromButtonAnimation
     }
 
     heatmapContainer.innerHTML = `
-        ${generateRoutineHeatmap(routine, newOffset)}
+        ${generateRoutineCardHeatmapCarousel(routine, newOffset)}
         <div class="heatmap-nav">
             <button type="button" class="heatmap-nav-btn heatmap-prev" data-routine-id="${routineId}" title="Mês anterior" aria-label="Mês anterior">‹</button>
             <button type="button" class="heatmap-nav-btn heatmap-next" data-routine-id="${routineId}" title="Próximo mês" aria-label="Próximo mês">›</button>
@@ -3826,6 +4209,13 @@ async function updateHeatmapForRoutine(routineId, newOffset, fromButtonAnimation
     }
     attachHeatmapListeners(card, routine);
     applyMobileHeatmapCompactUI();
+    if (newBlock) {
+        requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+                syncCarouselClipForHeatmapBlock(newBlock);
+            });
+        });
+    }
 }
 
 function ensureHeatmapMobileMediaListener() {
@@ -3837,18 +4227,16 @@ function ensureHeatmapMobileMediaListener() {
     });
 }
 
-/** Em ecrãs pequenos: mantém a grelha de dias visível; esconde só os algarismos (CSS). Toque num dia abre o modal ampliado. */
+/** Remove botão/classe legados do heatmap nos cards, se existirem em cache. */
 function applyMobileHeatmapCompactUI() {
     ensureHeatmapMobileMediaListener();
-    const mq = window.matchMedia('(max-width: 768px)');
-    const compact = mq.matches;
     document.querySelectorAll('.routine-card[data-routine-id]').forEach(function (card) {
         var rid = card.getAttribute('data-routine-id');
         var routine = typeof allRoutines !== 'undefined' && allRoutines ? allRoutines.find(function (r) { return r.id === rid; }) : null;
         if (!routine) return;
         var cardHeatmap = card.querySelector('.routine-card-heatmap');
         if (!cardHeatmap) return;
-        cardHeatmap.classList.toggle('routine-card-heatmap--mobile-compact', compact);
+        cardHeatmap.classList.remove('routine-card-heatmap--mobile-compact');
         var legacyBtn = cardHeatmap.querySelector('.heatmap-mobile-expand-btn');
         if (legacyBtn) legacyBtn.remove();
     });
@@ -3856,7 +4244,8 @@ function applyMobileHeatmapCompactUI() {
 
 // Animação de arraste ao clicar em ‹ ou ›: desliza a faixa de meses e depois atualiza o conteúdo.
 function animateHeatmapToMonth(routineId, routine, direction) {
-    const card = document.querySelector(`[data-routine-id="${routineId}"]`);
+    const ridEsc = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(String(routineId)) : String(routineId);
+    const card = document.querySelector('.routine-card[data-routine-id="' + ridEsc + '"]');
     if (!card) {
         updateHeatmapForRoutine(routineId, (heatmapOffsets[routineId] ?? 0) + direction, true);
         return;
@@ -3905,6 +4294,7 @@ function animateHeatmapToMonth(routineId, routine, direction) {
 // Aplicar posição inicial do heatmap (mês atual centralizado). Retorna true se aplicou, false se dimensões inválidas.
 // Usa flag para aplicar apenas uma vez e evitar tremida por múltiplas reaplicações.
 function applyHeatmapInitialPosition(heatmapBlock) {
+    syncCarouselClipForHeatmapBlock(heatmapBlock);
     if (heatmapBlock.dataset.positionInitialized === 'true') return true;
     if (heatmapBlock.dataset.userHasDragged === '1') return true;
     const container = heatmapBlock.querySelector('.calendar-months-container');
@@ -3933,6 +4323,7 @@ function applyHeatmapInitialPosition(heatmapBlock) {
     heatmapBlock.dataset.positionInitialized = 'true';
     requestAnimationFrame(() => {
         container.style.transition = '';
+        syncCarouselClipForHeatmapBlock(heatmapBlock);
     });
     return true;
 }
@@ -3986,6 +4377,39 @@ function updateCenteredMonth(heatmapBlock, translateX) {
 // Configurar arrastar/swipe no heatmap (13 meses em faixa, arrastar para mover)
 const HEATMAP_GAP = 12;
 
+/** Limpa variáveis de clip em px (legado); em ≤900px o 1 mês legível vem do CSS width: calc(13*100%). */
+function syncCarouselClipForHeatmapBlock(heatmapBlock) {
+    if (!heatmapBlock || typeof heatmapBlock.closest !== 'function') return;
+    if (!heatmapBlock.closest('#rotinasView')) return;
+    var host = heatmapBlock.closest('.routine-card-heatmap');
+    if (!host || !host.classList.contains('routine-card-heatmap--carousel')) return;
+    heatmapBlock.style.removeProperty('--ec-carousel-slot-px');
+    heatmapBlock.removeAttribute('data-carousel-slot-sync');
+}
+
+function syncCarouselClipForRoutineCards() {
+    document.querySelectorAll('#rotinasView .routine-card-heatmap--carousel .large-heatmap-block').forEach(function (el) {
+        syncCarouselClipForHeatmapBlock(el);
+    });
+}
+
+var _ecCarouselClipResizeTimer = null;
+function ensureCarouselClipResizeListener() {
+    if (window._ecCarouselClipResizeBound) return;
+    window._ecCarouselClipResizeBound = true;
+    window.addEventListener(
+        'resize',
+        function () {
+            if (_ecCarouselClipResizeTimer) clearTimeout(_ecCarouselClipResizeTimer);
+            _ecCarouselClipResizeTimer = setTimeout(function () {
+                _ecCarouselClipResizeTimer = null;
+                syncCarouselClipForRoutineCards();
+            }, 120);
+        },
+        { passive: true }
+    );
+}
+
 function getHeatmapScrollRange(container, heatmapBlock) {
     if (!container) return 0;
     const viewportWidth = heatmapBlock.offsetWidth;
@@ -4026,19 +4450,15 @@ function setupHeatmapDrag(heatmapBlock, routineId) {
     const onEnd = () => {
         if (!isDragging) return;
         const container = heatmapBlock.querySelector('.calendar-months-container');
-        if (container) {
+        if (container && container.children.length >= 13) {
             const match = container.style.transform ? container.style.transform.match(/translateX\(([^)]+)px\)/) : null;
-            const scrollRange = getHeatmapScrollRange(container, heatmapBlock);
-            const minTranslateX = -scrollRange;
-            const translateX = match ? parseFloat(match[1]) : minTranslateX / 2;
+            const translateX = match ? parseFloat(match[1]) : 0;
             updateCenteredMonth(heatmapBlock, translateX);
-            container.style.transition = '';
+            syncCarouselClipForHeatmapBlock(heatmapBlock);
 
-            const minX = minTranslateX;
-            const curOffset = heatmapOffsets[routineId] ?? 0;
             const viewportRect = heatmapBlock.getBoundingClientRect();
             const viewportCenterX = viewportRect.left + viewportRect.width / 2;
-            let bestIdx = 6;
+            let bestIdx = 0;
             let bestDist = Infinity;
             [...container.children].forEach((child, idx) => {
                 const rect = child.getBoundingClientRect();
@@ -4049,11 +4469,33 @@ function setupHeatmapDrag(heatmapBlock, routineId) {
                     bestIdx = idx;
                 }
             });
-            if (translateX >= -10 && bestIdx <= 1 && curOffset > -12) {
-                updateHeatmapForRoutine(routineId, curOffset - 1);
-            } else if (translateX <= minX + 20 && bestIdx >= 11 && curOffset < 12) {
-                updateHeatmapForRoutine(routineId, curOffset + 1);
+            const curOffset = heatmapOffsets[routineId] ?? 0;
+            const delta = bestIdx - 6;
+            let newOffset = curOffset + delta;
+            newOffset = Math.max(-12, Math.min(12, newOffset));
+            const appliedDelta = newOffset - curOffset;
+
+            if (appliedDelta !== 0) {
+                updateHeatmapForRoutine(routineId, newOffset, true);
+            } else {
+                const bestChild = container.children[bestIdx];
+                let snapTarget = translateX;
+                if (bestChild) {
+                    const r = bestChild.getBoundingClientRect();
+                    snapTarget = translateX + (viewportCenterX - (r.left + r.width / 2));
+                }
+                container.style.transition = 'transform 0.28s cubic-bezier(0.22, 0.8, 0.25, 1)';
+                requestAnimationFrame(() => {
+                    container.style.transform = 'translateX(' + snapTarget + 'px)';
+                    updateCenteredMonth(heatmapBlock, snapTarget);
+                    syncCarouselClipForHeatmapBlock(heatmapBlock);
+                });
+                setTimeout(function () {
+                    container.style.transition = '';
+                }, 300);
             }
+        } else if (container) {
+            container.style.transition = '';
         }
         isDragging = false;
         if (hasMoved) heatmapBlock.dataset.justDragged = '1';
@@ -4089,7 +4531,7 @@ function setupHeatmapDrag(heatmapBlock, routineId) {
     heatmapBlock.addEventListener('touchstart', onStart, { passive: false });
 }
 
-// Anexar listeners do heatmap (clique em dia → modal, arrastar para mover, botões mês anterior/próximo)
+// Anexar listeners do heatmap (arrastar para mover meses, botões ‹ ›)
 function attachHeatmapListeners(card, routine) {
     const cardHeatmap = card.querySelector('.routine-card-heatmap');
     if (!cardHeatmap) return;
@@ -4121,24 +4563,13 @@ function attachHeatmapListeners(card, routine) {
         });
     }
 
-    const squares = cardHeatmap.querySelectorAll('.heatmap-square:not(.empty)');
-    squares.forEach(square => {
-        square.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const block = square.closest('.large-heatmap-block');
-            if (block?.dataset.justDragged) return;
-            const date = square.getAttribute('data-date');
-            const dateFormatted = square.getAttribute('data-date-formatted');
-            if (date) showMonthAmplifiedModal(date, routine);
-        });
-    });
-
     const heatmapBlock = cardHeatmap.querySelector('.large-heatmap-block');
     if (heatmapBlock) {
         const container = heatmapBlock.querySelector('.calendar-months-container');
-        if (container) {
+        if (container && container.children.length >= 13) {
             // ResizeObserver: aplicar posição quando o heatmap receber dimensões não-zero
             const resizeObserver = new ResizeObserver(() => {
+                syncCarouselClipForHeatmapBlock(heatmapBlock);
                 if (applyHeatmapInitialPosition(heatmapBlock)) {
                     resizeObserver.disconnect();
                 }
@@ -4154,8 +4585,9 @@ function attachHeatmapListeners(card, routine) {
 
             // Polling até sucesso (importante para Cursor preview e ambientes com layout tardio)
             ensureHeatmapPositionWithRetry(heatmapBlock);
+            setupHeatmapDrag(heatmapBlock, routine.id);
+            ensureCarouselClipResizeListener();
         }
-        setupHeatmapDrag(heatmapBlock, routine.id);
     }
 }
 
@@ -5053,6 +5485,58 @@ function initAnnotationCaderno() {
     window._annotationCadernoCanvas = canvas;
 }
 
+function mentalNormalizeHex6(hex) {
+    var s = String(hex == null ? '' : hex).trim();
+    if (/^#[0-9A-Fa-f]{6}$/.test(s)) return s.toLowerCase();
+    if (/^[0-9A-Fa-f]{6}$/.test(s)) return '#' + s.toLowerCase();
+    return '';
+}
+
+function mentalRelativeLuminanceFromHex(hex) {
+    var h = mentalNormalizeHex6(hex).replace(/^#/, '');
+    if (h.length !== 6) return 0.25;
+    var r = parseInt(h.slice(0, 2), 16) / 255;
+    var g = parseInt(h.slice(2, 4), 16) / 255;
+    var b = parseInt(h.slice(4, 6), 16) / 255;
+    var lin = function (c) {
+        return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    };
+    var R = lin(r);
+    var G = lin(g);
+    var B = lin(b);
+    return 0.2126 * R + 0.7152 * G + 0.0722 * B;
+}
+
+/** Aplica cor ao pan-layer e grava em _annotationMentalData.canvasBg (#rrggbb). */
+function applyMentalDiagramCanvasBackground(hex) {
+    var panLayer = document.getElementById('annotationMentalPanLayer');
+    if (!panLayer) return;
+    var h = mentalNormalizeHex6(hex) || '#3a404a';
+    if (window._annotationMentalData) window._annotationMentalData.canvasBg = h;
+    panLayer.style.backgroundColor = h;
+    var lum = mentalRelativeLuminanceFromHex(h);
+    var dot = lum > 0.45 ? 'rgba(15, 23, 42, 0.22)' : 'rgba(255, 255, 255, 0.26)';
+    panLayer.style.backgroundImage = 'radial-gradient(' + dot + ' 1.25px, transparent 1.25px)';
+    panLayer.style.backgroundSize = '20px 20px';
+    panLayer.style.backgroundPosition = '0 0';
+    var inp = document.getElementById('annotationMentalBgColorInput');
+    if (inp && inp.type === 'color') inp.value = h;
+}
+
+/** Volta ao fundo definido no CSS e remove canvasBg dos dados. */
+function clearMentalDiagramCanvasBackgroundInline() {
+    var panLayer = document.getElementById('annotationMentalPanLayer');
+    if (panLayer) {
+        panLayer.style.backgroundColor = '';
+        panLayer.style.backgroundImage = '';
+        panLayer.style.backgroundSize = '';
+        panLayer.style.backgroundPosition = '';
+    }
+    if (window._annotationMentalData && window._annotationMentalData.canvasBg) delete window._annotationMentalData.canvasBg;
+    var inp = document.getElementById('annotationMentalBgColorInput');
+    if (inp && inp.type === 'color') inp.value = '#3a404a';
+}
+
 function initAnnotationMental() {
     revokeAllMentalBranchImageBlobUrls();
     const centerEl = document.getElementById('annotationMentalCenter');
@@ -5075,6 +5559,7 @@ function initAnnotationMental() {
             } catch (_) {}
         }
     }
+    if (data.canvasBg && !mentalNormalizeHex6(data.canvasBg)) delete data.canvasBg;
     var centerNode = data.nodes.find(function (n) { return n.id === 'center'; });
     if (centerNode) {
         var cx = typeof centerNode.x === 'number' ? centerNode.x : 150;
@@ -5093,6 +5578,11 @@ function initAnnotationMental() {
         branchesEl.appendChild(div);
     });
     window._annotationMentalData = data;
+    if (mentalNormalizeHex6(data.canvasBg)) {
+        applyMentalDiagramCanvasBackground(data.canvasBg);
+    } else {
+        clearMentalDiagramCanvasBackgroundInline();
+    }
     let nextNum = 1;
     data.nodes.forEach(n => {
         if (n.id && n.id !== 'center' && typeof n.id === 'string' && n.id.match(/^b\d+$/)) {
@@ -5118,6 +5608,7 @@ function initAnnotationMental() {
     setMentalZoom(1);
     setupMentalZoomControls();
     setupMentalPan();
+    setupMentalRecenterButton();
     setupMentalConnectionMode();
     if (!document.body.dataset.mentalImagePasteSetup) {
         document.body.dataset.mentalImagePasteSetup = '1';
@@ -5363,34 +5854,137 @@ function getMentalPan() {
     return (p && typeof p.x === 'number' && typeof p.y === 'number') ? p : { x: 0, y: 0 };
 }
 
-/** Centraliza a vista no anexo do mapa mental: conteúdo ao centro com zoom 1 (como na imagem). */
-function centerMentalViewOnContent() {
+/** Retorna a caixa (coordenadas do conteúdo) que envolve todos os nós do diagrama mental. */
+function getMentalDataContentBounds() {
     var data = window._annotationMentalData;
-    if (!data || !data.nodes || data.nodes.length === 0) return;
+    if (!data || !data.nodes || data.nodes.length === 0) return null;
     var nodes = data.nodes;
     var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     var defaultW = 170, defaultH = 96;
     nodes.forEach(function(n) {
         var x = typeof n.x === 'number' ? n.x : 150;
         var y = typeof n.y === 'number' ? n.y : 80;
-        var w = (typeof n.width === 'number' ? n.width : (n.id === 'center' ? BRANCH_CENTER_DEFAULT_WIDTH : defaultW));
-        var h = (typeof n.height === 'number' ? n.height : (n.id === 'center' ? BRANCH_CENTER_DEFAULT_HEIGHT : defaultH));
+        var w = typeof n.width === 'number' ? n.width : (n.id === 'center' ? BRANCH_CENTER_DEFAULT_WIDTH : defaultW);
+        var h = typeof n.height === 'number' ? n.height : (n.id === 'center' ? BRANCH_CENTER_DEFAULT_HEIGHT : defaultH);
         minX = Math.min(minX, x);
         minY = Math.min(minY, y);
         maxX = Math.max(maxX, x + w);
         maxY = Math.max(maxY, y + h);
     });
-    if (minX === Infinity) return;
-    var centerX = (minX + maxX) / 2;
-    var centerY = (minY + maxY) / 2;
-    var canvasW = window.innerWidth;
-    var canvasH = window.innerHeight;
+    if (minX === Infinity) return null;
+    return {
+        minX: minX,
+        minY: minY,
+        maxX: maxX,
+        maxY: maxY,
+        centerX: (minX + maxX) / 2,
+        centerY: (minY + maxY) / 2
+    };
+}
+
+/** True se a caixa dos anexos não intersecta o canvas (utilizador perdeu-se ao arrastar). */
+function mentalIsContentOffScreen() {
+    var canvas = document.getElementById('annotationMentalCanvas');
+    var modal = document.getElementById('annotationModal');
+    if (!canvas || !modal || modal.classList.contains('hidden') || !modal.classList.contains('annotation-modal--mental')) {
+        return false;
+    }
+    var b = getMentalDataContentBounds();
+    if (!b) return false;
+    var cr = canvas.getBoundingClientRect();
+    if (cr.width <= 0 || cr.height <= 0) return false;
+    var z = (typeof window._annotationMentalZoom === 'number' && window._annotationMentalZoom > 0) ? window._annotationMentalZoom : 1;
+    var pan = getMentalPan();
+    var pad = 14;
+    var vl = cr.left + pad;
+    var vt = cr.top + pad;
+    var vr = cr.right - pad;
+    var vb = cr.bottom - pad;
+    function contentPointToScreen(sx, sy) {
+        return {
+            x: cr.left + pan.x + z * sx,
+            y: cr.top + pan.y + z * sy
+        };
+    }
+    var c1 = contentPointToScreen(b.minX, b.minY);
+    var c2 = contentPointToScreen(b.maxX, b.minY);
+    var c3 = contentPointToScreen(b.minX, b.maxY);
+    var c4 = contentPointToScreen(b.maxX, b.maxY);
+    var sl = Math.min(c1.x, c2.x, c3.x, c4.x);
+    var st = Math.min(c1.y, c2.y, c3.y, c4.y);
+    var sr = Math.max(c1.x, c2.x, c3.x, c4.x);
+    var sb = Math.max(c1.y, c2.y, c3.y, c4.y);
+    var iw = Math.min(sr, vr) - Math.max(sl, vl);
+    var ih = Math.min(sb, vb) - Math.max(st, vt);
+    return iw <= 1 || ih <= 1;
+}
+
+function updateMentalRecenterButtonVisibility() {
+    var btn = document.getElementById('annotationMentalRecenterBtn');
+    if (!btn) return;
+    try {
+        if (mentalIsContentOffScreen()) btn.classList.remove('hidden');
+        else btn.classList.add('hidden');
+    } catch (_) {
+        btn.classList.add('hidden');
+    }
+}
+
+/** Recentraliza o pan no centro da caixa dos nós, mantendo o zoom atual. */
+function centerMentalPanOnContentPreserveZoom() {
+    var b = getMentalDataContentBounds();
+    var canvas = document.getElementById('annotationMentalCanvas');
+    if (!b || !canvas) return;
+    var zoom = (typeof window._annotationMentalZoom === 'number' && window._annotationMentalZoom > 0) ? window._annotationMentalZoom : 1;
+    var cr = canvas.getBoundingClientRect();
+    var cw = cr.width > 0 ? cr.width : window.innerWidth;
+    var ch = cr.height > 0 ? cr.height : window.innerHeight;
+    if (cw <= 0 || ch <= 0) return;
+    window._annotationMentalPan = {
+        x: Math.round(cw / 2 - b.centerX * zoom),
+        y: Math.round(ch / 2 - b.centerY * zoom)
+    };
+    applyMentalTransform();
+}
+
+function setupMentalRecenterButton() {
+    var canvas = document.getElementById('annotationMentalCanvas');
+    var btn = document.getElementById('annotationMentalRecenterBtn');
+    if (!canvas || !btn) return;
+    if (!canvas.dataset.recenterBtnSetup) {
+        canvas.dataset.recenterBtnSetup = '1';
+        btn.addEventListener('click', function() {
+            centerMentalPanOnContentPreserveZoom();
+        });
+        if (typeof ResizeObserver !== 'undefined') {
+            try {
+                var ro = new ResizeObserver(function() {
+                    updateMentalRecenterButtonVisibility();
+                });
+                ro.observe(canvas);
+                canvas._mentalRecenterResizeObserver = ro;
+            } catch (_) {}
+        }
+    }
+    var lucideLib = window.lucide;
+    if (lucideLib && lucideLib.createIcons) lucideLib.createIcons({ attrs: { 'stroke-width': 1.75 } });
+    updateMentalRecenterButtonVisibility();
+}
+
+/** Centraliza a vista no anexo do mapa mental: conteúdo ao centro com zoom 1 (como na imagem). */
+function centerMentalViewOnContent() {
+    var b = getMentalDataContentBounds();
+    if (!b) return;
+    var canvas = document.getElementById('annotationMentalCanvas');
+    var cr = canvas ? canvas.getBoundingClientRect() : null;
+    var canvasW = cr && cr.width > 0 ? cr.width : window.innerWidth;
+    var canvasH = cr && cr.height > 0 ? cr.height : window.innerHeight;
     if (canvasW <= 0 || canvasH <= 0) return;
     var zoom = 1;
     window._annotationMentalZoom = zoom;
     window._annotationMentalPan = {
-        x: Math.round(canvasW / 2 - centerX * zoom),
-        y: Math.round(canvasH / 2 - centerY * zoom)
+        x: Math.round(canvasW / 2 - b.centerX * zoom),
+        y: Math.round(canvasH / 2 - b.centerY * zoom)
     };
     var label = document.getElementById('annotationMentalZoomLevel');
     if (label) label.textContent = Math.round(zoom * 100) + '%';
@@ -5403,6 +5997,7 @@ function applyMentalTransform() {
     var zoom = (typeof window._annotationMentalZoom === 'number' && window._annotationMentalZoom > 0) ? window._annotationMentalZoom : 1;
     var pan = getMentalPan();
     wrap.style.transform = 'translate(' + pan.x + 'px,' + pan.y + 'px) scale(' + zoom + ')';
+    updateMentalRecenterButtonVisibility();
 }
 
 function setMentalZoom(level) {
@@ -5886,23 +6481,35 @@ function drawMentalConnections() {
     svg.style.overflow = 'visible';
     svg.innerHTML = '';
     if (!data.edges || !data.edges.length) return;
-    /* Seta no fim da linha (direção: from → to) */
-    var defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-    var arrowMarker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
-    arrowMarker.setAttribute('id', 'annotationMentalArrowEnd');
-    arrowMarker.setAttribute('viewBox', '0 0 10 10');
-    arrowMarker.setAttribute('refX', '9');
-    arrowMarker.setAttribute('refY', '5');
-    arrowMarker.setAttribute('markerWidth', '10');
-    arrowMarker.setAttribute('markerHeight', '10');
-    arrowMarker.setAttribute('orient', 'auto');
-    arrowMarker.setAttribute('markerUnits', 'userSpaceOnUse');
-    var arrowShape = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    arrowShape.setAttribute('d', 'M 0 0 L 10 5 L 0 10 Z');
-    arrowShape.setAttribute('fill', '#ffffff');
-    arrowMarker.appendChild(arrowShape);
-    defs.appendChild(arrowMarker);
-    svg.appendChild(defs);
+    /** Seta no fim da curva: polígono em vez de marker-end (Safari/WebKit com CSS scale no ancestral desloca markers). */
+    function appendMentalArrowPolygon(svgEl, x0, y0, cpx, cpy, xEnd, yEnd) {
+        var tdx = 2 * (xEnd - cpx);
+        var tdy = 2 * (yEnd - cpy);
+        var tl = Math.sqrt(tdx * tdx + tdy * tdy);
+        if (tl < 1e-6) {
+            tdx = xEnd - x0;
+            tdy = yEnd - y0;
+            tl = Math.sqrt(tdx * tdx + tdy * tdy) || 1;
+        }
+        tdx /= tl;
+        tdy /= tl;
+        var L = 9;
+        var W = 5;
+        var bx = xEnd - tdx * L;
+        var by = yEnd - tdy * L;
+        var px = -tdy;
+        var py = tdx;
+        var pLx = bx + px * W * 0.5;
+        var pLy = by + py * W * 0.5;
+        var pRx = bx - px * W * 0.5;
+        var pRy = by - py * W * 0.5;
+        var poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        poly.setAttribute('points', xEnd + ',' + yEnd + ' ' + pLx + ',' + pLy + ' ' + pRx + ',' + pRy);
+        poly.setAttribute('fill', 'rgba(255,255,255,0.88)');
+        poly.setAttribute('class', 'annotation-mental-connection-arrow');
+        poly.setAttribute('pointer-events', 'none');
+        svgEl.appendChild(poly);
+    }
     function screenToContent(screenX, screenY) {
         return {
             x: (screenX - canvasRect.left - pan.x) / zoom,
@@ -5936,7 +6543,7 @@ function drawMentalConnections() {
         var toR = toEl.getBoundingClientRect();
         var fromC = screenToContent(fromR.left + fromR.width / 2, fromR.top + fromR.height / 2);
         var toC = screenToContent(toR.left + toR.width / 2, toR.top + toR.height / 2);
-        /* Extremos nas bordas dos nós: se a linha for ao centro, marker-end fica tapado pelo cartão preto */
+        /* Extremos nas bordas dos nós: se a linha for ao centro, a seta fica tapada pelo cartão preto */
         var fromW = fromR.width / zoom;
         var fromH = fromR.height / zoom;
         var toW = toR.width / zoom;
@@ -5987,9 +6594,9 @@ function drawMentalConnections() {
         path.setAttribute('stroke-width', '1.5');
         path.setAttribute('stroke-linecap', 'round');
         path.setAttribute('stroke-linejoin', 'round');
-        path.setAttribute('marker-end', 'url(#annotationMentalArrowEnd)');
         path.setAttribute('class', 'annotation-mental-connection-path');
         svg.appendChild(path);
+        appendMentalArrowPolygon(svg, x1, y1, cpx, cpy, x2, y2);
         var linhaEditId = window._annotationMentalLinhaEditNodeId;
         if (linhaEditId && (edge.from === linhaEditId || edge.to === linhaEditId)) {
             var r = 6;
@@ -7170,7 +7777,10 @@ function getAnnotationDataFromEditors() {
             });
         }
         var edges = (data.edges && data.edges.length) ? data.edges.filter(function(e) { return nodeIds[e.from] && nodeIds[e.to]; }).map(function(e) { return { from: e.from, to: e.to, type: e.type || 'hierarchical' }; }) : [];
-        return JSON.stringify({ nodes: nodes, edges: edges });
+        var payload = { nodes: nodes, edges: edges };
+        var cbg = mentalNormalizeHex6(data.canvasBg || '');
+        if (cbg) payload.canvasBg = cbg;
+        return JSON.stringify(payload);
     }
     return null;
 }
@@ -7398,7 +8008,7 @@ function getRoutineTimeMin(routine) {
 }
 
 function statusForDailyOnboardingRoutine(r, completedTodaySet, currentTimeMin) {
-    if (completedTodaySet.has(r.id)) return { status: 'done', label: 'Concluída' };
+    if (completedTodaySet.has(r.id)) return { status: 'done', label: 'Concluído' };
     const routineMin = getRoutineTimeMin(r);
     if (routineMin != null) {
         if (currentTimeMin >= routineMin - 15 && currentTimeMin <= routineMin + 60) return { status: 'progress', label: 'Em andamento' };
@@ -7561,7 +8171,7 @@ async function runPostLoginWelcomeOnboarding() {
     if (dash && dash.classList) dash.classList.add('hidden');
     if (rot && rot.classList) rot.classList.add('hidden');
 
-    var STEP_MS = 2700;
+    var STEP_MS = 1900;
     function sleep(ms) {
         return new Promise(function (resolve) {
             setTimeout(resolve, ms);
@@ -7575,8 +8185,15 @@ async function runPostLoginWelcomeOnboarding() {
     await sleep(STEP_MS);
 
     await hidePostLoginWelcomeOverlay();
-    window.location.href = '/create';
-    return true;
+    try {
+        window.location.assign('/create');
+        await waitMs(700);
+        var path = String(window.location.pathname || '').toLowerCase();
+        var stillOnDashboard = path.indexOf('/dashboard') !== -1 || path.indexOf('dashboard.html') !== -1;
+        return !stillOnDashboard;
+    } catch (e) {
+        return false;
+    }
 }
 
 async function runDailyOnboarding(forceShow) {
@@ -7590,14 +8207,12 @@ async function runDailyOnboarding(forceShow) {
     if (dashboardOverview && dashboardOverview.classList) dashboardOverview.classList.add('hidden');
     if (rotinasView && rotinasView.classList) rotinasView.classList.add('hidden');
 
-    var STEP_MS = 2700;
+    var STEP_MS = 2600;
     function sleep(ms) {
         return new Promise(function(resolve) { setTimeout(resolve, ms); });
     }
 
     showDailyOnboardingOverlay();
-    setDailyOnboardingStep(1);
-    await sleep(STEP_MS);
     setDailyOnboardingStep(2);
     // Adia render pesado para o próximo frame, evitando micro-travada na troca de passo.
     await new Promise(function(resolve) {
@@ -7852,6 +8467,20 @@ function setupAnnotationModal() {
                     showToast((err && err.message) || 'Não foi possível exportar SVG.');
                 });
         });
+    }
+    var mentalBgBtn = document.getElementById('annotationMentalBgBtn');
+    var mentalBgInput = document.getElementById('annotationMentalBgColorInput');
+    if (mentalBgBtn && mentalBgInput) {
+        mentalBgBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            mentalBgInput.click();
+        });
+        function onMentalBgPick() {
+            if (mentalBgInput.value) applyMentalDiagramCanvasBackground(mentalBgInput.value);
+        }
+        mentalBgInput.addEventListener('input', onMentalBgPick);
+        mentalBgInput.addEventListener('change', onMentalBgPick);
     }
     document.querySelectorAll('#annotationEditorDigitalizing .annotation-tool-btn').forEach(btn => {
         btn.addEventListener('click', function() {
@@ -8211,64 +8840,4 @@ function closeNotification(routineId) {
     setTimeout(() => {
         notification.remove();
     }, 300);
-}
-
-// Modal de Mês Ampliado (ao clicar em um dia do heatmap)
-function showMonthAmplifiedModal(dateStr, routine) {
-    const modal = document.getElementById('dayInfoModal');
-    const dateElement = document.getElementById('dayInfoDate');
-    const gridElement = document.getElementById('monthAmplifiedGrid');
-    
-    if (!modal || !dateElement || !gridElement) return;
-    
-    const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if (!match) return;
-    const year = parseInt(match[1], 10);
-    const month = parseInt(match[2], 10) - 1;
-    
-    const allCheckIns = getRoutineCompletedDates(routine);
-    const monthData = generateMonthCalendar(year, month, allCheckIns, routine);
-    
-    dateElement.textContent = monthData.monthName;
-    
-    const weekdays = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
-    const weekdaysHTML = weekdays.map(d => `<div class="month-amplified-weekday">${d}</div>`).join('');
-    
-    const daysHTML = monthData.weeks.map(week => {
-        return week.map(dayData => {
-            if (dayData === null) {
-                return '<div class="month-amplified-square empty"></div>';
-            }
-            const classes = ['month-amplified-square'];
-            if (dayData.routineDay) classes.push('routine-day');
-            if (dayData.checked) classes.push('checked');
-            return `<div class="${classes.join(' ')}">${dayData.day}</div>`;
-        }).join('');
-    }).join('');
-    
-    gridElement.innerHTML = `<div class="month-amplified-weekdays">${weekdaysHTML}</div><div class="month-amplified-days">${daysHTML}</div>`;
-    
-    modal.classList.add('active');
-
-    const overlay = modal.querySelector('.day-info-overlay');
-    if (overlay) overlay.onclick = closeDayInfoModal;
-
-    const closeBtn = document.getElementById('dayInfoClose');
-
-    if (closeBtn) closeBtn.onclick = closeDayInfoModal;
-    
-    const handleEsc = (e) => {
-        if (e.key === 'Escape') {
-            closeDayInfoModal();
-            document.removeEventListener('keydown', handleEsc);
-        }
-    };
-    document.addEventListener('keydown', handleEsc);
-}
-
-function closeDayInfoModal() {
-    const modal = document.getElementById('dayInfoModal');
-    if (modal) {
-        modal.classList.remove('active');
-    }
 }

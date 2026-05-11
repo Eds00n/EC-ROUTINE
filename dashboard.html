@@ -5,6 +5,7 @@
         (function () {
             try {
                 if (localStorage.getItem('ecRoutineTheme') === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+                if (localStorage.getItem('ecRoutineShowDayNumbers') === '0') document.documentElement.setAttribute('data-ec-day-numbers', 'off');
             } catch (e) {}
         })();
     </script>
@@ -37,12 +38,6 @@
             font-weight: 900;
             letter-spacing: 0.1em;
             text-transform: uppercase;
-            color: #000000;
-            -webkit-text-fill-color: #000000;
-            background: none;
-            background-image: none;
-            -webkit-background-clip: border-box;
-            background-clip: border-box;
         }
         .header-profile-trigger {
             justify-self: end;
@@ -56,10 +51,9 @@
             background: #fff;
             font: inherit;
             cursor: pointer;
-            color: #111;
         }
         .header-profile-trigger:hover { background: #f9fafb; }
-        .username { font-size: 0.9rem; font-weight: 600; color: #0f172a; }
+        .username { font-size: 0.9rem; font-weight: 600; }
         .user-avatar-wrap { position: relative; width: 32px; height: 32px; flex-shrink: 0; }
         .user-avatar-fallback {
             display: block;
@@ -69,9 +63,35 @@
             background: linear-gradient(135deg, #1a1a2e 0%, #2563eb 100%);
         }
         .user-avatar-img { border-radius: 8px; object-fit: cover; vertical-align: middle; }
+        .dashboard-boot-loader {
+            position: fixed;
+            inset: 0;
+            z-index: 5000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8fafc;
+            color: #0f172a;
+            opacity: 1;
+            visibility: visible;
+            transition: opacity 0.35s ease, visibility 0s linear 0.35s;
+        }
+        .dashboard-boot-loader.is-hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        .dashboard-boot-loader__brand {
+            margin: 0;
+            font-size: clamp(2rem, 4.4vw, 3.2rem);
+            font-weight: 900;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: #000000;
+        }
     </style>
-    <link rel="stylesheet" href="dashboard.css?v=20260419theme-lucide">
-    <link rel="stylesheet" href="dashboard-theme.css?v=20260419theme-lucide">
+    <link rel="stylesheet" href="dashboard.css?v=20260420profile-admin">
+    <link rel="stylesheet" href="dashboard-theme.css?v=20260420profile-admin">
     <link rel="stylesheet" href="uiverse-trash-bin.css?v=20260418styles">
     <link rel="stylesheet" href="uiverse-download-btn.css?v=20260418styles">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -79,24 +99,31 @@
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
+    <div id="dashboardBootLoader" class="dashboard-boot-loader is-hidden" role="status" aria-live="polite" aria-hidden="true" aria-label="A carregar dashboard">
+        <h1 class="dashboard-boot-loader__brand">EC ROUTINE</h1>
+    </div>
     <header class="header">
         <div class="header-left">
         </div>
         <div class="header-center">
-            <h1>EC ROUTINE</h1>
+            <h1 class="header-title">EC ROUTINE</h1>
+            <p class="header-subtitle">Organize sua rotina. Meça sua produtividade.</p>
         </div>
-        <button type="button" class="header-profile-trigger" id="headerProfileTrigger" aria-haspopup="dialog" aria-expanded="false" aria-controls="userProfileModal" title="Ver perfil">
-            <span class="username" id="username">NOME DO USUARIO</span>
-            <span class="user-avatar-wrap" aria-hidden="true">
-                <img id="headerUserAvatarImg" class="user-avatar-img hidden" alt="" width="32" height="32" decoding="async" />
-                <span id="headerUserAvatarFall" class="user-avatar-fallback"></span>
-            </span>
-        </button>
+        <div class="header-right">
+            <button type="button" class="header-admin-btn hidden" id="headerAdminBtn" hidden aria-hidden="true" title="Painel de administrador">ADM</button>
+            <button type="button" class="header-profile-trigger" id="headerProfileTrigger" aria-haspopup="dialog" aria-expanded="false" aria-controls="userProfileModal" title="Ver perfil">
+                <span class="username" id="username">Administrador</span>
+                <span class="user-avatar-wrap" aria-hidden="true">
+                    <img id="headerUserAvatarImg" class="user-avatar-img hidden" alt="" width="32" height="32" decoding="async" />
+                    <span id="headerUserAvatarFall" class="user-avatar-fallback"></span>
+                </span>
+            </button>
+        </div>
     </header>
 
     <main class="main-content">
         <!-- Dashboard: Hoje, resposta rápida -->
-        <div id="dashboardOverview" class="dashboard-overview">
+        <div id="dashboardOverview" class="dashboard-overview hidden">
             <div class="dashboard-overview-bar" aria-label="Título do dashboard">
                 <h1 class="dashboard-hero-title">Dashboard</h1>
             </div>
@@ -246,20 +273,28 @@
                 <h3 class="annotation-modal-title" id="annotationPreviewTitle">Escolha como anotar</h3>
                 <p class="annotation-preview-desc">Selecione um tipo de anotação para esta tarefa no dia indicado.</p>
                 <div class="annotation-preview-cards">
-                    <button type="button" class="annotation-preview-card" data-type="caderno" aria-label="Caderno Digital - Folha com pauta para desenho e escrita à mão">
+                    <button type="button" class="annotation-preview-card" data-type="caderno" aria-label="Caderno Digital — em desenvolvimento. Folha com pauta para desenho e escrita à mão.">
                         <img class="annotation-preview-thumb" src="assets/annotation-preview-caderno.svg?v=20260419caderno-dark" width="200" height="120" alt="" aria-hidden="true" decoding="async" />
-                        <span class="annotation-preview-label">Caderno Digital</span>
-                        <span class="annotation-preview-hint">Folha com pauta para desenho e escrita à mão.</span>
+                        <div class="annotation-preview-card-stack">
+                            <span class="annotation-preview-label">Caderno Digital</span>
+                            <span class="annotation-preview-hint">Folha com pauta para desenho e escrita à mão.</span>
+                            <span class="annotation-preview-dev-note" role="note">Em desenvolvimento — pode mudar ou ter limitações.</span>
+                        </div>
                     </button>
-                    <button type="button" class="annotation-preview-card" data-type="digitalizando" aria-label="Digitalizando - Destacar e sublinhar texto da tarefa">
+                    <button type="button" class="annotation-preview-card" data-type="digitalizando" aria-label="Digitalizando — em desenvolvimento. Destacar e sublinhar texto da tarefa.">
                         <img class="annotation-preview-thumb" src="assets/annotation-preview-digitalizando.png?v=20260419" width="200" height="120" alt="" aria-hidden="true" decoding="async" />
-                        <span class="annotation-preview-label">Digitalizando</span>
-                        <span class="annotation-preview-hint">Destacar e sublinhar texto da tarefa.</span>
+                        <div class="annotation-preview-card-stack">
+                            <span class="annotation-preview-label">Digitalizando</span>
+                            <span class="annotation-preview-hint">Destacar e sublinhar texto da tarefa.</span>
+                            <span class="annotation-preview-dev-note" role="note">Em desenvolvimento — pode mudar ou ter limitações.</span>
+                        </div>
                     </button>
                     <button type="button" class="annotation-preview-card" data-type="mental" aria-label="Diagrama - Nós e ramos como anexos flutuantes que você pode arrastar">
                         <img class="annotation-preview-thumb" src="assets/annotation-preview-diagrama.png?v=20260419" alt="" aria-hidden="true" decoding="async" />
-                        <span class="annotation-preview-label">Diagrama</span>
-                        <span class="annotation-preview-hint">Nós e ramos como anexos flutuantes que você pode arrastar.</span>
+                        <div class="annotation-preview-card-stack">
+                            <span class="annotation-preview-label">Diagrama</span>
+                            <span class="annotation-preview-hint">Nós e ramos como anexos flutuantes que você pode arrastar.</span>
+                        </div>
                     </button>
                 </div>
             </div>
@@ -292,7 +327,9 @@
                     <div class="annotation-mental-toolbar">
                         <button type="button" class="annotation-mental-add-branch" id="annotationMentalAddBranch" title="Adicionar nó" aria-label="Adicionar nó">+</button>
                         <button type="button" class="annotation-mental-add-balloon" id="annotationMentalAddBalloon" title="Balão de texto" aria-label="Balão de texto">T</button>
-                        <button type="button" class="annotation-mental-export-svg" id="annotationMentalExportSvg" title="Exportar diagrama completo como SVG (ligações e imagens)" aria-label="Exportar SVG">SVG</button>
+                        <button type="button" class="annotation-mental-export-svg" id="annotationMentalExportSvg" title="Descarregar diagrama como SVG (ligações e imagens)" aria-label="Descarregar diagrama SVG"><i data-lucide="download" class="annotation-mental-export-svg__icon" aria-hidden="true"></i></button>
+                        <button type="button" class="annotation-mental-bg-btn" id="annotationMentalBgBtn" title="Cor de fundo do diagrama" aria-label="Escolher cor de fundo do diagrama"><i data-lucide="palette" class="annotation-mental-bg-btn__icon" aria-hidden="true"></i></button>
+                        <input type="color" id="annotationMentalBgColorInput" class="annotation-mental-bg-color-input" value="#3a404a" title="Cor de fundo" aria-label="Cor de fundo do diagrama" tabindex="-1" />
                         <div class="annotation-mental-connection-tip hidden" id="annotationMentalConnectionTip">Clique em outro nó para conectar.</div>
                         <div class="annotation-mental-add-preview hidden" id="annotationMentalAddPreview">
                             <label for="annotationMentalAddPreviewInput" class="annotation-mental-preview-label">O que será este anexo?</label>
@@ -323,6 +360,10 @@
                             <div class="annotation-mental-center" id="annotationMentalCenter"></div>
                             <div class="annotation-mental-branches" id="annotationMentalBranches"></div>
                         </div>
+                        <button type="button" id="annotationMentalRecenterBtn" class="annotation-mental-recenter-btn hidden" title="Centralizar vista nos anexos" aria-label="Centralizar vista nos anexos">
+                            <i data-lucide="scan-search" class="annotation-mental-recenter-btn__icon" aria-hidden="true"></i>
+                            <span class="annotation-mental-recenter-btn__label">Ver anexos</span>
+                        </button>
                     </div>
                 </div>
                 <div class="annotation-modal-actions">
@@ -345,41 +386,79 @@
     <!-- Modal de perfil do utilizador -->
     <div class="user-profile-modal hidden" id="userProfileModal" role="dialog" aria-modal="true" aria-labelledby="userProfileModalTitle" aria-hidden="true">
         <div class="user-profile-overlay" id="userProfileOverlay"></div>
-        <div class="user-profile-panel">
-            <button type="button" class="user-profile-theme-toggle" id="userProfileThemeToggle" role="switch" aria-checked="false" aria-label="Alternar tema claro ou escuro" title="Tema">
-                <span class="user-profile-theme-toggle__thumb" aria-hidden="true"><span id="userProfileThemeToggleIconHost" class="user-profile-theme-toggle__icon-host"><i data-lucide="sun" class="user-profile-theme-toggle__lucide" aria-hidden="true"></i></span></span>
+        <div class="user-profile-panel" id="userProfilePanel">
+            <button type="button" class="user-profile-settings-btn" id="userProfileSettingsBtn" aria-expanded="false" aria-haspopup="true" aria-controls="userProfileSettingsMenu" aria-label="Configurações" title="Configurações">
+                <i data-lucide="settings" class="user-profile-settings-btn__icon" aria-hidden="true"></i>
             </button>
+            <div class="user-profile-settings-menu hidden" id="userProfileSettingsMenu" role="region" aria-label="Configurações">
+                <div class="user-profile-settings-row">
+                    <span class="user-profile-settings-label" id="userProfileSettingsThemeLabel">Tema claro / escuro</span>
+                    <button type="button" class="user-profile-theme-toggle user-profile-theme-toggle--in-menu" id="userProfileThemeToggle" role="switch" aria-checked="false" aria-labelledby="userProfileSettingsThemeLabel" title="Alternar tema">
+                        <span class="user-profile-theme-toggle__thumb" aria-hidden="true"><span id="userProfileThemeToggleIconHost" class="user-profile-theme-toggle__icon-host"><i data-lucide="sun" class="user-profile-theme-toggle__lucide" aria-hidden="true"></i></span></span>
+                    </button>
+                </div>
+                <div class="user-profile-settings-row user-profile-settings-row--last">
+                    <span class="user-profile-settings-label" id="userProfileSettingsDayNumbersLabel">Mostrar números dos dias nas tarefas</span>
+                    <button type="button" class="user-profile-theme-toggle user-profile-theme-toggle--in-menu user-profile-day-numbers-toggle" id="userProfileDayNumbersToggle" role="switch" aria-checked="true" aria-labelledby="userProfileSettingsDayNumbersLabel" title="Alternar números dos dias">
+                        <span class="user-profile-theme-toggle__thumb" aria-hidden="true"><span id="userProfileDayNumbersToggleIconHost" class="user-profile-theme-toggle__icon-host"><i data-lucide="calendar-days" class="user-profile-theme-toggle__lucide" aria-hidden="true"></i></span></span>
+                    </button>
+                </div>
+            </div>
             <button type="button" class="user-profile-close" id="userProfileClose" aria-label="Fechar perfil">×</button>
             <div class="user-profile-head">
                 <div class="user-profile-avatar-block">
-                    <img id="profileModalAvatar" class="user-profile-avatar-img hidden" alt="" width="96" height="96" decoding="async" />
+                    <img id="profileModalAvatar" class="user-profile-avatar-img hidden" alt="" width="76" height="76" decoding="async" />
                     <div id="profileModalAvatarFall" class="user-profile-avatar-fallback" aria-hidden="true"></div>
                 </div>
-                <h2 class="user-profile-title" id="userProfileModalTitle">Perfil</h2>
+                <p class="user-profile-eyebrow">Perfil</p>
+                <h2 class="user-profile-display-name" id="userProfileModalTitle">—</h2>
                 <p class="user-profile-email" id="profileModalEmail"></p>
             </div>
             <div class="user-profile-body" id="userProfileViewMode">
                 <dl class="user-profile-dl">
                     <dt>Nome</dt><dd id="profileViewName">—</dd>
-                    <dt>Sexualidade</dt><dd id="profileViewSexuality">—</dd>
-                    <dt>Nascimento</dt><dd id="profileViewBirth">—</dd>
+                    <dt>Gênero</dt><dd id="profileViewSexuality">—</dd>
+                    <dt>Idade</dt><dd id="profileViewAge">—</dd>
                 </dl>
                 <div class="user-profile-stats" aria-label="Estatísticas">
-                    <div class="user-profile-stat"><span class="user-profile-stat-value" id="profileStatTasks">0</span><span class="user-profile-stat-label">Tarefas</span></div>
-                    <div class="user-profile-stat"><span class="user-profile-stat-value" id="profileStatRoutines">0</span><span class="user-profile-stat-label">Rotinas</span></div>
-                    <div class="user-profile-stat"><span class="user-profile-stat-value" id="profileStatSeqActive">0</span><span class="user-profile-stat-label">Sequências ativas</span></div>
-                    <div class="user-profile-stat"><span class="user-profile-stat-value" id="profileStatSeqMax">0</span><span class="user-profile-stat-label">Maior sequência (dias)</span></div>
+                    <div class="user-profile-stat">
+                        <span class="user-profile-stat-icon" aria-hidden="true"><i data-lucide="clipboard-list"></i></span>
+                        <span class="user-profile-stat-value" id="profileStatTasks">0</span>
+                        <span class="user-profile-stat-label">Tarefas</span>
+                    </div>
+                    <div class="user-profile-stat">
+                        <span class="user-profile-stat-icon" aria-hidden="true"><i data-lucide="calendar-days"></i></span>
+                        <span class="user-profile-stat-value" id="profileStatRoutines">0</span>
+                        <span class="user-profile-stat-label">Hábitos criados</span>
+                    </div>
+                    <div class="user-profile-stat">
+                        <span class="user-profile-stat-icon" aria-hidden="true"><i data-lucide="flame"></i></span>
+                        <span class="user-profile-stat-value" id="profileStatSeqActive">0</span>
+                        <span class="user-profile-stat-label">Hábitos em progresso</span>
+                    </div>
+                    <div class="user-profile-stat">
+                        <span class="user-profile-stat-icon" aria-hidden="true"><i data-lucide="trophy"></i></span>
+                        <span class="user-profile-stat-value" id="profileStatSeqMax">0</span>
+                        <span class="user-profile-stat-label">Melhor sequência (dias)</span>
+                    </div>
                 </div>
                 <p class="user-profile-privacy-note">Dados de perfil (incluindo campos opcionais sensíveis) tratam-se conforme a <a href="privacidade.html" target="_blank" rel="noopener noreferrer">Política de Privacidade</a>.</p>
                 <div class="user-profile-actions">
-                    <button type="button" class="user-profile-btn user-profile-btn--primary" id="profileBtnEdit">Editar perfil</button>
+                    <button type="button" class="user-profile-btn user-profile-btn--primary user-profile-btn--with-icon" id="profileBtnEdit">
+                        <i data-lucide="pencil" class="user-profile-btn__icon" aria-hidden="true"></i>
+                        <span>Editar perfil</span>
+                    </button>
+                    <button type="button" class="user-profile-btn user-profile-btn--admin user-profile-btn--with-icon hidden" id="profileBtnAdmin" hidden aria-hidden="true">
+                        <i data-lucide="layout-dashboard" class="user-profile-btn__icon" aria-hidden="true"></i>
+                        <span>Painel admin</span>
+                    </button>
                     <button type="button" class="user-profile-btn user-profile-btn--logout" id="profileBtnLogout">Sair</button>
                 </div>
             </div>
             <div class="user-profile-body hidden" id="userProfileEditMode">
                 <label class="user-profile-label" for="profileEditName">Nome</label>
                 <input type="text" id="profileEditName" class="user-profile-input" maxlength="200" autocomplete="name" />
-                <label class="user-profile-label" for="profileEditSexuality">Sexualidade</label>
+                <label class="user-profile-label" for="profileEditSexuality">Gênero</label>
                 <select id="profileEditSexuality" class="user-profile-input">
                     <option value="">Prefiro não informar</option>
                     <option value="homem">Masculino</option>
@@ -399,21 +478,9 @@
         </div>
     </div>
 
-    <!-- Modal de Mês Ampliado -->
-    <div class="day-info-modal" id="dayInfoModal">
-        <div class="day-info-overlay"></div>
-        <div class="day-info-content">
-            <button class="day-info-close" id="dayInfoClose">×</button>
-            <h3 class="day-info-date" id="dayInfoDate">MES ANO</h3>
-            <div class="month-amplified-grid" id="monthAmplifiedGrid">
-                <!-- Grade do mês será inserida via JS -->
-            </div>
-        </div>
-    </div>
-
     <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
     <script src="trash-bin-button.js"></script>
     <script src="mental-diagram-svg-export.js"></script>
-    <script src="dashboard.js?v=20260419theme-lucide"></script>
+    <script src="dashboard.js?v=20260420profile-admin-race"></script>
 </body>
 </html>

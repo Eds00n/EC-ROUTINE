@@ -38,6 +38,7 @@ O servidor recusa arrancar em produção sem `DATABASE_URL`, ou com `JWT_SECRET`
 
 - URL (monólito): `https://O-TEU-SERVICO/admin` ou `admin.html` na mesma origem.
 - **Autenticação:** inicie sessão com uma conta cujo e-mail esteja em `ADMIN_EMAILS`; o browser envia o JWT nas chamadas a `/api/admin/summary` e `/api/admin/ping`.
+- **404 em `GET /api/admin/ping` (ou perfil sem `isAdmin`):** o backend na Render ainda não foi actualizado com o `server.js` actual do repositório — faça **redeploy** do serviço Web a partir do último commit. Com o código correcto, `GET /api/admin/ping` com Bearer de admin responde **200** JSON; sem ser admin, **403**.
 - **Segurança:** o servidor valida o e-mail do token em cada pedido; não basta «esconder» o link no HTML.
 - No arranque, os logs indicam se `ADMIN_EMAILS` está vazio (ninguém é admin) ou quantos e-mails foram configurados.
 
@@ -84,6 +85,7 @@ Execute manualmente na URL de produção:
 
 - **Login Google:** foi removido do projeto. Se ainda existir `GOOGLE_CLIENT_ID` no painel do host (Render, etc.), pode apagá-la — já não é usada.
 - **Cold start (Render free):** o primeiro pedido após inatividade pode ser lento.
-- **Proxy:** o servidor define `trust proxy` (1 hop por defeito) para conviver com `X-Forwarded-For` da Render e com **express-rate-limit v8**; sem isto, `POST /api/login` podia responder **500**. Opcional: `TRUST_PROXY_HOPS` no ambiente se tiver mais de um proxy. O limitador de `/api/login` também desactiva validações `xForwardedForHeader` / `forwardedHeader` que em alguns proxies ainda geravam erro.
-- **CI:** [`.github/workflows/ci.yml`](.github/workflows/ci.yml) corre `npm test` em push/PR; **não faz deploy** automático.
+- **Proxy:** o servidor define `trust proxy` (1 hop por defeito) para a Render e **express-rate-limit v8**. Se `POST /api/login` voltar a responder **500**, experimente `TRUST_PROXY_HOPS=2` no ambiente. O limitador de `/api/login` e `/api/register` usa `keyGenerator` com fallback de IP, `validate: false` e `passOnStoreError: true` para não derrubar o pedido por detalhes de proxy ou da store em memória.
+- **CI:** [`.github/workflows/ci.yml`](.github/workflows/ci.yml) corre `npm test` em push/PR; **não faz deploy**.
+- **Deploy automático (front na Hostinger por FTP):** [`.github/workflows/deploy-hostinger.yml`](.github/workflows/deploy-hostinger.yml) envia o site estático no push a `main`/`master` quando altera `*.html`, `*.css`, `*.js` ou `assets/`. Configure no GitHub **Settings → Secrets → Actions:** `FTP_SERVER`, `FTP_USERNAME`, `FTP_PASSWORD`. Opcional: `FTP_SERVER_DIR` (ex.: `/public_html/`); sem este secret usa-se a raiz FTP (`/`). Sem os três primeiros segredos o job é ignorado.
 - **Legal:** personalizar o contacto do responsável em [privacidade.html](privacidade.html) antes de tráfego público alargado (ver [README.md](README.md)).

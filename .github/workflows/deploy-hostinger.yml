@@ -1,0 +1,66 @@
+# Deploy automático do front estático (HTML/CSS/JS) para alojamento por FTP — ex.: Hostinger.
+#
+# 1) No repositório GitHub: Settings → Secrets and variables → Actions → New repository secret
+#    - FTP_SERVER       → servidor FTP (ex.: ftp.seudominio.com ou o host indicado na Hostinger)
+#    - FTP_USERNAME     → utilizador FTP
+#    - FTP_PASSWORD     → palavra-passe FTP
+#    Opcional:
+#    - FTP_SERVER_DIR   → pasta no servidor (ex.: /public_html/). Se não criar este secret, usa-se / (raiz da sessão FTP).
+#
+# 2) Push para main ou master dispara o deploy. Também pode correr manualmente: Actions → este workflow → Run workflow.
+#
+# A API (Node/Render) não é enviada aqui — só ficheiros do site estático.
+
+name: Deploy static site (FTP / Hostinger)
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - '**.html'
+      - '**.css'
+      - '**.js'
+      - 'assets/**'
+      - '.github/workflows/deploy-hostinger.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-hostinger-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Evita falhar o CI do repositório se os secrets ainda não estiverem configurados
+    if: ${{ secrets.FTP_SERVER != '' && secrets.FTP_USERNAME != '' && secrets.FTP_PASSWORD != '' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy over FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.6
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          server-dir: ${{ secrets.FTP_SERVER_DIR != '' && secrets.FTP_SERVER_DIR || '/' }}
+          dry-run: false
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            **/tests/**
+            **/.vscode/**
+            **/.cursor/**
+            **/migrations/**
+            **/lib/**
+            package.json
+            package-lock.json
+            server.js
+            test-server.js
+            docker-compose.yml
+            start-server.bat
+            **/.env*
+            **/*.md
+            **/.env.example

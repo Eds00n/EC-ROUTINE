@@ -23,13 +23,15 @@ html[data-theme="dark"] {
     --ec-input-bg: #18181b;
     --ec-input-border: #3f3f46;
     --ec-profile-panel: #141416;
+    --ec-profile-overlay: rgba(9, 9, 11, 0.78);
+    --ec-profile-stat-icon: #71717a;
     --ec-close-muted: #d4d4d8;
     --ec-close-hover: #27272a;
     --ec-day-summary-bg: #141416;
     --ec-day-summary-border: #3f3f46;
     --ec-day-summary-strong: #f4f4f5;
     --ec-view-toggle-bg: #1f1f23;
-    --ec-view-btn: #a1a1aa;
+    --ec-view-btn: #c4c4cc;
     --ec-view-btn-active-bg: #f4f4f5;
     --ec-view-btn-active-fg: #18181b;
     --ec-view-btn-hover-bg: #2a2a30;
@@ -64,6 +66,20 @@ html[data-theme="dark"] {
     --color-border-neutral: #3f3f46;
     --color-done-bg: rgba(22, 163, 74, 0.22);
     --color-info-bg: rgba(63, 63, 70, 0.5);
+    /* Cards Rotinas + heatmap (camadas tipo referência) */
+    --ec-routine-card-bg: #1c1c20;
+    --ec-routine-card-border: #2e2e33;
+    --ec-heatmap-panel-bg: #16161a;
+    --ec-heatmap-panel-border: #2a2a30;
+    --ec-heatmap-cell-bg: #222226;
+    --ec-heatmap-cell-border: #3a3a42;
+    --ec-heatmap-routine-day-bg: #2a2a32;
+    --ec-heatmap-routine-day-border: #52525b;
+    --ec-heatmap-checked-bg: #22c55e;
+    --ec-heatmap-checked-border: #4ade80;
+    --ec-card-action-bg: #2a2a30;
+    --ec-card-action-border: #3f3f46;
+    --ec-card-action-fg: #e4e4e7;
 }
 
 html[data-theme="dark"] .user-profile-theme-toggle {
@@ -94,6 +110,56 @@ html[data-theme="dark"] .user-profile-btn--logout:hover {
     color: #fecaca;
 }
 
+html[data-theme="dark"] .user-profile-btn--admin {
+    border-color: #52525b;
+    color: #e4e4e7;
+}
+
+html[data-theme="dark"] .user-profile-btn--admin:hover {
+    background: rgba(63, 63, 70, 0.55);
+    border-color: #71717a;
+}
+
+html[data-theme="dark"] .header-admin-btn {
+    border-color: #3f3f46;
+    background: rgba(34, 197, 94, 0.14);
+    color: #4ade80;
+}
+
+html[data-theme="dark"] .header-admin-btn:hover {
+    background: rgba(34, 197, 94, 0.22);
+    border-color: #52525b;
+}
+
+html[data-theme="dark"] .user-profile-avatar-fallback {
+    background: linear-gradient(145deg, #3f3f46, #27272a);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+html[data-theme="dark"] .user-profile-btn--primary .user-profile-btn__icon {
+    color: #18181b;
+}
+
+html[data-theme="dark"] .user-profile-settings-btn {
+    background: #18181b;
+    border-color: #52525b;
+    color: #e4e4e7;
+}
+
+html[data-theme="dark"] .user-profile-settings-btn:hover {
+    border-color: #71717a;
+}
+
+html[data-theme="dark"] .user-profile-settings-menu {
+    background: #141416;
+    border-color: #3f3f46;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45), 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+
+html[data-theme="dark"] .user-profile-settings-label {
+    color: #fafafa;
+}
+
 /* Calendário: estados verdes legíveis no escuro */
 html[data-theme="dark"] .calendar-day.calendar-day--all-done {
     border-color: #22c55e;
@@ -106,6 +172,12 @@ html[data-theme="dark"] .calendar-day.calendar-day--partial-done {
     background: rgba(22, 163, 74, 0.12);
 }
 
+html[data-theme="dark"] .calendar-day.empty {
+    border-color: #3f3f46;
+    background: rgba(39, 39, 42, 0.55);
+    opacity: 1;
+}
+
 html[data-theme="dark"] .calendar-day-task-row--done .calendar-day-task-name {
     color: #86efac;
 }
@@ -116,4 +188,1774 @@ html[data-theme="dark"] .month-amplified-weekday {
 
 html[data-theme="dark"] .day-info-status {
     color: var(--ec-muted);
+}
+
+/* Calendário compacto nos cards (vista Rotinas) — tema escuro */
+html[data-theme="dark"] .routine-compact-cal__day:not(.routine-compact-cal__day--routine):not(.routine-compact-cal__day--empty):not(.routine-compact-cal__day--checked) {
+    background: transparent;
+    border-color: transparent;
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .routine-compact-cal__wd {
+    color: var(--ec-muted);
+}
+
+/* ---------- Header: botão de perfil legível no escuro ---------- */
+html[data-theme="dark"] .header-profile-trigger {
+    background: var(--ec-surface-3);
+    border-color: var(--ec-border);
+    color: var(--ec-body-text);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+
+html[data-theme="dark"] .header-profile-trigger:hover {
+    background: var(--ec-surface-4);
+    border-color: var(--ec-border-2);
+}
+
+html[data-theme="dark"] .header-profile-trigger:focus-visible {
+    outline-color: var(--ec-focus-ring);
+}
+
+html[data-theme="dark"] .header-profile-trigger .username {
+    color: var(--ec-heading);
+}
+
+/* ---------- Agenda ---------- */
+html[data-theme="dark"] .agenda-day-title {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .agenda-day-date,
+html[data-theme="dark"] .agenda-day-empty {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .agenda-day-section-title {
+    color: var(--ec-heading);
+    border-bottom-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .agenda-day-history-btn {
+    background: var(--ec-surface-3);
+    border-color: var(--ec-border);
+    color: var(--ec-body-text);
+}
+
+html[data-theme="dark"] .agenda-day-history-btn:hover {
+    background: var(--ec-surface-4);
+    border-color: var(--ec-muted-2);
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .agenda-day-section-empty {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .agenda-card {
+    background: var(--ec-surface);
+    border-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .agenda-card:hover {
+    border-color: var(--ec-muted-2);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+html[data-theme="dark"] .agenda-card-header {
+    border-bottom-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .agenda-card-title {
+    color: var(--ec-card-title);
+}
+
+html[data-theme="dark"] .agenda-card-time {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .agenda-card-task-row {
+    border-bottom-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .agenda-card-task-row .task-awaiting-confirm-hint {
+    color: #fcd34d;
+    background: rgba(120, 53, 15, 0.35);
+    border-color: rgba(251, 191, 36, 0.45);
+}
+
+html[data-theme="dark"] .agenda-card-annotations,
+html[data-theme="dark"] .agenda-card-annotations li {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .agenda-annotation-sep-line {
+    background: var(--ec-border);
+}
+
+html[data-theme="dark"] .agenda-folder-bar {
+    background: var(--ec-surface-2);
+    border-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .agenda-open-annotation {
+    background: var(--ec-surface-2);
+    border-color: var(--ec-border);
+    color: var(--ec-body-text);
+}
+
+html[data-theme="dark"] .agenda-open-annotation:hover,
+html[data-theme="dark"] .agenda-open-annotation:active {
+    background: var(--ec-surface-4);
+    border-color: var(--ec-muted-2);
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .agenda-open-annotation:hover .agenda-folder-icon,
+html[data-theme="dark"] .agenda-open-annotation:hover .agenda-card-annotation-name,
+html[data-theme="dark"] .agenda-open-annotation:active .agenda-folder-icon,
+html[data-theme="dark"] .agenda-open-annotation:active .agenda-card-annotation-name {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .agenda-folder-icon {
+    color: var(--ec-body-text);
+}
+
+html[data-theme="dark"] .agenda-card-annotation-name {
+    color: var(--ec-card-title);
+}
+
+html[data-theme="dark"] .agenda-card-annotation-time {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .agenda-card-task-text {
+    color: var(--ec-body-text);
+}
+
+html[data-theme="dark"] .agenda-task-menu-btn {
+    background: var(--ec-surface-3);
+    border-color: var(--ec-border);
+    color: var(--ec-body-text);
+}
+
+html[data-theme="dark"] .agenda-task-menu-btn:hover {
+    background: var(--ec-surface-4);
+    border-color: var(--ec-muted-2);
+}
+
+html[data-theme="dark"] .agenda-menu-dropdown {
+    background: var(--ec-surface);
+    border-color: var(--ec-border);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+html[data-theme="dark"] .agenda-menu-item {
+    color: var(--ec-body-text);
+}
+
+html[data-theme="dark"] .agenda-menu-item:hover {
+    background: var(--ec-surface-3);
+}
+
+html[data-theme="dark"] .agenda-history-content {
+    background: var(--ec-surface);
+    border-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .agenda-history-title {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .agenda-history-list li {
+    border-bottom-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .agenda-history-name {
+    color: var(--ec-card-title);
+}
+
+html[data-theme="dark"] .agenda-history-close {
+    background: var(--ec-surface-3);
+    border-color: var(--ec-border);
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .agenda-history-close:hover {
+    background: var(--ec-surface-4);
+}
+
+html[data-theme="dark"] .agenda-delete-hint {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .agenda-delete-item {
+    border-bottom-color: var(--ec-border);
+}
+
+/* ---------- Biblioteca de Agendamentos ---------- */
+html[data-theme="dark"] .biblioteca-title {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .biblioteca-desc {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .biblioteca-month-title {
+    color: var(--ec-heading);
+    border-bottom-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .biblioteca-day-title {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .biblioteca-selection-bar {
+    border-bottom-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .biblioteca-selection-count {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .biblioteca-item-checkbox-wrap {
+    color: var(--ec-body-text);
+}
+
+html[data-theme="dark"] .biblioteca-type-title {
+    color: var(--ec-card-title);
+}
+
+html[data-theme="dark"] .biblioteca-folder-bar .biblioteca-item-open,
+html[data-theme="dark"] .biblioteca-item-open {
+    background: var(--ec-surface);
+    border-color: var(--ec-border);
+    color: var(--ec-body-text);
+}
+
+html[data-theme="dark"] .biblioteca-item-open:hover,
+html[data-theme="dark"] .biblioteca-item-open:active {
+    background: var(--ec-surface-4);
+    border-color: var(--ec-muted-2);
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .biblioteca-item-open:hover .biblioteca-item-name,
+html[data-theme="dark"] .biblioteca-item-open:active .biblioteca-item-name {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .biblioteca-item-open:hover .biblioteca-item-folder-icon,
+html[data-theme="dark"] .biblioteca-item-open:active .biblioteca-item-folder-icon {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .biblioteca-item-folder-icon {
+    color: var(--ec-body-text);
+}
+
+html[data-theme="dark"] .biblioteca-item-name {
+    color: var(--ec-card-title);
+}
+
+html[data-theme="dark"] .biblioteca-folder-bar .biblioteca-item-datetime,
+html[data-theme="dark"] .biblioteca-item-datetime {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .biblioteca-item-open:hover .biblioteca-item-datetime,
+html[data-theme="dark"] .biblioteca-item-open:active .biblioteca-item-datetime {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .biblioteca-item-last-update {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .biblioteca-item-routine {
+    color: var(--ec-card-title);
+}
+
+html[data-theme="dark"] .biblioteca-item-task {
+    color: var(--ec-body-text);
+}
+
+html[data-theme="dark"] .biblioteca-item-cat {
+    background: var(--ec-surface-3);
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .biblioteca-item-type {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .biblioteca-btn-excluded {
+    background: var(--ec-surface-3);
+    border-color: var(--ec-border);
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .biblioteca-btn-excluded:hover {
+    background: var(--ec-surface-4);
+    border-color: var(--ec-muted-2);
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .biblioteca-btn-exclude.uiverse-trash-btn.uiverse-trash-btn--labeled {
+    background: var(--ec-surface-3);
+    border-color: var(--ec-border);
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .biblioteca-btn-exclude.uiverse-trash-btn .uiverse-trash-btn__label {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .biblioteca-btn-exclude.uiverse-trash-btn .svgIcon path {
+    fill: var(--ec-heading);
+}
+
+html[data-theme="dark"] .biblioteca-btn-exclude.uiverse-trash-btn:hover {
+    background: var(--ec-surface-4);
+    border-color: var(--ec-muted-2);
+}
+
+html[data-theme="dark"] .biblioteca-btn-cancel-exclude {
+    background: var(--ec-surface-3);
+    border-color: var(--ec-border);
+    color: var(--ec-body-text);
+}
+
+html[data-theme="dark"] .biblioteca-btn-cancel-exclude:hover {
+    background: var(--ec-surface-4);
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .biblioteca-item-open:focus {
+    box-shadow: 0 0 0 2px var(--ec-surface), 0 0 0 4px var(--ec-focus-ring);
+}
+
+html[data-theme="dark"] .biblioteca-excluded-modal {
+    background: var(--ec-surface);
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.55);
+}
+
+html[data-theme="dark"] .biblioteca-excluded-header {
+    border-bottom-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .biblioteca-excluded-header h3 {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .biblioteca-excluded-close {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .biblioteca-excluded-close:hover {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .biblioteca-excluded-desc {
+    color: var(--ec-muted);
+    border-bottom-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .biblioteca-excluded-item {
+    border-bottom-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .biblioteca-excluded-name {
+    color: var(--ec-card-title);
+}
+
+html[data-theme="dark"] .biblioteca-excluded-meta {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .biblioteca-excluded-empty {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .biblioteca-excluded-restore {
+    background: var(--ec-surface-3);
+    border-color: var(--ec-border);
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .biblioteca-excluded-restore:hover {
+    background: var(--ec-surface-4);
+    border-color: var(--ec-muted-2);
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .biblioteca-empty {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .biblioteca-filter-label {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .biblioteca-filter-select {
+    background: var(--ec-input-bg);
+    border-color: var(--ec-input-border);
+    color: var(--ec-body-text);
+}
+
+/* ---------- Vista Rotinas: cards + heatmap (camadas escuras / referência) ---------- */
+html[data-theme="dark"] .routine-card {
+    background: var(--ec-routine-card-bg);
+    border-color: var(--ec-routine-card-border);
+    border-width: 1px;
+}
+
+html[data-theme="dark"] .routine-card:hover {
+    border-color: var(--ec-muted-2);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+html[data-theme="dark"] .routine-card-actions {
+    border-top-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .card-action-btn {
+    background: var(--ec-card-action-bg);
+    border-color: var(--ec-card-action-border);
+    color: var(--ec-card-action-fg);
+}
+
+/* Vista Cards: #rotinasView em dashboard.css usa color:#374151 — aqui ganhamos o ID + tema para ícones claros */
+html[data-theme="dark"] #rotinasView .routine-card-actions .card-action-btn {
+    color: #f4f4f5;
+    border-color: rgba(244, 244, 245, 0.2);
+}
+
+html[data-theme="dark"] #rotinasView .routine-card-actions .card-action-btn:hover {
+    color: #ffffff;
+}
+
+html[data-theme="dark"] #rotinasView .routine-card-actions .card-action-btn.delete:hover {
+    color: #fecaca;
+}
+
+html[data-theme="dark"] #rotinasView .routine-card-actions .card-action-btn.uiverse-trash-btn--card .svgIcon path {
+    fill: currentColor;
+}
+
+html[data-theme="dark"] .card-action-btn:hover {
+    background: var(--ec-surface-4);
+    border-color: var(--ec-muted-2);
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .card-action-btn:active {
+    background: var(--ec-surface-3);
+}
+
+html[data-theme="dark"] .card-action-btn.delete:hover {
+    background: rgba(127, 29, 29, 0.42);
+    border-color: rgba(248, 113, 113, 0.5);
+    color: #fecaca;
+}
+
+html[data-theme="dark"] .card-action-btn.uiverse-trash-btn--card.delete:hover .svgIcon path {
+    fill: #fecaca;
+}
+
+html[data-theme="dark"] .routine-card-bullet--reminder {
+    background: var(--ec-muted-2);
+}
+
+html[data-theme="dark"] .routine-card-bullet--task {
+    background: var(--ec-muted);
+}
+
+html[data-theme="dark"] .routine-card-bullet--commitment {
+    border-color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .routine-card-heatmap .large-heatmap-block {
+    background: var(--ec-heatmap-panel-bg);
+    border-color: var(--ec-heatmap-panel-border);
+    border-width: 1px;
+}
+
+/* Painel do heatmap na vista Cards: #rotinasView vence especificidade do dashboard.css */
+html[data-theme="dark"] #rotinasView .routine-card-heatmap .large-heatmap-block {
+    background: #000000;
+    border-color: var(--ec-heatmap-panel-border);
+}
+
+/* Mês: remover vidro claro legado — fundo do mês totalmente preto */
+html[data-theme="dark"] .routine-card-heatmap .calendar-month {
+    background: #000000;
+    backdrop-filter: none;
+    box-shadow: none;
+}
+
+html[data-theme="dark"] .routine-card-heatmap .calendar-month--current {
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+html[data-theme="dark"] .routine-card-heatmap .calendar-month-header {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .routine-card-heatmap .calendar-weekday {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .routine-card-heatmap .heatmap-nav-btn {
+    background: var(--ec-card-action-bg);
+    border-color: var(--ec-card-action-border);
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .routine-card-heatmap .heatmap-nav-btn:hover:not(:disabled) {
+    background: var(--ec-surface-4);
+    border-color: var(--ec-muted-2);
+    color: var(--ec-heading);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.28);
+}
+
+html[data-theme="dark"] .routine-card-heatmap .heatmap-nav-btn:active:not(:disabled) {
+    background: var(--ec-surface-3);
+}
+
+html[data-theme="dark"] .routine-card-heatmap .heatmap-square {
+    background: var(--ec-heatmap-cell-bg);
+    border-color: var(--ec-heatmap-cell-border);
+}
+
+/* Dias fora da rotina: mesmo fundo que o mês (transparente sobre #000); só número branco */
+html[data-theme="dark"] .routine-card-heatmap .heatmap-square:not(.routine-day):not(.empty):not(.checked) {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+}
+
+html[data-theme="dark"] .routine-card-heatmap .heatmap-square:not(.routine-day):not(.empty):not(.checked) .heatmap-day-number {
+    color: var(--ec-heading);
+    background: none;
+    -webkit-background-clip: unset;
+    background-clip: unset;
+    text-shadow: none;
+}
+
+html[data-theme="dark"] .routine-card-heatmap .heatmap-square.routine-day {
+    background: var(--ec-heatmap-routine-day-bg);
+    border-color: var(--ec-heatmap-routine-day-border);
+}
+
+html[data-theme="dark"] .routine-card-heatmap .heatmap-square.routine-day .heatmap-day-number {
+    color: var(--ec-heading);
+    background: none;
+    -webkit-background-clip: unset;
+    background-clip: unset;
+    text-shadow: none;
+}
+
+html[data-theme="dark"] .routine-card-heatmap .heatmap-square.routine-day.checked {
+    background: var(--ec-heatmap-checked-bg);
+    border-color: var(--ec-heatmap-checked-border);
+    box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.35);
+}
+
+html[data-theme="dark"] .routine-card-heatmap .heatmap-square.routine-day.checked .heatmap-day-number {
+    color: #052e16;
+}
+
+html[data-theme="dark"] .routine-card-heatmap .heatmap-square.checked:not(.routine-day) {
+    background: var(--ec-heatmap-checked-bg);
+    border-color: var(--ec-heatmap-checked-border);
+    box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.3);
+}
+
+html[data-theme="dark"] .routine-card-heatmap .heatmap-square.checked .heatmap-day-number {
+    color: #f0fdf4;
+    background: none;
+    -webkit-background-clip: unset;
+    background-clip: unset;
+    text-shadow: none;
+}
+
+html[data-theme="dark"] .routine-card-heatmap .heatmap-square.empty {
+    background: transparent;
+    border-color: transparent;
+}
+
+html[data-theme="dark"] .routine-card-description {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .routine-card-streak-label {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .routine-card-streak-number {
+    color: var(--ec-heading);
+}
+
+/* Aviso «sem horário»: tom informativo suave (menos âmbar forte sobre fundo escuro) */
+html[data-theme="dark"] .routine-card-no-time-awaiting {
+    color: #cbd5e1;
+    background: rgba(30, 41, 59, 0.55);
+    border: 1px solid rgba(100, 116, 139, 0.4);
+}
+
+html[data-theme="dark"] .routine-card-no-time-awaiting__icon {
+    color: #94a3b8;
+}
+
+/* «Adicionar rotina»: alinhado ao cartão, sem bloco branco */
+html[data-theme="dark"] .add-routine-card {
+    background: var(--ec-surface-3);
+    border-color: var(--ec-muted-2);
+    border-style: dashed;
+    border-width: 2px;
+}
+
+html[data-theme="dark"] .add-routine-card:hover {
+    background: var(--ec-surface-4);
+    border-color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .add-routine-icon {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .add-routine-text {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .add-routine-card:hover .add-routine-text {
+    color: var(--ec-heading);
+}
+
+/* ---------- Dashboard overview: progresso, produtividade, gráficos, métricas, onboarding ---------- */
+html[data-theme="dark"] .dashboard-card:hover {
+    border-color: var(--ec-border-2);
+    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.4);
+}
+
+html[data-theme="dark"] .dashboard-card:focus-within {
+    border-color: var(--ec-muted-2);
+    box-shadow: 0 0 0 2px rgba(161, 161, 170, 0.22);
+}
+
+html[data-theme="dark"] .dashboard-progress-bar {
+    background: var(--ec-surface-3);
+    border-color: var(--ec-border);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+html[data-theme="dark"] .dashboard-card--frequency .dashboard-frequency-content {
+    background: linear-gradient(180deg, var(--ec-heatmap-panel-bg) 0%, var(--ec-surface-2) 100%);
+    border-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .dashboard-card--frequency .dashboard-card-label {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .dashboard-frequency-toggle {
+    background: var(--ec-surface-3);
+    border-color: var(--ec-border);
+    color: var(--ec-body-text);
+}
+
+html[data-theme="dark"] .dashboard-frequency-toggle:hover {
+    border-color: var(--ec-muted-2);
+    background: var(--ec-surface-4);
+}
+
+html[data-theme="dark"] .dashboard-frequency-toggle.is-active {
+    background: var(--ec-heading);
+    color: var(--ec-body-bg);
+    border-color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .dashboard-frequency-grid-line {
+    stroke: rgba(161, 161, 170, 0.4);
+}
+
+html[data-theme="dark"] .dashboard-frequency-chart-label,
+html[data-theme="dark"] .dashboard-frequency-chart-axis {
+    fill: var(--ec-muted);
+}
+
+html[data-theme="dark"] .dashboard-frequency-chart-legend {
+    color: var(--ec-muted);
+}
+
+/* Linhas brancas + nomes legíveis no gráfico de produtividade (tema escuro) */
+html[data-theme="dark"] .dashboard-frequency-series-line {
+    stroke: #ffffff !important;
+    animation: dashboardFrequencyLinePulseDark 4.8s ease-in-out infinite;
+}
+
+html[data-theme="dark"] .dashboard-frequency-series-line.is-focused {
+    stroke-width: 3px;
+    filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.45));
+}
+
+html[data-theme="dark"] .dashboard-frequency-end-label {
+    fill: #ffffff !important;
+    stroke: rgba(0, 0, 0, 0.72);
+    stroke-width: 3px;
+    paint-order: stroke fill;
+}
+
+html[data-theme="dark"] .dashboard-frequency-legend-item {
+    background: var(--ec-surface-2);
+    border-color: var(--ec-border);
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .dashboard-frequency-legend-item:hover {
+    border-color: var(--ec-muted-2);
+}
+
+html[data-theme="dark"] .dashboard-frequency-legend-dot {
+    background: #ffffff !important;
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35);
+}
+
+html[data-theme="dark"] .dashboard-frequency-series-dot {
+    stroke: var(--ec-surface);
+    stroke-width: 1.5px;
+}
+
+@keyframes dashboardFrequencyLinePulseDark {
+    0% {
+        opacity: 0.88;
+        filter: none;
+    }
+    50% {
+        opacity: 1;
+        filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.35));
+    }
+    100% {
+        opacity: 0.88;
+        filter: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html[data-theme="dark"] .dashboard-frequency-series-line {
+        animation: none;
+    }
+}
+
+html[data-theme="dark"] .dashboard-frequency-final-focus {
+    stroke: var(--ec-surface);
+}
+
+html[data-theme="dark"] .dashboard-metrics-intro {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .dashboard-metric-card {
+    background: var(--ec-surface-2);
+    border-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .dashboard-metric-title {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .dashboard-metric-desc {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .dashboard-stat-chart-box {
+    background: var(--ec-surface-2);
+    border-color: var(--ec-border);
+    box-shadow: none;
+}
+
+html[data-theme="dark"] .dashboard-stat-chart-box:hover {
+    border-color: var(--ec-muted-2);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+html[data-theme="dark"] .dashboard-stat-chart-box-title {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .dashboard-stat-chart-caption {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .dashboard-stat-chart-summary {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .dashboard-stat-chart-grid-group line.dashboard-stat-chart-grid {
+    stroke: var(--ec-border);
+}
+
+html[data-theme="dark"] .dashboard-stat-chart-legend {
+    color: var(--ec-body-text);
+}
+
+html[data-theme="dark"] .dashboard-stat-chart-period {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .dashboard-stat-chart-axis {
+    fill: var(--ec-muted);
+}
+
+html[data-theme="dark"] .dashboard-donut-center-value {
+    fill: var(--ec-heading);
+}
+
+html[data-theme="dark"] .dashboard-donut-center-label {
+    fill: var(--ec-muted);
+}
+
+html[data-theme="dark"] .dashboard-donut-legend {
+    color: var(--ec-body-text);
+}
+
+html[data-theme="dark"] .dashboard-bar-week-fill--base {
+    fill: #3f3f46 !important;
+}
+
+html[data-theme="dark"] .dashboard-bar-week-fill--pending {
+    fill: #52525b !important;
+}
+
+html[data-theme="dark"] .dashboard-bar-week-label {
+    fill: var(--ec-muted);
+}
+
+html[data-theme="dark"] .dashboard-bar-week-value {
+    fill: var(--ec-heading);
+}
+
+html[data-theme="dark"] .dashboard-bar-week-legend {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .dashboard-circle-today-wrap {
+    background: radial-gradient(70% 70% at 50% 42%, var(--ec-surface-3) 0%, var(--ec-surface-2) 72%, var(--ec-surface) 100%);
+    border-color: var(--ec-border);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+html[data-theme="dark"] .dashboard-circle-today-wrap--complete,
+html[data-theme="dark"] .dashboard-circle-today-wrap--pending {
+    box-shadow: 0 6px 20px rgba(22, 163, 74, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+html[data-theme="dark"] .dashboard-circle-today-value {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .dashboard-circle-today-svg circle.dashboard-circle-today-track {
+    stroke: #52525b;
+    stroke-opacity: 0.88;
+}
+
+html[data-theme="dark"] .dashboard-pending-tasks-title,
+html[data-theme="dark"] .dashboard-pending-tasks-value {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .dashboard-today-name {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .dashboard-today-time {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .dashboard-today-empty {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .dashboard-card--status-pending .dashboard-today-badge.status-pending,
+html[data-theme="dark"] .dashboard-today-badge.status-pending,
+html[data-theme="dark"] .dashboard-card--status-progress .dashboard-today-badge.status-progress,
+html[data-theme="dark"] .dashboard-today-badge.status-progress {
+    background: var(--ec-surface-3);
+    color: var(--ec-heading);
+    border-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .dashboard-card--status-done .dashboard-today-badge.status-done,
+html[data-theme="dark"] .dashboard-today-badge.status-done {
+    background: rgba(22, 163, 74, 0.32);
+    color: #bbf7d0;
+    border-color: rgba(74, 222, 128, 0.45);
+}
+
+html[data-theme="dark"] .dashboard-next-link {
+    color: var(--ec-body-text);
+}
+
+html[data-theme="dark"] .dashboard-next-day,
+html[data-theme="dark"] .dashboard-next-time {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .dashboard-day-summary-icon--done {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .dashboard-chart-count {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .dashboard-chart-doughnut-center {
+    background: var(--ec-surface-2);
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .dashboard-chart-legend {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .dashboard-overdue-value {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .daily-onboarding-task-row {
+    background: var(--ec-surface-2);
+    border-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .daily-onboarding-task-title {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .daily-onboarding-task-time {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .daily-onboarding-badge {
+    background: var(--ec-surface-3);
+    border-color: var(--ec-border);
+    color: var(--ec-body-text);
+}
+
+html[data-theme="dark"] .daily-onboarding-badge--pending {
+    background: var(--ec-surface-3);
+    border-color: var(--ec-border);
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .daily-onboarding-badge--done {
+    background: rgba(22, 163, 74, 0.28);
+    border-color: rgba(74, 222, 128, 0.5);
+    color: #bbf7d0;
+}
+
+html[data-theme="dark"] .daily-onboarding-badge--progress {
+    background: var(--ec-surface-4);
+    border-color: var(--ec-border);
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .daily-onboarding-empty {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .daily-onboarding-title {
+    color: var(--ec-onboarding-heading);
+}
+
+html[data-theme="dark"] .daily-onboarding-desc {
+    color: var(--ec-onboarding-muted);
+}
+
+/* ---------- Modal de anotação: escolha de tipo (3 cartões) + conteúdo do editor — tema escuro ---------- */
+html[data-theme="dark"] #annotationModal .annotation-modal-content {
+    background: var(--ec-surface);
+    color: var(--ec-body-text);
+}
+
+html[data-theme="dark"] #annotationModal:not(.hidden):has(#annotationEditorStep.hidden) .annotation-modal-content {
+    background: transparent;
+}
+
+html[data-theme="dark"] .annotation-preview-card {
+    background: var(--ec-surface-3);
+    border-color: var(--ec-border);
+    color: var(--ec-body-text);
+}
+
+html[data-theme="dark"] .annotation-preview-card:hover {
+    background: var(--ec-surface-4);
+    border-color: var(--ec-muted-2);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+}
+
+html[data-theme="dark"] #annotationModal:not(.hidden):has(#annotationEditorStep.hidden) .annotation-preview-card {
+    background: var(--ec-surface-3);
+    border-color: rgba(244, 244, 245, 0.14);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+}
+
+html[data-theme="dark"] #annotationModal:not(.hidden):has(#annotationEditorStep.hidden) .annotation-preview-card:hover {
+    background: var(--ec-surface-4);
+    border-color: rgba(244, 244, 245, 0.26);
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55);
+}
+
+html[data-theme="dark"] .annotation-preview-card:focus-visible {
+    outline-color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .annotation-preview-card .annotation-preview-thumb {
+    border-color: var(--ec-border);
+    background: var(--ec-surface-2);
+}
+
+html[data-theme="dark"] .annotation-preview-label,
+html[data-theme="dark"] .annotation-preview-card .annotation-preview-label {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .annotation-preview-hint,
+html[data-theme="dark"] .annotation-preview-card .annotation-preview-hint {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .annotation-preview-dev-note {
+    color: #fde68a;
+    background: rgba(30, 41, 59, 0.65);
+    border-color: rgba(148, 163, 184, 0.4);
+}
+
+html[data-theme="dark"] .annotation-tool-btn {
+    background: var(--ec-surface-3);
+    border-color: var(--ec-border);
+    color: var(--ec-body-text);
+}
+
+html[data-theme="dark"] .annotation-tool-btn:hover {
+    background: var(--ec-surface-4);
+    border-color: var(--ec-muted-2);
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .annotation-tool-btn.active {
+    background: var(--ec-surface-4);
+    color: var(--ec-heading);
+    border-color: var(--ec-muted);
+}
+
+/* --- Página detalhe da rotina (routine-detail): interior alinhado ao tema --- */
+html[data-theme="dark"] .back-btn {
+    background: var(--ec-surface-2);
+    border-color: var(--ec-border);
+    color: var(--ec-body-text);
+    box-shadow: none;
+}
+
+html[data-theme="dark"] .back-btn:hover {
+    background: var(--ec-surface-3);
+    border-color: var(--ec-muted-2);
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .routine-detail-container .routine-title {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .routine-detail-container .routine-description {
+    color: var(--ec-muted);
+    background: var(--ec-surface-2);
+    border: 1px solid var(--ec-border);
+}
+
+html[data-theme="dark"] .routine-detail-container .routine-meta {
+    background: var(--ec-surface-2);
+    border: 1px solid var(--ec-border);
+}
+
+html[data-theme="dark"] .routine-detail-container .meta-label {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .routine-detail-container .meta-value {
+    color: var(--ec-strong);
+}
+
+html[data-theme="dark"] .routine-detail-container .routine-complete-block {
+    background: var(--ec-surface);
+    border-color: var(--ec-border);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+}
+
+html[data-theme="dark"] .routine-detail-container .routine-complete-question {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .routine-detail-container .routine-complete-question::after {
+    border-bottom-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .routine-detail-container .btn-task-complete-detail {
+    background: var(--ec-btn-primary-bg);
+    color: var(--ec-btn-primary-hover);
+    border-color: var(--ec-btn-primary-bg);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+html[data-theme="dark"] .routine-detail-container .btn-task-complete-detail:hover {
+    background: var(--ec-btn-primary-hover);
+    border-color: var(--ec-btn-primary-hover);
+    color: #18181b;
+}
+
+html[data-theme="dark"] .routine-detail-container .btn-task-incomplete-detail {
+    background: var(--ec-surface-2);
+    color: var(--ec-body-text);
+    border-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .routine-detail-container .btn-task-incomplete-detail:hover {
+    background: var(--ec-surface-3);
+    border-color: var(--ec-muted-2);
+}
+
+html[data-theme="dark"] .routine-detail-container .progress-section {
+    background: var(--ec-surface-2);
+    border: 1px solid var(--ec-border);
+}
+
+html[data-theme="dark"] .routine-detail-container .progress-header h3,
+html[data-theme="dark"] .routine-detail-container .progress-percent {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .routine-detail-container .progress-bar-large {
+    background: var(--ec-surface-3);
+}
+
+html[data-theme="dark"] .routine-detail-container .progress-fill-large {
+    background: var(--ec-btn-primary-bg);
+}
+
+html[data-theme="dark"] .routine-detail-container .progress-section--complete .progress-fill-large {
+    background: #22c55e;
+}
+
+html[data-theme="dark"] .routine-detail-container .progress-section--complete .progress-percent {
+    color: #86efac;
+}
+
+html[data-theme="dark"] .routine-detail-container .detail-section {
+    background: var(--ec-surface-2);
+    border: 1px solid var(--ec-border);
+}
+
+html[data-theme="dark"] .routine-detail-container .detail-section h3 {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .routine-detail-container .routine-objectives-text,
+html[data-theme="dark"] .routine-detail-container .routine-reasons-text {
+    color: var(--ec-body-text);
+}
+
+html[data-theme="dark"] .routine-detail-container .tasks-section {
+    background: var(--ec-surface);
+    border-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .routine-detail-container .tasks-header h3 {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .routine-detail-container .action-btn {
+    background: var(--ec-card-action-bg);
+    border-color: var(--ec-card-action-border);
+    color: var(--ec-card-action-fg);
+}
+
+html[data-theme="dark"] .routine-detail-container .action-btn:hover {
+    background: var(--ec-surface-4);
+    border-color: var(--ec-muted);
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .routine-detail-container .add-task-btn {
+    background: var(--ec-btn-primary-bg);
+    color: #18181b;
+}
+
+html[data-theme="dark"] .routine-detail-container .add-task-btn:hover {
+    background: var(--ec-btn-primary-hover);
+    color: #18181b;
+}
+
+html[data-theme="dark"] .routine-detail-container .task-item {
+    background: var(--ec-surface-2);
+    border: 1px solid transparent;
+}
+
+html[data-theme="dark"] .routine-detail-container .task-item:hover {
+    background: var(--ec-surface-3);
+}
+
+html[data-theme="dark"] .routine-detail-container .task-text {
+    color: var(--ec-body-text);
+}
+
+html[data-theme="dark"] .routine-detail-container .task-item.completed .task-text {
+    color: var(--ec-muted-2);
+}
+
+html[data-theme="dark"] .routine-detail-container .task-checkbox {
+    border-color: var(--ec-border);
+    background: var(--ec-input-bg);
+}
+
+html[data-theme="dark"] .routine-detail-container .task-study-block {
+    border-top-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .routine-detail-container .task-study-timer {
+    background: var(--ec-surface);
+    border-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .routine-detail-container .task-study-timer-icon {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .routine-detail-container .task-study-time-display {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .routine-detail-container .task-study-btn {
+    background: var(--ec-surface-3);
+    color: var(--ec-body-text);
+    border-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .routine-detail-container .task-study-btn:hover {
+    background: var(--ec-btn-primary-bg);
+    color: #18181b;
+    border-color: var(--ec-btn-primary-bg);
+}
+
+html[data-theme="dark"] .routine-detail-container .task-study-stats {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .routine-detail-container .task-study-stat strong {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .routine-detail-container .task-input-container {
+    background: var(--ec-surface-2);
+    border-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .routine-detail-container .task-input {
+    background: var(--ec-input-bg);
+    border-color: var(--ec-border);
+    color: var(--ec-body-text);
+}
+
+html[data-theme="dark"] .routine-detail-container .task-input:focus {
+    border-color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .routine-detail-container .task-input-btn {
+    background: var(--ec-btn-primary-bg);
+    color: #18181b;
+}
+
+html[data-theme="dark"] .routine-detail-container .task-input-btn:hover {
+    background: var(--ec-btn-primary-hover);
+}
+
+html[data-theme="dark"] .routine-detail-container .task-input-btn.cancel {
+    background: var(--ec-surface-3);
+    border-color: var(--ec-border);
+    color: var(--ec-body-text);
+}
+
+html[data-theme="dark"] .routine-detail-container .task-input-btn.cancel:hover {
+    background: var(--ec-surface-4);
+}
+
+html[data-theme="dark"] .routine-detail-container .routine-study-section {
+    background: var(--ec-surface);
+    border-color: var(--ec-border);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+}
+
+html[data-theme="dark"] .routine-detail-container .routine-study-heading {
+    color: var(--ec-heading);
+    border-bottom-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .routine-detail-container .routine-study-label,
+html[data-theme="dark"] .routine-detail-container .routine-study-select {
+    color: var(--ec-body-text);
+    background: var(--ec-input-bg);
+    border-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .routine-detail-container .routine-study-clock-display {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .routine-detail-container .routine-study-chart-summary,
+html[data-theme="dark"] .routine-detail-container .routine-study-chart-empty {
+    background: var(--ec-surface-2);
+    border-color: var(--ec-border);
+    color: var(--ec-body-text);
+}
+
+html[data-theme="dark"] .routine-detail-container .routine-study-chart-bar-track--grid {
+    background-color: var(--ec-surface-3);
+    border-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .routine-detail-container .routine-study-chart-bar-fill {
+    background: var(--ec-btn-primary-bg);
+}
+
+html[data-theme="dark"] .routine-detail-container .routine-study-chart-h-row {
+    border-bottom-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .routine-detail-container .routine-study-chart-date-main,
+html[data-theme="dark"] .routine-detail-container .routine-study-chart-bar-duration,
+html[data-theme="dark"] .routine-detail-container .routine-study-chart-title {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .routine-detail-container .routine-study-chart-hint,
+html[data-theme="dark"] .routine-detail-container .routine-study-chart-date-time,
+html[data-theme="dark"] .routine-detail-container .routine-study-chart-x-ticks {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .routine-detail-container .routine-study-chart-axis-corner,
+html[data-theme="dark"] .routine-detail-container .routine-study-chart-x-axis-label {
+    color: var(--ec-muted-2);
+}
+
+html[data-theme="dark"] .routine-detail-container .routine-study-chart-x-ticks {
+    border-bottom-color: var(--ec-border);
+}
+
+html[data-theme="dark"] #saveToast.save-toast {
+    background: var(--ec-surface-2);
+    border-color: #22c55e;
+    color: #bbf7d0;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+
+/* --- Criar / editar rotina (create.html + create.css) --- */
+html[data-theme="dark"] .main-content:has(.create-section) {
+    background: var(--ec-body-bg);
+}
+
+html[data-theme="dark"] .create-section {
+    background: var(--ec-surface);
+    border: 1px solid var(--ec-border);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+html[data-theme="dark"] .create-section .create-title,
+html[data-theme="dark"] .create-section .wizard-question,
+html[data-theme="dark"] .create-section .wizard-step-heading {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .create-section .wizard-option:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+html[data-theme="dark"] .create-section .wizard-option-label {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .create-section .wizard-option-example {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .create-section .wizard-option-radio {
+    border-color: var(--ec-muted-2);
+}
+
+html[data-theme="dark"] .create-section .wizard-option input[type="radio"]:checked + .wizard-option-radio {
+    border-color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .create-section .wizard-option input[type="radio"]:checked + .wizard-option-radio::before,
+html[data-theme="dark"] .create-section .wizard-option input[type="radio"]:checked + .wizard-option-radio::after {
+    background: var(--ec-heading);
+}
+
+html[data-theme="dark"] .create-section .btn-continuar {
+    background: var(--ec-btn-primary-bg);
+    color: #18181b;
+    border-color: var(--ec-btn-primary-bg);
+}
+
+html[data-theme="dark"] .create-section .btn-continuar:hover:not(:disabled) {
+    background: var(--ec-btn-primary-hover);
+    border-color: var(--ec-btn-primary-hover);
+}
+
+html[data-theme="dark"] .create-section .btn-continuar:disabled {
+    background: var(--ec-surface-3);
+    color: var(--ec-muted-2);
+    border-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .create-section .btn-voltar {
+    background: var(--ec-surface-3);
+    color: var(--ec-heading);
+    border-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .create-section .btn-voltar:hover {
+    background: var(--ec-surface-4);
+    border-color: var(--ec-muted-2);
+}
+
+html[data-theme="dark"] .create-section .wizard-progress-dots .circle {
+    background-color: var(--ec-surface-3);
+    border-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .create-section .wizard-progress-dots .circle.done {
+    background-color: #22c55e;
+    border-color: #4ade80;
+}
+
+html[data-theme="dark"] .create-section .bullet-journal-labels {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .create-section .bullet-option-box {
+    background: var(--ec-surface-2);
+    border-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .create-section .bullet-option:hover .bullet-option-box {
+    border-color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .create-section .bullet-option input[type="radio"]:checked + .bullet-option-box {
+    background: #f4f4f5;
+    border-color: #18181b;
+    box-shadow: 0 0 0 1px rgba(24, 24, 27, 0.25);
+}
+
+html[data-theme="dark"] .create-section .bullet-option input[type="radio"]:checked + .bullet-option-box .bullet-option-label {
+    color: #18181b;
+}
+
+html[data-theme="dark"] .create-section .bullet-option-label {
+    color: var(--ec-body-text);
+}
+
+html[data-theme="dark"] .create-section .form-group label,
+html[data-theme="dark"] .create-section .task-name-label {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .create-section .category-hint {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .create-section .category-chip {
+    background: var(--ec-surface-2);
+    border-color: var(--ec-border);
+    color: var(--ec-body-text);
+}
+
+html[data-theme="dark"] .create-section .category-chip:hover {
+    background: var(--ec-surface-3);
+}
+
+html[data-theme="dark"] .create-section .category-chip.selected {
+    background: var(--ec-surface-4);
+    border-color: var(--ec-heading);
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .create-section .form-input,
+html[data-theme="dark"] .create-section .form-textarea {
+    background: var(--ec-input-bg);
+    color: var(--ec-body-text);
+    border: 1px solid var(--ec-input-border);
+    box-shadow: none;
+}
+
+html[data-theme="dark"] .create-section .form-input::placeholder,
+html[data-theme="dark"] .create-section .form-textarea::placeholder {
+    color: var(--ec-muted-2);
+}
+
+html[data-theme="dark"] .create-section .form-input:focus,
+html[data-theme="dark"] .create-section .form-textarea:focus {
+    box-shadow: 0 0 0 2px rgba(161, 161, 170, 0.35);
+    border-color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .create-section .details-subtitle {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .create-section .details-intro {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .create-section .btn-show-more {
+    background: var(--ec-surface-2);
+    border-color: var(--ec-border);
+    color: var(--ec-body-text);
+}
+
+html[data-theme="dark"] .create-section .btn-show-more:hover {
+    background: var(--ec-surface-3);
+    border-color: var(--ec-muted-2);
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .create-section .detail-card {
+    background: var(--ec-surface-2);
+    border-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .create-section .detail-card--highlight {
+    background: var(--ec-surface-3);
+    border-color: var(--ec-border);
+    box-shadow: none;
+}
+
+html[data-theme="dark"] .create-section .detail-card-label {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .create-section .detail-card-hint,
+html[data-theme="dark"] .create-section .detail-card-example {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .create-section .detail-card .form-textarea--compact {
+    background: var(--ec-input-bg);
+    border-color: var(--ec-border);
+    color: var(--ec-body-text);
+}
+
+html[data-theme="dark"] .create-section .field-hint {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .create-section .step4-time-title,
+html[data-theme="dark"] .create-section .step4-daily-days-title,
+html[data-theme="dark"] .create-section .weekdays-group-label,
+html[data-theme="dark"] .create-section .step4-monthly-title {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .create-section .step4-daily-days-subtitle,
+html[data-theme="dark"] .create-section .weekdays-group-hint,
+html[data-theme="dark"] .create-section .step4-monthly-subtitle {
+    color: var(--ec-muted);
+}
+
+/* Cartões horário / dias — não seleccionado */
+html[data-theme="dark"] #routineTimeGroup .time-choice-option:not(:has(input:checked)),
+html[data-theme="dark"] #step4MonthlyGroup .monthly-type-option:not(:has(input:checked)) {
+    opacity: 1;
+    background: var(--ec-surface-2);
+    border-color: var(--ec-border);
+}
+
+html[data-theme="dark"] #routineTimeGroup .time-choice-option:not(:has(input:checked)) .time-choice-label,
+html[data-theme="dark"] #step4MonthlyGroup .monthly-type-option:not(:has(input:checked)) .time-choice-label {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] #routineTimeGroup .time-choice-option:not(:has(input:checked)) .time-choice-subtitle,
+html[data-theme="dark"] #step4MonthlyGroup .monthly-type-option:not(:has(input:checked)) .time-choice-subtitle {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] #routineTimeGroup .time-choice-option:not(:has(input:checked)):hover,
+html[data-theme="dark"] #step4MonthlyGroup .monthly-type-option:not(:has(input:checked)):hover {
+    background: var(--ec-surface-3);
+    border-color: var(--ec-muted-2);
+}
+
+html[data-theme="dark"] #routineTimeGroup .time-choice-option:has(input:checked),
+html[data-theme="dark"] #step4MonthlyGroup .monthly-type-option:has(input:checked) {
+    background: var(--ec-btn-primary-bg);
+    border-color: var(--ec-btn-primary-bg);
+}
+
+html[data-theme="dark"] #routineTimeGroup .time-choice-option:has(input:checked) .time-choice-label,
+html[data-theme="dark"] #routineTimeGroup .time-choice-option:has(input:checked) .time-choice-subtitle,
+html[data-theme="dark"] #step4MonthlyGroup .monthly-type-option:has(input:checked) .time-choice-label,
+html[data-theme="dark"] #step4MonthlyGroup .monthly-type-option:has(input:checked) .time-choice-subtitle {
+    color: #18181b;
+}
+
+html[data-theme="dark"] #step4WeekdaysGroup .daily-day-type-option:not(:has(input:checked)) {
+    background: var(--ec-surface-2);
+    border-color: var(--ec-border);
+    opacity: 1;
+}
+
+html[data-theme="dark"] #step4WeekdaysGroup .daily-day-type-option:not(:has(input:checked)) .time-choice-label {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] #step4WeekdaysGroup .daily-day-type-option:not(:has(input:checked)) .time-choice-subtitle {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] #step4WeekdaysGroup .daily-day-type-option:not(:has(input:checked)):hover {
+    background: var(--ec-surface-3);
+}
+
+html[data-theme="dark"] #step4WeekdaysGroup .daily-day-type-option:has(input:checked) {
+    background: var(--ec-btn-primary-bg);
+    border-color: var(--ec-btn-primary-bg);
+}
+
+html[data-theme="dark"] #step4WeekdaysGroup .daily-day-type-option:has(input:checked) .time-choice-label,
+html[data-theme="dark"] #step4WeekdaysGroup .daily-day-type-option:has(input:checked) .time-choice-subtitle {
+    color: #18181b;
+}
+
+html[data-theme="dark"] .create-section .weekday-chip {
+    background: var(--ec-surface-2);
+    border-color: var(--ec-border);
+    color: var(--ec-body-text);
+}
+
+html[data-theme="dark"] .create-section .weekday-chip:hover {
+    background: var(--ec-surface-3);
+}
+
+html[data-theme="dark"] .create-section .weekday-chip:has(input:checked) {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: #ffffff;
+    color: #ffffff;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+html[data-theme="dark"] .create-section .time-picker-card {
+    background: var(--ec-surface-2);
+    border-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .create-section .time-picker-card-display {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .create-section .time-picker-card-label {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .create-section .time-picker-card .time-picker-select {
+    background: var(--ec-input-bg);
+    border-color: var(--ec-border);
+    color: var(--ec-body-text);
+}
+
+html[data-theme="dark"] .create-section .schedule-preview {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .create-section .btn-cancel {
+    background: var(--ec-surface-3);
+    color: var(--ec-body-text);
+    border-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .create-section .btn-cancel:hover {
+    background: var(--ec-surface-4);
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .create-section .btn-create {
+    background: var(--ec-btn-primary-bg);
+    color: #18181b;
+    border-color: var(--ec-btn-primary-bg);
+}
+
+html[data-theme="dark"] .create-section .btn-create:hover:not(:disabled) {
+    background: var(--ec-btn-primary-hover);
+}
+
+html[data-theme="dark"] .create-section .monthly-pattern-card {
+    background: var(--ec-surface-2);
+    border-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .create-section .monthly-pattern-card-title {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .create-section .monthly-pattern-card-hint,
+html[data-theme="dark"] .create-section .monthly-pattern-label {
+    color: var(--ec-muted);
+}
+
+html[data-theme="dark"] .create-section .monthly-day-calendar {
+    background: var(--ec-surface);
+    border-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .create-section .monthly-calendar-header,
+html[data-theme="dark"] .create-section .monthly-calendar-weekday {
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .create-section .monthly-day-cell {
+    background: var(--ec-surface-3);
+    border-color: var(--ec-border);
+    color: var(--ec-heading);
+}
+
+html[data-theme="dark"] .create-section .monthly-day-cell:hover:not(.monthly-day-cell--empty) {
+    background: var(--ec-surface-4);
+}
+
+html[data-theme="dark"] .create-section .monthly-day-cell.selected {
+    background: var(--ec-btn-primary-bg);
+    color: #18181b;
+    border-color: var(--ec-btn-primary-bg);
+}
+
+html[data-theme="dark"] .create-section .commitment-time-warning {
+    color: #fde68a;
+    background: rgba(30, 41, 59, 0.55);
+    border: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+html[data-theme="dark"] .create-section .tasks-preview .task-preview-item,
+html[data-theme="dark"] .create-section .add-task-container {
+    background: var(--ec-input-bg);
+    border-color: var(--ec-border);
+}
+
+html[data-theme="dark"] .create-section .btn-add-task {
+    background: var(--ec-surface-4);
+    color: var(--ec-heading);
+    border-color: var(--ec-border);
 }
