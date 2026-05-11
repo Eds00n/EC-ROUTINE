@@ -31,9 +31,6 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    # Evita falhar o CI do repositório se os secrets ainda não estiverem configurados
-    if: ${{ secrets.FTP_SERVER != '' && secrets.FTP_USERNAME != '' && secrets.FTP_PASSWORD != '' }}
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -44,7 +41,8 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          server-dir: ${{ secrets.FTP_SERVER_DIR != '' && secrets.FTP_SERVER_DIR || '/' }}
+          # Pasta remota; em Hostinger costuma ser /public_html (secret FTP_SERVER_DIR).
+          server-dir: ${{ secrets.FTP_SERVER_DIR }}
           dry-run: false
           exclude: |
             **/.git*
