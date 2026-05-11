@@ -41,7 +41,12 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          # Pasta remota; em Hostinger costuma ser /public_html (secret FTP_SERVER_DIR).
+          port: 21
+          # Hostinger: FTP sobre TLS (explícito) na porta 21 — costuma falhar com FTP “simples”.
+          protocol: ftps
+          security: loose
+          log-level: verbose
+          # Deve terminar com / (doc da action). No GitHub: secret FTP_SERVER_DIR = /public_html/
           server-dir: ${{ secrets.FTP_SERVER_DIR }}
           dry-run: false
           exclude: |
