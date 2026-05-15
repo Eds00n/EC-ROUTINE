@@ -194,6 +194,27 @@
         window.location.href = 'dashboard.html';
     }
 
+    /** Volta interna segura após login (ex.: ?next=/financeiro/conectar). */
+    function safeNextPath() {
+        try {
+            var next = new URLSearchParams(window.location.search).get('next');
+            if (!next || typeof next !== 'string') return null;
+            if (!next.startsWith('/') || next.startsWith('//')) return null;
+            return next;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function redirectAfterAuthSuccess() {
+        var next = safeNextPath();
+        if (next) {
+            window.location.href = next;
+            return true;
+        }
+        return false;
+    }
+
     function clearEntryTransitionFlags() {
         try {
             sessionStorage.removeItem('ec_force_daily_onboarding');
@@ -249,6 +270,7 @@
     function redirectAfterLogin() {
         clearEntryTransitionFlags();
     setEntryTransitionFlags('login', { showBootLoader: false, forceDaily: true, postLoginWelcome: false });
+        if (redirectAfterAuthSuccess()) return;
         redirectDashboard();
     }
 
@@ -281,8 +303,19 @@
                 var loginErr = (parsed.data && parsed.data.error) || 'Não foi possível entrar.';
                 if (parsed.status === 401 && /incorretos/i.test(String(loginErr))) {
                     loginErr +=
-                        ' Verifique a palavra-passe (o preenchimento automático do browser pode estar errado). ' +
-                        'Se criou a conta em outro sítio (ex.: online vs. no seu PC), use o mesmo sítio e a mesma palavra-passe.';
+                        ' Verifique a palavra-passe (o preenchimento automático do browser pode estar errado).';
+                    if (
+                        typeof window !== 'undefined' &&
+                        (window.location.hostname === 'localhost' ||
+                            window.location.hostname === '127.0.0.1')
+                    ) {
+                        loginErr +=
+                            ' No PC (localhost), a senha é a do cadastro neste computador — pode ser diferente do site online. ' +
+                            'Rotinas: use o site publicado. Financeiro sem login: http://localhost:3000/financeiro/conectar (modo dev) ou CSV.';
+                    } else {
+                        loginErr +=
+                            ' Se criou a conta em outro sítio (ex.: online vs. no seu PC), use o mesmo sítio e a mesma palavra-passe.';
+                    }
                 }
                 document.getElementById('loginFormError').textContent = loginErr;
                 return;

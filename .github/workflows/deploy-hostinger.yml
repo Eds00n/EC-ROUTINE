@@ -21,6 +21,7 @@ on:
       - '**.css'
       - '**.js'
       - 'assets/**'
+      - 'financeiro/**'
       - '.github/workflows/deploy-hostinger.yml'
   workflow_dispatch:
 

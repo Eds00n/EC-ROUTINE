@@ -2,3 +2,13 @@ node_modules/
 data/
 .env
 *.log
+
+# Financeiro — artefatos gerados e extrações manuais
+financeiro/import/nubank.csv
+financeiro/_xlsx_unzip/
+financeiro/_fix-motion.mjs
+financeiro/Planilha_Orcamento_Pessoal.xlsx
+financeiro/Planilha_Orcamento.html
+financeiro/Planilha_Resumo.csv
+financeiro/Planilha_Fluxo.csv
+financeiro/lancamentos.json

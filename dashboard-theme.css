@@ -131,6 +131,17 @@ html[data-theme="dark"] .header-admin-btn:hover {
     border-color: #52525b;
 }
 
+html[data-theme="dark"] .header-financeiro-btn {
+    border-color: #5b21b6;
+    background: rgba(139, 92, 246, 0.18);
+    color: #c4b5fd;
+}
+
+html[data-theme="dark"] .header-financeiro-btn:hover {
+    background: rgba(139, 92, 246, 0.28);
+    border-color: #7c3aed;
+}
+
 html[data-theme="dark"] .user-profile-avatar-fallback {
     background: linear-gradient(145deg, #3f3f46, #27272a);
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);

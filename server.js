@@ -12,6 +12,28 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const store = require('./lib/store');
 
+/** Carrega .env local (não commitado). Em produção use variáveis do painel do host. */
+function loadDotEnv() {
+    const envPath = path.join(__dirname, '.env');
+    if (!fsSync.existsSync(envPath)) return;
+    for (const line of fsSync.readFileSync(envPath, 'utf8').split(/\r?\n/)) {
+        const t = line.trim();
+        if (!t || t.startsWith('#')) continue;
+        const eq = t.indexOf('=');
+        if (eq < 1) continue;
+        const key = t.slice(0, eq).trim();
+        let val = t.slice(eq + 1).trim();
+        if (
+            (val.startsWith('"') && val.endsWith('"')) ||
+            (val.startsWith("'") && val.endsWith("'"))
+        ) {
+            val = val.slice(1, -1);
+        }
+        if (key && process.env[key] === undefined) process.env[key] = val;
+    }
+}
+loadDotEnv();
+
 const app = express();
 /** Render / proxies enviam X-Forwarded-For; express-rate-limit v8 exige isto para não lançar ValidationError. */
 app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS) || 1);
@@ -885,6 +907,16 @@ app.delete('/api/routines/:id/tasks/:taskId', authenticateToken, async (req, res
         console.error('Erro ao deletar tarefa:', error);
         res.status(500).json({ error: 'Erro ao deletar tarefa' });
     }
+});
+
+// ==================== FINANCEIRO (Open Finance / Pluggy) ====================
+const { createFinanceiroRouter } = require('./financeiro/openfinance/routes');
+app.use(
+    '/api/financeiro',
+    createFinanceiroRouter({ rootDir: __dirname, authenticateToken })
+);
+app.get('/financeiro/conectar', (req, res) => {
+    res.sendFile(path.join(__dirname, 'financeiro', 'conectar-nubank.html'));
 });
 
 // Estático por último: garante que nenhum ficheiro/pasta sob `api/` ou outro nome possa “roubar” pedidos a /api/*.

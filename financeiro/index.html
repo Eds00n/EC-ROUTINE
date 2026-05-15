@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Financeiro · EC ROUTINE</title>
+  <meta name="ec-api-base" content="https://ec-routine-api.onrender.com/api" />
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --card: #141414;
+      --border: #2a2a2a;
+      --text: #f0f0f0;
+      --muted: #9a9a9a;
+      --accent: #8b5cf6;
+      --accent-dim: rgba(139, 92, 246, 0.15);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 1.25rem;
+    }
+    .wrap { max-width: 26rem; margin: 0 auto; }
+    h1 { font-size: 1.2rem; margin: 0 0 0.35rem; }
+    p.lead { color: var(--muted); font-size: 0.88rem; line-height: 1.45; margin: 0 0 1rem; }
+    .hint {
+      font-size: 0.78rem;
+      color: var(--muted);
+      border-left: 3px solid var(--accent);
+      padding: 0.5rem 0.65rem;
+      margin-bottom: 1rem;
+      background: var(--accent-dim);
+      border-radius: 0 6px 6px 0;
+    }
+    .actions { display: flex; flex-direction: column; gap: 0.5rem; }
+    .actions a {
+      display: block;
+      text-align: center;
+      padding: 0.85rem 1rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.92rem;
+      text-decoration: none;
+      transition: opacity 0.15s ease;
+    }
+    .actions a:hover { opacity: 0.92; }
+    .actions a.primary { background: var(--accent); color: #fff; }
+    .actions a.secondary {
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .actions a.ghost {
+      color: var(--muted);
+      font-weight: 500;
+      font-size: 0.85rem;
+      padding: 0.5rem;
+    }
+    .foot { margin-top: 1.25rem; font-size: 0.75rem; color: var(--muted); line-height: 1.4; }
+  </style>
+  <script src="/api-base.js?v=20260419deploy"></script>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Financeiro</h1>
+    <p class="lead">Orçamento pessoal, extrato e conexão com o banco.</p>
+    <p class="hint">
+      Use o mesmo site em que você fez login no EC ROUTINE. O Open Finance usa sua sessão (token no navegador).
+    </p>
+    <nav class="actions" aria-label="Ações financeiras">
+      <a class="primary" href="Planilha_Orcamento.html">Ver painel do mês</a>
+      <a class="secondary" href="conectar-nubank.html">Conectar Nubank (Open Finance)</a>
+      <a class="ghost" href="../dashboard.html">Voltar ao dashboard</a>
+    </nav>
+    <p class="foot">
+      <strong>Erro 404 ao conectar?</strong> A API na Render precisa do <code>server.js</code> mais recente (rotas <code>/api/financeiro</code>) e das variáveis Pluggy no painel Render — depois redeploy.
+      O painel HTML no Hostinger só atualiza após regenerar a planilha e novo deploy FTP.
+    </p>
+  </div>
+</body>
+</html>

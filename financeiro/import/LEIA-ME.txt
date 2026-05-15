@@ -1,0 +1,12 @@
+AUTO NUBANK — onde colocar o arquivo
+====================================
+
+1. No app Nubank: exporte o extrato da CONTA em CSV.
+2. Salve aqui com o nome exato:  nubank.csv
+   (substitua o arquivo antigo cada mes)
+
+3. No PC, na pasta financeiro:
+   - SINCRONIZAR_AUTOMATICO.bat  = um clique (importa + abre painel)
+   - MONITORAR_NUBANK.bat        = deixa aberto; ao salvar o CSV, atualiza sozinho
+
+Teste sem Nubank: rode PREPARAR_NUBANK.bat (copia exemplo-nubank.csv).

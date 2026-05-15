@@ -1,0 +1,139 @@
+{
+  "mesRef": "jun/26",
+  "anoMes": "2026-06",
+  "valores": {
+    "salLiq": 1505.67,
+    "pensao": 1500,
+    "auxilio": 100,
+    "moto": 1000,
+    "emp": 442.39,
+    "facul": 140,
+    "gas": 85,
+    "cartao": 488.03,
+    "outros": 100,
+    "reservaAtual": 0
+  },
+  "colchao": {
+    "metaMin": 500,
+    "metaMax": 1000
+  },
+  "emprestimo": {
+    "parcelasPagas": 3,
+    "parcelasTotal": 12,
+    "parcelasRestantes": 9,
+    "saldoRestante": 3981.49,
+    "parcelaAntecipada": 401.77
+  },
+  "fluxo": [
+    {
+      "dia": 5,
+      "evento": "Salário",
+      "key": "salLiq",
+      "sinal": 1
+    },
+    {
+      "dia": 10,
+      "evento": "Pensão",
+      "key": "pensao",
+      "sinal": 1
+    },
+    {
+      "dia": 10,
+      "evento": "Cartão",
+      "key": "cartao",
+      "sinal": -1
+    },
+    {
+      "dia": 12,
+      "evento": "Moto",
+      "key": "moto",
+      "sinal": -1
+    },
+    {
+      "dia": 15,
+      "evento": "Faculdade",
+      "key": "facul",
+      "sinal": -1
+    },
+    {
+      "dia": 16,
+      "evento": "Empréstimo",
+      "key": "emp",
+      "sinal": -1
+    },
+    {
+      "dia": 20,
+      "evento": "Gasolina",
+      "key": "gas",
+      "sinal": -1
+    },
+    {
+      "dia": 25,
+      "evento": "Outros (teto)",
+      "key": "outros",
+      "sinal": -1
+    },
+    {
+      "dia": 29,
+      "evento": "IFAL",
+      "key": "auxilio",
+      "sinal": 1
+    }
+  ],
+  "metas": [
+    {
+      "icone": "E",
+      "titulo": "Empréstimo",
+      "texto": "9 parcelas restantes · saldo ~R$ 3.981 — adiantar se sobrar (antecip. ~R$ 401,77)"
+    },
+    {
+      "icone": "C",
+      "titulo": "Cartão",
+      "texto": "Fatura caindo — evitar novas parcelas até estabilizar"
+    },
+    {
+      "icone": "R",
+      "titulo": "Colchão",
+      "texto": "Meta R$ 500–1.000 antes de investir agressivamente"
+    }
+  ],
+  "extrato": {
+    "fonte": "nubank-csv",
+    "syncedAt": "2026-05-15T16:26:46.189Z",
+    "totalEntradas": 3105.67,
+    "totalSaidas": 1015.42,
+    "saldoReal": 2090.25,
+    "lancamentos": [
+      {
+        "date": "2026-06-05",
+        "desc": "Transferência recebida - Jovem Aprendiz",
+        "amount": 1505.67
+      },
+      {
+        "date": "2026-06-10",
+        "desc": "Pagamento de fatura",
+        "amount": -488.03
+      },
+      {
+        "date": "2026-06-10",
+        "desc": "Transferência recebida - Pensão",
+        "amount": 1500
+      },
+      {
+        "date": "2026-06-16",
+        "desc": "Parcela de empréstimo",
+        "amount": -442.39
+      },
+      {
+        "date": "2026-06-20",
+        "desc": "Posto Shell",
+        "amount": -85
+      },
+      {
+        "date": "2026-06-29",
+        "desc": "Transferência recebida IFAL",
+        "amount": 100
+      }
+    ]
+  }
+}

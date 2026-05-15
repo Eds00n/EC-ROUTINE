@@ -7,6 +7,14 @@
     "start": "node server.js",
     "dev": "node server.js",
     "test": "node --test tests/api.test.cjs",
+    "planilha:orcamento": "node financeiro/gerar-planilha.mjs",
+    "planilha:import-nubank": "node financeiro/importar-nubank-csv.mjs",
+    "planilha:sync": "node financeiro/sync.mjs",
+    "planilha:watch": "node financeiro/watch-import.mjs",
+    "planilha:verificar": "node financeiro/verificar-config.mjs",
+    "planilha:preparar-nubank": "node financeiro/preparar-nubank.mjs",
+    "planilha:navegador": "node financeiro/abrir-navegador.mjs",
+    "dev:reset-password": "node scripts/reset-local-password.mjs",
     "client": "npx http-server . -p 3001 -o"
   },
   "keywords": [
@@ -28,5 +36,8 @@
     "multer": "^2.1.1",
     "pg": "^8.13.1",
     "supertest": "^7.2.2"
+  },
+  "devDependencies": {
+    "exceljs": "^4.4.0"
   }
 }
