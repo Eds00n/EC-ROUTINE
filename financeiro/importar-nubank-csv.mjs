@@ -254,6 +254,49 @@ export function mesRefFromYm(ym) {
   return `${names[parseInt(m, 10) - 1]}/${y.slice(2)}`;
 }
 
+const PT_MONTH = {
+  JAN: "01",
+  FEV: "02",
+  MAR: "03",
+  ABR: "04",
+  MAI: "05",
+  JUN: "06",
+  JUL: "07",
+  AGO: "08",
+  SET: "09",
+  OUT: "10",
+  NOV: "11",
+  DEZ: "12",
+};
+
+/** Ex.: NU_..._01MAI2026_15MAI2026.csv → 2026-05 */
+export function ymFromNubankFilename(name) {
+  const m = String(name || "").match(
+    /(\d{2})(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)(\d{4})/i
+  );
+  if (!m) return null;
+  const mm = PT_MONTH[m[2].toUpperCase()];
+  return mm ? `${m[3]}-${mm}` : null;
+}
+
+/** Mês com mais lançamentos no CSV. */
+export function detectPrimaryYm(rows) {
+  const counts = new Map();
+  for (const t of rows) {
+    if (!t.ym) continue;
+    counts.set(t.ym, (counts.get(t.ym) || 0) + 1);
+  }
+  let best = null;
+  let bestN = 0;
+  for (const [ym, n] of counts) {
+    if (n > bestN) {
+      bestN = n;
+      best = ym;
+    }
+  }
+  return best;
+}
+
 function fmt(n) {
   return n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
@@ -261,11 +304,12 @@ function fmt(n) {
 /**
  * Aplica import CSV a um objeto config (API ou ficheiro).
  * @param {object} config
- * @param {{ csvText?: string, csv?: string, mes?: string|null, apply?: boolean }} opts
+ * @param {{ csvText?: string, csv?: string, mes?: string|null, apply?: boolean, filename?: string }} opts
  */
 export function runNubankImportOnConfig(config, opts = {}) {
   const apply = opts.apply ?? false;
-  const filterYm = opts.mes || config.anoMes;
+  let filterYm = opts.mes || config.anoMes;
+  let autoDetected = false;
 
   let rows;
   try {
@@ -280,11 +324,20 @@ export function runNubankImportOnConfig(config, opts = {}) {
     return { ok: false, error: e.message || String(e), changed: 0, count: 0, filterYm };
   }
 
-  const { filtered, suggested, count } = aggregate(rows, filterYm);
+  let { filtered, suggested, count } = aggregate(rows, filterYm);
+  if (count === 0) {
+    const detected =
+      detectPrimaryYm(rows) || ymFromNubankFilename(opts.filename) || null;
+    if (detected && detected !== filterYm) {
+      filterYm = detected;
+      autoDetected = true;
+      ({ filtered, suggested, count } = aggregate(rows, filterYm));
+    }
+  }
   if (count === 0) {
     return {
       ok: false,
-      error: `Nenhum lançamento em ${filterYm}. Exporte o CSV do mês correto no Nubank.`,
+      error: `Nenhum lançamento em ${filterYm}. Confira as datas no CSV ou exporte outro período no Nubank.`,
       changed: 0,
       count: 0,
       filterYm,
@@ -340,6 +393,7 @@ export function runNubankImportOnConfig(config, opts = {}) {
     changed,
     count,
     filterYm,
+    autoDetected,
     config,
     ledger,
     preview: {
@@ -347,6 +401,7 @@ export function runNubankImportOnConfig(config, opts = {}) {
       totalEntradas: ledger?.totalEntradas,
       totalSaidas: ledger?.totalSaidas,
       saldoReal: ledger?.saldoReal,
+      mesRef: mesRefFromYm(filterYm),
     },
   };
 }

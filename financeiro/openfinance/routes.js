@@ -285,6 +285,7 @@ function createFinanceiroRouter({ rootDir, authenticateToken }) {
         csvText,
         mes: anoMes,
         apply: true,
+        filename: req.file.originalname || "",
       });
 
       if (!result.ok) {
@@ -320,8 +321,11 @@ function createFinanceiroRouter({ rootDir, authenticateToken }) {
         anoMes: result.filterYm,
         count: result.count,
         changed: result.changed,
-        message: `${result.count} lançamentos importados`,
+        message: result.autoDetected
+          ? `${result.count} lançamentos importados (mês ${result.preview?.mesRef || result.filterYm} detectado no CSV)`
+          : `${result.count} lançamentos importados`,
         preview: result.preview,
+        autoDetected: Boolean(result.autoDetected),
       });
     } catch (e) {
       console.error("financeiro/import", e.message || e);
