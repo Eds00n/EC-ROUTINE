@@ -156,8 +156,7 @@ function findColumn(headers, names) {
   return -1;
 }
 
-export function loadTransactions(csvPath) {
-  let text = readFileSync(csvPath, "utf8");
+export function loadTransactionsFromText(text) {
   if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
   const lines = text.split(/\r?\n/).filter((l) => l.trim());
   if (lines.length < 2) throw new Error("CSV vazio ou sem linhas de dados.");
@@ -210,6 +209,10 @@ export function loadTransactions(csvPath) {
   return rows;
 }
 
+export function loadTransactions(csvPath) {
+  return loadTransactionsFromText(readFileSync(csvPath, "utf8"));
+}
+
 function matchRule(desc, rule) {
   return rule.patterns.some((p) => p.test(desc));
 }
@@ -245,7 +248,7 @@ function aggregate(rows, filterYm) {
   return { filtered, suggested, count: filtered.length };
 }
 
-function mesRefFromYm(ym) {
+export function mesRefFromYm(ym) {
   const [y, m] = ym.split("-");
   const names = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
   return `${names[parseInt(m, 10) - 1]}/${y.slice(2)}`;
@@ -253,6 +256,99 @@ function mesRefFromYm(ym) {
 
 function fmt(n) {
   return n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/**
+ * Aplica import CSV a um objeto config (API ou ficheiro).
+ * @param {object} config
+ * @param {{ csvText?: string, csv?: string, mes?: string|null, apply?: boolean }} opts
+ */
+export function runNubankImportOnConfig(config, opts = {}) {
+  const apply = opts.apply ?? false;
+  const filterYm = opts.mes || config.anoMes;
+
+  let rows;
+  try {
+    if (opts.csvText != null) {
+      rows = loadTransactionsFromText(opts.csvText);
+    } else if (opts.csv) {
+      rows = loadTransactions(opts.csv);
+    } else {
+      return { ok: false, error: "csvText ou csv obrigatório", changed: 0, count: 0, filterYm };
+    }
+  } catch (e) {
+    return { ok: false, error: e.message || String(e), changed: 0, count: 0, filterYm };
+  }
+
+  const { filtered, suggested, count } = aggregate(rows, filterYm);
+  if (count === 0) {
+    return {
+      ok: false,
+      error: `Nenhum lançamento em ${filterYm}. Exporte o CSV do mês correto no Nubank.`,
+      changed: 0,
+      count: 0,
+      filterYm,
+    };
+  }
+
+  const valorKeys = ["salLiq", "pensao", "auxilio", "moto", "emp", "facul", "gas", "cartao", "outros"];
+  let changed = 0;
+
+  for (const key of valorKeys) {
+    if (suggested[key] == null) continue;
+    const cur = config.valores[key];
+    const neu = Math.round(suggested[key] * 100) / 100;
+    if (apply && cur !== neu) {
+      config.valores[key] = neu;
+      changed++;
+    }
+  }
+
+  if (suggested.reservaAtual != null && apply) {
+    const cur = config.valores.reservaAtual ?? 0;
+    const neu = suggested.reservaAtual;
+    if (cur !== neu) {
+      config.valores.reservaAtual = neu;
+      changed++;
+    }
+  }
+
+  let ledger = null;
+  if (apply) {
+    if (filterYm && filterYm !== config.anoMes) {
+      config.anoMes = filterYm;
+      config.mesRef = mesRefFromYm(filterYm);
+    }
+    const mapped = filtered.map((t) => ({
+      date: t.date || `${t.ym}-01`,
+      desc: t.desc,
+      amount: t.amount,
+    }));
+    ledger = buildLedger(mapped, filterYm);
+    config.extrato = {
+      fonte: "nubank-csv",
+      syncedAt: new Date().toISOString(),
+      totalEntradas: ledger.totalEntradas,
+      totalSaidas: ledger.totalSaidas,
+      saldoReal: ledger.saldoReal,
+      lancamentos: ledger.lancamentos,
+    };
+  }
+
+  return {
+    ok: true,
+    changed,
+    count,
+    filterYm,
+    config,
+    ledger,
+    preview: {
+      sugestoes: suggested,
+      totalEntradas: ledger?.totalEntradas,
+      totalSaidas: ledger?.totalSaidas,
+      saldoReal: ledger?.saldoReal,
+    },
+  };
 }
 
 /**
@@ -271,91 +367,55 @@ export function runNubankImport(opts = {}) {
   }
 
   const config = JSON.parse(readFileSync(CONFIG_PATH, "utf8"));
-  const filterYm = opts.mes || config.anoMes;
-  const rows = loadTransactions(csv);
-  const { filtered, suggested, count } = aggregate(rows, filterYm);
-
   log("=== Import Nubank CSV ===");
   log("Arquivo:", csv);
-  log("Mês filtro:", filterYm, `(${count} lançamentos)`);
+
+  const result = runNubankImportOnConfig(config, { csv, mes: opts.mes, apply });
+  if (!result.ok) {
+    if (!quiet) logErr(result.error || "Erro no import");
+    return { ok: false, changed: 0, count: result.count || 0, filterYm: result.filterYm || "" };
+  }
+
+  const { suggested } = result.preview || {};
+  const filterYm = result.filterYm;
+  log("Mês filtro:", filterYm, `(${result.count} lançamentos)`);
   log("");
 
   const valorKeys = ["salLiq", "pensao", "auxilio", "moto", "emp", "facul", "gas", "cartao", "outros"];
-  const keys = Object.keys(suggested).filter((k) => k !== "reservaAtual");
+  const keys = Object.keys(suggested || {}).filter((k) => k !== "reservaAtual");
 
-  if (!keys.length && suggested.reservaAtual == null) {
-    log("Nenhum lançamento reconhecido nas regras automáticas.");
-    return { ok: true, changed: 0, count, filterYm };
-  }
-
-  if (!quiet) {
+  if (!keys.length && suggested?.reservaAtual == null) {
+    log("Nenhum lançamento reconhecido nas regras automáticas (extrato gravado mesmo assim).");
+  } else if (!quiet) {
     log("Sugestões (comparado com config atual):");
     log("");
-  }
-
-  let changed = 0;
-
-  for (const key of valorKeys) {
-    if (suggested[key] == null) continue;
-    const cur = config.valores[key];
-    const neu = Math.round(suggested[key] * 100) / 100;
-    const rule = RULES.find((r) => r.key === key);
-    const tag = cur === neu ? "=" : "→";
-    log(
-      `  ${rule?.label || key}: R$ ${fmt(cur)} ${tag} R$ ${fmt(neu)}${tag === "=" ? " (igual)" : ""}`
-    );
-    if (apply && cur !== neu) {
-      config.valores[key] = neu;
-      changed++;
+    for (const key of valorKeys) {
+      if (suggested[key] == null) continue;
+      const cur = config.valores[key];
+      const neu = Math.round(suggested[key] * 100) / 100;
+      const rule = RULES.find((r) => r.key === key);
+      const tag = cur === neu ? "=" : "→";
+      log(
+        `  ${rule?.label || key}: R$ ${fmt(cur)} ${tag} R$ ${fmt(neu)}${tag === "=" ? " (igual)" : ""}`
+      );
     }
-  }
-
-  if (suggested.reservaAtual != null) {
-    const cur = config.valores.reservaAtual ?? 0;
-    const neu = suggested.reservaAtual;
-    log(`  Reserva (saldo CSV): R$ ${fmt(cur)} ${cur === neu ? "=" : "→"} R$ ${fmt(neu)}`);
-    if (apply && cur !== neu) {
-      config.valores.reservaAtual = neu;
-      changed++;
-    }
-  }
-
-  if (!quiet) {
     log("");
     log("Não detectados automaticamente: moto (fora do Nu), outros, metas, fluxo.");
   }
 
-  if (apply) {
-    if (filterYm && filterYm !== config.anoMes) {
-      config.anoMes = filterYm;
-      config.mesRef = mesRefFromYm(filterYm);
-    }
-    const mapped = filtered.map((t) => ({
-      date: t.date || `${t.ym}-01`,
-      desc: t.desc,
-      amount: t.amount,
-    }));
-    const ledger = buildLedger(mapped, filterYm);
-    config.extrato = {
-      fonte: "nubank-csv",
-      syncedAt: new Date().toISOString(),
-      totalEntradas: ledger.totalEntradas,
-      totalSaidas: ledger.totalSaidas,
-      saldoReal: ledger.saldoReal,
-      lancamentos: ledger.lancamentos,
-    };
+  if (apply && result.ledger) {
     writeFileSync(
       join(__dirname, "lancamentos.json"),
-      JSON.stringify({ syncedAt: config.extrato.syncedAt, ...ledger }, null, 2) + "\n",
+      JSON.stringify({ syncedAt: config.extrato.syncedAt, ...result.ledger }, null, 2) + "\n",
       "utf8"
     );
     writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2) + "\n", "utf8");
-    if (!quiet) log(`config.json atualizado (${changed} campo(s) alterado(s)).`);
+    if (!quiet) log(`config.json atualizado (${result.changed} campo(s) alterado(s)).`);
   } else if (!quiet) {
     log("Modo leitura. Para gravar: npm run planilha:import-nubank -- --apply");
   }
 
-  return { ok: true, changed, count, filterYm };
+  return { ok: true, changed: result.changed, count: result.count, filterYm };
 }
 
 function main() {

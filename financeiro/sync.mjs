@@ -27,6 +27,12 @@ const gen = spawnSync(process.execPath, ["financeiro/gerar-planilha.mjs"], {
 });
 if (gen.status !== 0) process.exit(gen.status ?? 1);
 
+const ftp = spawnSync(process.execPath, ["financeiro/upload-hostinger.mjs"], {
+  cwd: root,
+  stdio: "inherit",
+});
+if (ftp.status !== 0) process.exit(ftp.status ?? 1);
+
 const nav = spawnSync(process.execPath, ["financeiro/abrir-navegador.mjs"], {
   cwd: root,
   stdio: "inherit",

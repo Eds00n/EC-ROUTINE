@@ -103,4 +103,97 @@ describe('API REST', () => {
         assert.equal(verifyAdmin.status, 200);
         assert.equal(verifyAdmin.body.user.isAdmin, true);
     });
+
+    test('GET /api/financeiro/ping sem auth', async () => {
+        const res = await request(app).get('/api/financeiro/ping');
+        assert.equal(res.status, 200);
+        assert.equal(res.body.ok, true);
+        assert.equal(res.body.financeiro, true);
+        assert.equal(typeof res.body.pluggyConfigured, 'boolean');
+    });
+
+    test('POST /api/financeiro/webhooks/pluggy aceita evento', async () => {
+        const res = await request(app)
+            .post('/api/financeiro/webhooks/pluggy')
+            .send({ event: 'item/created', itemId: 'test-item', eventId: 'evt-1' });
+        assert.equal(res.status, 200);
+        assert.equal(res.body.received, true);
+    });
+
+    test('GET /api/financeiro/painel exige autenticação', async () => {
+        const res = await request(app).get('/api/financeiro/painel');
+        assert.equal(res.status, 401);
+    });
+
+    test('POST /api/financeiro/import exige autenticação', async () => {
+        const csv = 'data,descrição,valor\n05/06/2026,Teste,10.00\n';
+        const res = await request(app)
+            .post('/api/financeiro/import')
+            .attach('file', Buffer.from(csv, 'utf8'), { filename: 'nubank.csv', contentType: 'text/csv' });
+        assert.equal(res.status, 401);
+    });
+
+    test('POST /api/financeiro/import grava orçamento e painel reflete', async () => {
+        const fs = require('fs/promises');
+        const path = require('path');
+        const rootDir = path.join(__dirname, '..');
+        const csv = await fs.readFile(
+            path.join(rootDir, 'financeiro', 'import', 'exemplo-nubank.csv'),
+            'utf8'
+        );
+
+        const email = `import_${Date.now()}@test.local`;
+        const reg = await request(app)
+            .post('/api/register')
+            .send({ name: 'Import', email, password: 'senha88888' });
+        assert.equal(reg.status, 201);
+        const token = reg.body.token;
+
+        const imp = await request(app)
+            .post('/api/financeiro/import')
+            .set('Authorization', 'Bearer ' + token)
+            .field('anoMes', '2026-06')
+            .attach('file', Buffer.from(csv, 'utf8'), {
+                filename: 'nubank.csv',
+                contentType: 'text/csv',
+            });
+        assert.equal(imp.status, 200, imp.body?.error || JSON.stringify(imp.body));
+        assert.equal(imp.body.ok, true);
+        assert.equal(imp.body.count, 6);
+        assert.equal(imp.body.anoMes, '2026-06');
+
+        const painel = await request(app)
+            .get('/api/financeiro/painel?format=html')
+            .set('Authorization', 'Bearer ' + token);
+        assert.equal(painel.status, 200);
+        assert.match(painel.text, /Orçamento pessoal/);
+        assert.match(painel.text, /Jovem Aprendiz|Transferência recebida/i);
+    });
+
+    test('GET /api/financeiro/painel devolve HTML com orçamento do usuário', async () => {
+        const fs = require('fs/promises');
+        const path = require('path');
+        const userStore = require('../financeiro/openfinance/user-store');
+        const rootDir = path.join(__dirname, '..');
+
+        const email = `painel_${Date.now()}@test.local`;
+        const reg = await request(app)
+            .post('/api/register')
+            .send({ name: 'Painel', email, password: 'senha88888' });
+        assert.equal(reg.status, 201);
+        const token = reg.body.token;
+        const userId = reg.body.user.id;
+
+        const config = JSON.parse(
+            await fs.readFile(path.join(rootDir, 'financeiro', 'config.json'), 'utf8')
+        );
+        await userStore.saveOrcamento(rootDir, userId, config);
+
+        const res = await request(app)
+            .get('/api/financeiro/painel?format=html')
+            .set('Authorization', 'Bearer ' + token);
+        assert.equal(res.status, 200);
+        assert.match(res.headers['content-type'] || '', /html/i);
+        assert.match(res.text, /Orçamento pessoal/);
+    });
 });

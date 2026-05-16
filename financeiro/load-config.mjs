@@ -4,9 +4,8 @@ import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-/** Carrega config.json e calcula totais derivados */
-export function loadOrcamentoConfig() {
-  const raw = JSON.parse(readFileSync(join(__dirname, "config.json"), "utf8"));
+/** Calcula totais derivados a partir do objeto config (arquivo ou API). */
+export function orcamentoFromRaw(raw) {
   const v = { ...raw.valores };
 
   v.totalEntradas = v.salLiq + v.pensao + v.auxilio;
@@ -53,6 +52,12 @@ export function loadOrcamentoConfig() {
       pct: colchaoMeta > 0 ? Math.min(100, Math.round((reserva / colchaoMeta) * 100)) : 0,
     },
   };
+}
+
+/** Carrega config.json e calcula totais derivados */
+export function loadOrcamentoConfig() {
+  const raw = JSON.parse(readFileSync(join(__dirname, "config.json"), "utf8"));
+  return orcamentoFromRaw(raw);
 }
 
 export function fmtMoneyBR(n) {

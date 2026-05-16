@@ -3,11 +3,13 @@
  */
 const fs = require("fs").promises;
 const path = require("path");
+const userStore = require("./user-store");
 
 async function applyToFinanceiroFiles(rootDir, ledger, opts = {}) {
   const financeRoot = path.join(rootDir, "financeiro");
   const configPath = path.join(financeRoot, "config.json");
   const lancPath = path.join(financeRoot, "lancamentos.json");
+  const userId = opts.userId;
 
   const raw = JSON.parse(await fs.readFile(configPath, "utf8"));
   const syncedAt = new Date().toISOString();
@@ -28,20 +30,20 @@ async function applyToFinanceiroFiles(rootDir, ledger, opts = {}) {
   }
 
   await fs.writeFile(configPath, JSON.stringify(raw, null, 2) + "\n", "utf8");
-  await fs.writeFile(
-    lancPath,
-    JSON.stringify(
-      {
-        syncedAt,
-        ...ledger,
-      },
-      null,
-      2
-    ) + "\n",
-    "utf8"
-  );
 
-  return { configPath, lancPath, extrato: raw.extrato };
+  const lancPayload = { syncedAt, ...ledger };
+  await fs.writeFile(lancPath, JSON.stringify(lancPayload, null, 2) + "\n", "utf8");
+
+  if (userId) {
+    await userStore.saveOrcamento(rootDir, userId, raw);
+    const userLancPath = path.join(
+      userStore.financeDir(rootDir),
+      `user-${userId}-lancamentos.json`
+    );
+    await fs.writeFile(userLancPath, JSON.stringify(lancPayload, null, 2) + "\n", "utf8");
+  }
+
+  return { configPath, lancPath, extrato: raw.extrato, orcamento: raw };
 }
 
 module.exports = { applyToFinanceiroFiles };

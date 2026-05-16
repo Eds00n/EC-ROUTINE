@@ -14,6 +14,8 @@
     "planilha:verificar": "node financeiro/verificar-config.mjs",
     "planilha:preparar-nubank": "node financeiro/preparar-nubank.mjs",
     "planilha:navegador": "node financeiro/abrir-navegador.mjs",
+    "planilha:upload": "node financeiro/upload-hostinger.mjs",
+    "planilha:upload-site": "node financeiro/upload-site-ftp.mjs",
     "dev:reset-password": "node scripts/reset-local-password.mjs",
     "client": "npx http-server . -p 3001 -o"
   },
@@ -26,6 +28,7 @@
   "license": "MIT",
   "dependencies": {
     "axios": "^1.6.0",
+    "basic-ftp": "^5.3.1",
     "bcryptjs": "^2.4.3",
     "chartist": "^1.5.0",
     "cors": "^2.8.5",

@@ -2,19 +2,23 @@
 
 Controle financeiro local: planilha Excel, dashboard HTML e CSV.
 
-## Site publicado (Hostinger + API Render)
+## Uso no site (FINANCEIRO no header)
 
-1. Faça **login** no EC ROUTINE no seu domínio (mesma conta de sempre — não use `localhost` se a senha for só do site no ar).
-2. No **dashboard**, clique **FINANCEIRO** no header (ao lado de ADM / perfil).
-3. No hub (`financeiro/index.html`):
-   - **Ver painel do mês** → `Planilha_Orcamento.html`
-   - **Conectar Nubank** → `conectar-nubank.html` (Open Finance; exige Pluggy na API Render)
+### Opção A — CSV no site (recomendado)
 
-URL direta do hub: `https://SEU-DOMINIO/financeiro/index.html`
+1. Faça **login** no EC ROUTINE.
+2. **FINANCEIRO** → exporte CSV no app Nubank (Conta → CSV).
+3. **Escolher ficheiro** → **Importar e ver painel** (dados ficam na API, por utilizador).
+4. O painel abre automaticamente (não precisa de PC nem FTP).
 
-**Hostinger + API separada:** o sync Pluggy grava dados no servidor **Render**. O HTML do painel no Hostinger só mostra números novos depois de `npm run planilha:orcamento` e novo deploy FTP — ou use monólito Render para painel e API no mesmo domínio.
+Requer API em produção com `POST /api/financeiro/import` (redeploy Render) e `CORS_ORIGIN` com o domínio do site.
 
-**Erro «Erro ao obter status» ou 404:** a API `ec-routine-api.onrender.com` ainda não foi atualizada com o módulo financeiro. No [Render](https://dashboard.render.com) → seu Web Service → **Environment** → adicione `PLUGGY_CLIENT_ID` e `PLUGGY_CLIENT_SECRET` → **Manual Deploy** / redeploy do último commit do GitHub.
+### Opção B — CSV no PC
+
+1. Salvar em `financeiro/import/nubank.csv`.
+2. `SINCRONIZAR_AUTOMATICO.bat` (opcional FTP no `.env` publica `Planilha_Orcamento.html` na Hostinger).
+
+Open Finance (Pluggy) não é o fluxo principal — use o CSV.
 
 ## Editar valores
 
@@ -67,7 +71,7 @@ npm run planilha:import-nubank -- --apply   # grava no config
 **Preenche do CSV:** salário, pensão, IFAL, fatura cartão, empréstimo, gasolina, faculdade.  
 **Manual no config:** `moto`, `outros`, metas (se não aparecerem no extrato).
 
-**Sem exportar CSV:** use Open Finance abaixo (cada lançamento do mês soma no extrato).
+**Sem CSV:** o painel não atualiza — exporte o extrato no app Nubank.
 
 ## Gerar arquivos
 
@@ -107,30 +111,10 @@ Gera:
 | `PREPARAR_NUBANK.bat` | Cria `nubank.csv` de teste ou lembra o caminho |
 | `SINCRONIZAR_AUTOMATICO.bat` | Sync completo em um clique |
 | `MONITORAR_NUBANK.bat` | Monitor da pasta `import/` |
-| `index.html` | Hub no site (painel + conectar + voltar) |
-| `conectar-nubank.html` | Open Finance (widget Pluggy) |
-
-## Open Finance (Pluggy — cada centavo)
-
-Com o servidor EC ROUTINE a correr (`npm start`) e credenciais Pluggy no `.env`:
-
-1. Crie uma aplicação em [dashboard.pluggy.ai](https://dashboard.pluggy.ai) (modo **sandbox** para testes).
-2. No `.env` da raiz: `PLUGGY_CLIENT_ID` e `PLUGGY_CLIENT_SECRET` (ver `.env.example`).
-3. Faça **login** no site EC ROUTINE (token em `localStorage`).
-4. Abra **`financeiro/conectar-nubank.html`** no site (ou `http://localhost:3000/financeiro/conectar` em dev local).
-5. **Conectar conta** → autorize no widget → **Sincronizar mês agora**.
-
-O sync grava em `config.json` o bloco `extrato` (todas as linhas do mês), `financeiro/lancamentos.json`, opcionalmente atualiza `valores` por regras, e regenera o painel HTML.
-
-| API (JWT) | Função |
-|-----------|--------|
-| `GET /api/financeiro/status` | Pluggy configurado? conta ligada? |
-| `POST /api/financeiro/connect-token` | Token do widget Connect |
-| `POST /api/financeiro/connection` | Guarda `itemId` após sucesso no widget |
-| `POST /api/financeiro/sync` | Baixa transações do mês (`anoMes` do config) |
-| `GET /api/financeiro/extrato` | Último `lancamentos.json` |
-
-Código em `financeiro/openfinance/`. CSV manual continua válido; com `--apply` o import também pode preencher o extrato completo a partir do CSV.
+| `index.html` | Hub: upload CSV (login) + instruções PC |
+| `import.js` | Envia CSV para `POST /api/financeiro/import` |
+| `painel.html` | Painel via API (logado) ou `Planilha_Orcamento.html` (fallback) |
+| `conectar-nubank.html` | Redireciona para `index.html` (legado) |
 
 ## Git
 

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Orçamento · EC ROUTINE</title>
+  <meta name="ec-api-base" content="https://ec-routine-api.onrender.com/api" />
+  <style>
+    body { margin: 0; background: #0a0a0a; color: #f0f0f0; font-family: system-ui, sans-serif; }
+    .painel-loading {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      padding: 1rem;
+      text-align: center;
+      color: #9a9a9a;
+    }
+    .painel-loading.err { color: #ff6b6b; }
+    .painel-loading a { color: #8b5cf6; }
+    .painel-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; }
+    .painel-actions button, .painel-actions a {
+      padding: 0.55rem 0.9rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.88rem;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+    }
+    .painel-actions .primary { background: #8b5cf6; color: #fff; }
+    .painel-actions .secondary { background: #222; color: #f0f0f0; border: 1px solid #2a2a2a; }
+  </style>
+</head>
+<body>
+  <div id="painel-loading" class="painel-loading">Carregando orçamento…</div>
+  <script src="/api-base.js?v=20260419deploy"></script>
+  <script src="/financeiro/painel.js"></script>
+</body>
+</html>

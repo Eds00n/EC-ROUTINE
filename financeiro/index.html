@@ -14,6 +14,8 @@
       --muted: #9a9a9a;
       --accent: #8b5cf6;
       --accent-dim: rgba(139, 92, 246, 0.15);
+      --ok: #3ddc84;
+      --err: #ff6b6b;
     }
     * { box-sizing: border-box; }
     body {
@@ -24,7 +26,7 @@
       color: var(--text);
       padding: 1.25rem;
     }
-    .wrap { max-width: 26rem; margin: 0 auto; }
+    .wrap { max-width: 28rem; margin: 0 auto; }
     h1 { font-size: 1.2rem; margin: 0 0 0.35rem; }
     p.lead { color: var(--muted); font-size: 0.88rem; line-height: 1.45; margin: 0 0 1rem; }
     .hint {
@@ -35,51 +37,68 @@
       margin-bottom: 1rem;
       background: var(--accent-dim);
       border-radius: 0 6px 6px 0;
+      line-height: 1.45;
     }
-    .actions { display: flex; flex-direction: column; gap: 0.5rem; }
-    .actions a {
-      display: block;
-      text-align: center;
-      padding: 0.85rem 1rem;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 0.92rem;
-      text-decoration: none;
-      transition: opacity 0.15s ease;
-    }
-    .actions a:hover { opacity: 0.92; }
-    .actions a.primary { background: var(--accent); color: #fff; }
-    .actions a.secondary {
-      background: var(--card);
-      color: var(--text);
-      border: 1px solid var(--border);
-    }
-    .actions a.ghost {
+    ol.steps {
+      font-size: 0.82rem;
       color: var(--muted);
-      font-weight: 500;
-      font-size: 0.85rem;
-      padding: 0.5rem;
+      line-height: 1.5;
+      padding-left: 1.2rem;
+      margin: 0 0 1rem;
     }
-    .foot { margin-top: 1.25rem; font-size: 0.75rem; color: var(--muted); line-height: 1.4; }
+    ol.steps strong { color: var(--text); }
   </style>
-  <script src="/api-base.js?v=20260419deploy"></script>
+  <link rel="stylesheet" href="/financeiro/import-ui.css" />
 </head>
 <body>
   <div class="wrap">
     <h1>Financeiro</h1>
-    <p class="lead">Orçamento pessoal, extrato e conexão com o banco.</p>
+    <p class="lead">Atualize o orçamento com o extrato CSV do Nubank.</p>
+
     <p class="hint">
-      Use o mesmo site em que você fez login no EC ROUTINE. O Open Finance usa sua sessão (token no navegador).
+      No app: <strong>Conta</strong> → exportar extrato → formato <strong>CSV</strong> (não PDF).
+      Escolha o mês que quer ver no painel.
     </p>
-    <nav class="actions" aria-label="Ações financeiras">
-      <a class="primary" href="Planilha_Orcamento.html">Ver painel do mês</a>
-      <a class="secondary" href="conectar-nubank.html">Conectar Nubank (Open Finance)</a>
-      <a class="ghost" href="../dashboard.html">Voltar ao dashboard</a>
+
+    <ol class="steps">
+      <li>Exportar CSV no Nubank</li>
+      <li>Entrar no EC ROUTINE (login)</li>
+      <li>Enviar o ficheiro abaixo → <strong>Importar e ver painel</strong></li>
+    </ol>
+
+    <div id="login-required" class="card login-card">
+      <p>É preciso estar com sessão iniciada.</p>
+      <a class="btn primary" href="/auth.html?next=%2Ffinanceiro%2Findex.html">Entrar / criar conta</a>
+    </div>
+
+    <div id="upload-block" class="card" hidden>
+      <h2 class="section-title">Atualizar extrato</h2>
+      <label class="file-label">
+        <span class="file-label-text">Ficheiro CSV</span>
+        <input id="csv-file" type="file" accept=".csv,text/csv" />
+      </label>
+      <button type="button" id="btn-import" class="btn primary">Importar e ver painel</button>
+      <p id="import-status" class="import-status" role="status" aria-live="polite"></p>
+    </div>
+
+    <nav class="actions" aria-label="Ações">
+      <a class="btn secondary" href="painel.html">Ver painel (última importação)</a>
+      <a class="btn ghost" href="../dashboard.html">Voltar ao dashboard</a>
     </nav>
+
     <p class="foot">
-      <strong>Erro 404 ao conectar?</strong> A API na Render precisa do <code>server.js</code> mais recente (rotas <code>/api/financeiro</code>) e das variáveis Pluggy no painel Render — depois redeploy.
-      O painel HTML no Hostinger só atualiza após regenerar a planilha e novo deploy FTP.
+      <a href="#" id="toggle-pc-help" aria-expanded="false">Prefere usar o PC? Instruções</a>
     </p>
+    <div id="pc-instructions" class="card pc-help" hidden>
+      <ol class="steps">
+        <li>Salvar CSV em <code>financeiro/import/nubank.csv</code></li>
+        <li>Rodar <code>SINCRONIZAR_AUTOMATICO.bat</code></li>
+        <li>FTP no <code>.env</code> publica o painel na Hostinger (opcional)</li>
+      </ol>
+    </div>
   </div>
+
+  <script src="/api-base.js?v=20260419deploy"></script>
+  <script src="/financeiro/import.js"></script>
 </body>
 </html>

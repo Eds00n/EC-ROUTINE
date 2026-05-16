@@ -9,6 +9,10 @@ function userPath(rootDir, userId) {
   return path.join(financeDir(rootDir), `user-${userId}.json`);
 }
 
+function orcamentoPath(rootDir, userId) {
+  return path.join(financeDir(rootDir), `user-${userId}-orcamento.json`);
+}
+
 async function ensureDir(rootDir) {
   await fs.mkdir(financeDir(rootDir), { recursive: true });
 }
@@ -32,4 +36,28 @@ async function saveUser(rootDir, userId, data) {
   await fs.writeFile(userPath(rootDir, userId), JSON.stringify(data, null, 2) + "\n", "utf8");
 }
 
-module.exports = { loadUser, saveUser, financeDir };
+async function loadOrcamento(rootDir, userId) {
+  await ensureDir(rootDir);
+  const p = orcamentoPath(rootDir, userId);
+  try {
+    const raw = await fs.readFile(p, "utf8");
+    return JSON.parse(raw);
+  } catch (e) {
+    if (e.code === "ENOENT") return null;
+    throw e;
+  }
+}
+
+async function saveOrcamento(rootDir, userId, data) {
+  await ensureDir(rootDir);
+  await fs.writeFile(orcamentoPath(rootDir, userId), JSON.stringify(data, null, 2) + "\n", "utf8");
+}
+
+module.exports = {
+  loadUser,
+  saveUser,
+  loadOrcamento,
+  saveOrcamento,
+  financeDir,
+  orcamentoPath,
+};

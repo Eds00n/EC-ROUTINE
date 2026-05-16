@@ -6,6 +6,16 @@
   const loginHint = document.getElementById("loginHint");
   const originHint = document.getElementById("originHint");
   const updateBudget = document.getElementById("updateBudget");
+  const sandboxCard = document.getElementById("sandboxCard");
+
+  function isLocalDev() {
+    const h = String(window.location.hostname || "").toLowerCase();
+    return h === "localhost" || h === "127.0.0.1";
+  }
+
+  function showSandboxHint(show) {
+    if (sandboxCard) sandboxCard.style.display = show ? "block" : "none";
+  }
 
   if (originHint) {
     originHint.textContent = window.location.origin || "http://localhost:3000";
@@ -39,15 +49,26 @@
       ...options,
       headers,
     });
-    const data = await res.json().catch(() => ({}));
+    const raw = await res.text();
+    let data = {};
+    try {
+      data = raw ? JSON.parse(raw) : {};
+    } catch (_) {
+      data = {};
+    }
     if (!res.ok) {
       let msg = data.error || res.statusText;
       if (data.hint) msg += " — " + data.hint;
       if (res.status === 401) msg = "Faça login no EC ROUTINE (botão abaixo).";
       if (res.status === 403) msg = "Sessão expirada — entre de novo.";
       if (res.status === 404) {
-        msg =
-          "A API no ar ainda não tem o módulo financeiro (404). No Render: redeploy do server.js atual + PLUGGY_CLIENT_ID e PLUGGY_CLIENT_SECRET.";
+        const apiHost = apiRoot().replace(/\/api\/?$/i, "");
+        const html404 = /Cannot GET/i.test(raw);
+        msg = html404
+          ? "A API em " +
+            apiHost +
+            " ainda não tem o módulo financeiro (deploy antigo). No Render: Manual Deploy do último commit + variáveis PLUGGY_CLIENT_ID e PLUGGY_CLIENT_SECRET."
+          : "Rota financeiro não encontrada (404). Faça redeploy da API.";
       }
       const err = new Error(msg);
       err.status = res.status;
@@ -55,6 +76,24 @@
       throw err;
     }
     return data;
+  }
+
+  async function checkApiDeployed() {
+    try {
+      const res = await fetch(apiRoot() + "/financeiro/ping", {
+        headers: { Accept: "application/json" },
+      });
+      const raw = await res.text();
+      let data = {};
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch (_) {}
+      if (res.ok && data.ok && data.financeiro) return data;
+      if (res.status === 404) return null;
+      return data;
+    } catch (_) {
+      return null;
+    }
   }
 
   function showLoginRequired() {
@@ -67,6 +106,31 @@
 
   async function refreshStatus() {
     try {
+      const ping = await checkApiDeployed();
+      if (!ping) {
+        const local =
+          window.location.hostname === "localhost" &&
+          window.location.port === "3000";
+        setStatus(
+          local
+            ? "Servidor local sem rotas financeiro — reinicie npm start na pasta EC ROUTINE."
+            : "API desatualizada (sem /financeiro). No Render: redeploy + Pluggy no Environment.",
+          "err"
+        );
+        btnConnect.disabled = true;
+        btnSync.disabled = true;
+        return;
+      }
+      showSandboxHint(isLocalDev());
+      if (!ping.pluggyConfigured && !isLocalDev()) {
+        setStatus(
+          "API no ar sem Pluggy. No Render, adicione PLUGGY_CLIENT_ID e PLUGGY_CLIENT_SECRET e redeploy.",
+          "err"
+        );
+        btnConnect.disabled = true;
+        btnSync.disabled = true;
+        return;
+      }
       const s = await api("/status");
       if (!s.pluggyConfigured) {
         setStatus("Pluggy não configurado. Reinicie npm start após editar .env.", "err");
@@ -126,7 +190,9 @@
         method: "POST",
         body: JSON.stringify({ updateBudget: updateBudget.checked }),
       });
-      setStatus(data.message || "Extrato sincronizado.", "ok");
+      setStatus(data.message || "Extrato sincronizado. Abrindo painel…", "ok");
+      window.location.href = "/financeiro/painel.html?synced=1";
+      return;
     } catch (e) {
       setStatus(e.message || "Falha na sincronização", "err");
     } finally {
@@ -153,7 +219,11 @@
       return;
     }
     btnConnect.disabled = true;
-    setStatus("Abrindo Pluggy Connect…");
+    if (isLocalDev()) {
+      setStatus("Sandbox: no widget escolha Pluggy Bank (não Nubank real).", "ok");
+    } else {
+      setStatus("Abrindo Pluggy Connect…");
+    }
     try {
       const { accessToken } = await api("/connect-token", { method: "POST", body: "{}" });
       const pluggyConnect = new PluggyConnect({
@@ -179,8 +249,17 @@
             error && (error.message || error.code || error.description)
               ? String(error.message || error.code || error.description)
               : "";
+          const sandboxOnly =
+            /sandbox|contas de teste|pluggy bank/i.test(detail) ||
+            /sandbox|contas de teste|pluggy bank/i.test(
+              error && error.data ? String(error.data.message || "") : ""
+            );
           setStatus(
-            detail ? "Pluggy: " + detail : "Conexão cancelada ou com erro no widget.",
+            sandboxOnly
+              ? "Conta Pluggy de teste: escolha Pluggy Bank no widget (user-ok / password-ok). Nubank real só com produção na Pluggy."
+              : detail
+                ? "Pluggy: " + detail
+                : "Conexão cancelada ou com erro no widget.",
             "err"
           );
           btnConnect.disabled = false;

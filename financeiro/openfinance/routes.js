@@ -1,10 +1,14 @@
 const express = require("express");
 const path = require("path");
+const { pathToFileURL } = require("url");
 const { spawn } = require("child_process");
+const multer = require("multer");
 const pluggy = require("./pluggy-client");
 const userStore = require("./user-store");
 const { buildLedger, mapPluggyTransactions } = require("./ledger");
 const { applyToFinanceiroFiles } = require("./apply-files");
+const { renderPainelHtml } = require("./render-painel");
+const fs = require("fs").promises;
 
 function runPlanilhaOrcamento(rootDir) {
   return new Promise((resolve, reject) => {
@@ -36,7 +40,8 @@ function monthRange(anoMes) {
 function financeiroDevBypass() {
   return (
     process.env.FINANCEIRO_DEV_BYPASS === "1" &&
-    process.env.NODE_ENV !== "production"
+    process.env.NODE_ENV !== "production" &&
+    process.env.NODE_ENV !== "test"
   );
 }
 
@@ -50,9 +55,71 @@ function createFinanceiroAuth(authenticateToken) {
   };
 }
 
+const CSV_IMPORT_MAX_BYTES = 5 * 1024 * 1024;
+const csvUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: CSV_IMPORT_MAX_BYTES },
+  fileFilter(req, file, cb) {
+    const name = String(file.originalname || "").toLowerCase();
+    const ok =
+      name.endsWith(".csv") ||
+      file.mimetype === "text/csv" ||
+      file.mimetype === "application/vnd.ms-excel" ||
+      file.mimetype === "text/plain";
+    cb(ok ? null : new Error("Envie um ficheiro CSV exportado do Nubank"), ok);
+  },
+});
+
+function csvUploadSingle(req, res, next) {
+  csvUpload.single("file")(req, res, (err) => {
+    if (err && err.code === "LIMIT_FILE_SIZE") {
+      return res.status(413).json({ error: "CSV demasiado grande (máx. 5 MB)." });
+    }
+    if (err) return res.status(400).json({ error: err.message || "Upload inválido" });
+    next();
+  });
+}
+
 function createFinanceiroRouter({ rootDir, authenticateToken }) {
   const router = express.Router();
   const auth = createFinanceiroAuth(authenticateToken);
+
+  /** Sem login — confirma se a API em produção tem o módulo financeiro. */
+  router.get("/ping", (req, res) => {
+    res.json({
+      ok: true,
+      financeiro: true,
+      pluggyConfigured: pluggy.isConfigured(),
+    });
+  });
+
+  function pluggyWebhookAuthorized(req) {
+    const secret = String(process.env.PLUGGY_WEBHOOK_SECRET || "").trim();
+    if (!secret) return true;
+    const auth = String(req.headers.authorization || "").trim();
+    return auth === secret || auth === `Bearer ${secret}`;
+  }
+
+  /** Pluggy exige HTTPS público (não localhost) para pedir produção. */
+  router.get("/webhooks/pluggy", (req, res) => {
+    res.json({
+      ok: true,
+      message: "Endpoint ativo. Configure POST com eventos Pluggy (event: all).",
+    });
+  });
+
+  router.post("/webhooks/pluggy", (req, res) => {
+    if (!pluggyWebhookAuthorized(req)) {
+      return res.status(401).json({ error: "Webhook não autorizado" });
+    }
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    res.status(200).json({ received: true });
+    setImmediate(() => {
+      const tag = body.event || "unknown";
+      const id = body.itemId || body.eventId || "";
+      console.log("pluggy webhook", tag, id);
+    });
+  });
 
   router.get("/status", auth, async (req, res) => {
     try {
@@ -157,6 +224,7 @@ function createFinanceiroRouter({ rootDir, authenticateToken }) {
       const files = await applyToFinanceiroFiles(rootDir, ledger, {
         fonte: "pluggy",
         updateBudget: req.body?.updateBudget !== false,
+        userId: req.user.id,
       });
 
       try {
@@ -178,10 +246,136 @@ function createFinanceiroRouter({ rootDir, authenticateToken }) {
     }
   });
 
+  async function loadOrcamentoForUser(userId) {
+    let raw = await userStore.loadOrcamento(rootDir, userId);
+    if (raw) return raw;
+    const configPath = path.join(rootDir, "financeiro", "config.json");
+    try {
+      return JSON.parse(await fs.readFile(configPath, "utf8"));
+    } catch (e) {
+      if (e.code === "ENOENT") return null;
+      throw e;
+    }
+  }
+
+  router.post("/import", auth, csvUploadSingle, async (req, res) => {
+    try {
+      if (!req.file || !req.file.buffer) {
+        return res.status(400).json({ error: "Nenhum ficheiro CSV enviado" });
+      }
+
+      const importUrl = pathToFileURL(
+        path.join(rootDir, "financeiro", "importar-nubank-csv.mjs")
+      ).href;
+      const { runNubankImportOnConfig } = await import(importUrl);
+
+      let config = await loadOrcamentoForUser(req.user.id);
+      if (!config) {
+        const configPath = path.join(rootDir, "financeiro", "config.json");
+        config = JSON.parse(await fs.readFile(configPath, "utf8"));
+      } else {
+        config = JSON.parse(JSON.stringify(config));
+      }
+
+      const anoMes =
+        (req.body && String(req.body.anoMes || "").trim()) || config.anoMes;
+      const csvText = req.file.buffer.toString("utf8");
+
+      const result = runNubankImportOnConfig(config, {
+        csvText,
+        mes: anoMes,
+        apply: true,
+      });
+
+      if (!result.ok) {
+        return res.status(400).json({ error: result.error || "Erro ao importar CSV" });
+      }
+
+      await userStore.saveOrcamento(rootDir, req.user.id, result.config);
+
+      if (result.ledger) {
+        const lancPath = path.join(
+          userStore.financeDir(rootDir),
+          `user-${req.user.id}-lancamentos.json`
+        );
+        await fs.mkdir(userStore.financeDir(rootDir), { recursive: true });
+        await fs.writeFile(
+          lancPath,
+          JSON.stringify(
+            { syncedAt: result.config.extrato.syncedAt, ...result.ledger },
+            null,
+            2
+          ) + "\n",
+          "utf8"
+        );
+      }
+
+      const state = await userStore.loadUser(rootDir, req.user.id);
+      state.lastSyncAt = result.config.extrato?.syncedAt || new Date().toISOString();
+      await userStore.saveUser(rootDir, req.user.id, state);
+
+      res.set("Cache-Control", "private, no-store");
+      res.json({
+        ok: true,
+        anoMes: result.filterYm,
+        count: result.count,
+        changed: result.changed,
+        message: `${result.count} lançamentos importados`,
+        preview: result.preview,
+      });
+    } catch (e) {
+      console.error("financeiro/import", e.message || e);
+      res.status(500).json({ error: e.message || "Erro ao importar extrato" });
+    }
+  });
+
+  router.get("/painel", auth, async (req, res) => {
+    try {
+      const raw = await loadOrcamentoForUser(req.user.id);
+      if (!raw) {
+        return res.status(404).json({
+          error: "Nenhum orçamento sincronizado",
+          hint: "Em FINANCEIRO, importe o CSV do Nubank ou sincronize no PC",
+        });
+      }
+
+      const format = String(req.query.format || "html").toLowerCase();
+      if (format === "json") {
+        const loadConfigUrl = pathToFileURL(
+          path.join(rootDir, "financeiro", "load-config.mjs")
+        ).href;
+        const { orcamentoFromRaw } = await import(loadConfigUrl);
+        const state = await userStore.loadUser(rootDir, req.user.id);
+        return res.json({
+          ok: true,
+          connected: Boolean(state.pluggyItemId && state.accountId),
+          lastSyncAt: state.lastSyncAt || raw.extrato?.syncedAt || null,
+          ...orcamentoFromRaw(raw),
+        });
+      }
+
+      const html = await renderPainelHtml(raw);
+      res.set("Cache-Control", "private, no-store");
+      res.type("html").send(html);
+    } catch (e) {
+      console.error("financeiro/painel", e);
+      res.status(500).json({ error: e.message || "Erro ao gerar painel" });
+    }
+  });
+
   router.get("/extrato", auth, async (req, res) => {
     try {
-      const lancPath = path.join(rootDir, "financeiro", "lancamentos.json");
-      const raw = await require("fs").promises.readFile(lancPath, "utf8");
+      const userLanc = path.join(
+        userStore.financeDir(rootDir),
+        `user-${req.user.id}-lancamentos.json`
+      );
+      let lancPath = userLanc;
+      try {
+        await fs.access(userLanc);
+      } catch {
+        lancPath = path.join(rootDir, "financeiro", "lancamentos.json");
+      }
+      const raw = await fs.readFile(lancPath, "utf8");
       res.json(JSON.parse(raw));
     } catch (e) {
       if (e.code === "ENOENT") {

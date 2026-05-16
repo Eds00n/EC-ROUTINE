@@ -80,6 +80,9 @@ Execute manualmente na URL de produção:
 - [ ] Anotação (tipo caderno / digital / diagrama) e guardar
 - [ ] Upload de imagem (perfil ou anexo) e verificar se persiste após redeploy (se usar disco efémero, pode falhar — ver secção 5)
 - [ ] `ADMIN_EMAILS` definido; abrir `/admin` com sessão desse e-mail e confirmar estatísticas; com outra conta, confirmar 403 em `/api/admin/summary`
+- [ ] `GET https://O-TEU-SERVICO.onrender.com/api/financeiro/ping` responde **200** JSON `{"ok":true,"financeiro":true,...}` (se der **404**, faça **Manual Deploy** na Render)
+- [ ] **Financeiro CSV:** com login no site, FINANCEIRO → importar CSV → painel; `POST /api/financeiro/import` com Bearer (teste após deploy). `CORS_ORIGIN` deve incluir o domínio Hostinger (ex.: `https://seudominio.com`)
+- [ ] (Opcional PC) FTP no `.env` local + `SINCRONIZAR_AUTOMATICO.bat` publica `Planilha_Orcamento.html` na Hostinger
 
 ## 7. Outros
 
