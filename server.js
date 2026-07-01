@@ -111,6 +111,10 @@ app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'admin.html'))
 app.get('/admin.html', (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
 app.get('/create', (req, res) => res.sendFile(path.join(__dirname, 'create.html')));
 app.get('/login', (req, res) => res.redirect('/auth.html?view=login'));
+app.get('/auth', (req, res) => {
+    const qs = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '?view=login';
+    res.redirect('/auth.html' + qs);
+});
 app.get('/register', (req, res) => res.sendFile(path.join(__dirname, 'auth.html')));
 app.get('/', (req, res) => res.redirect('/auth.html?view=login'));
 
@@ -226,7 +230,7 @@ function publicUserFields(user) {
         id: user.id,
         name: user.name,
         email: user.email,
-        picture: user.picture || '',
+        picture: normalizeProfilePictureRef(user.picture || ''),
         sexuality: user.sexuality || '',
         birthDate: user.birthDate || ''
     };
@@ -260,6 +264,48 @@ function attachmentIdFromPictureUrl(pic) {
     } catch {
         return pathPart;
     }
+}
+
+/** Corrige referências antigas (só nome do ficheiro ou URL na raiz da API) para /api/attachments/:id */
+function normalizeProfilePictureRef(pic) {
+    if (!pic || typeof pic !== 'string') return '';
+    const t = pic.trim();
+    if (!t) return '';
+    if (t.startsWith('data:')) return t;
+
+    const attId = attachmentIdFromPictureUrl(t);
+    if (attId) return '/api/attachments/' + encodeURIComponent(attId);
+
+    if (!/[\\/]/.test(t) && !/^https?:\/\//i.test(t)) {
+        if (/^[a-zA-Z0-9._-]+\.(png|jpe?g|webp|gif|svg)$/i.test(t)) {
+            return '/api/attachments/' + encodeURIComponent(t);
+        }
+        return '';
+    }
+
+    if (/^https?:\/\//i.test(t)) {
+        try {
+            const u = new URL(t);
+            const host = (u.hostname || '').toLowerCase();
+            const isOurApi =
+                host === 'localhost' ||
+                host === '127.0.0.1' ||
+                host.endsWith('.onrender.com');
+            const base = (u.pathname || '').split('/').filter(Boolean).pop() || '';
+            if (
+                isOurApi &&
+                base &&
+                /^[a-zA-Z0-9._-]+\.(png|jpe?g|webp|gif|svg)$/i.test(base) &&
+                (u.pathname || '').indexOf('/api/attachments/') === -1
+            ) {
+                return '/api/attachments/' + encodeURIComponent(base);
+            }
+        } catch {
+            return '';
+        }
+    }
+
+    return t;
 }
 
 function authenticateToken(req, res, next) {
@@ -325,6 +371,78 @@ function uploadSingle(req, res, next) {
 }
 
 // ==================== AUTENTICAÇÃO ====================
+
+const DEV_MONITOR_EMAIL = 'dev.monitor@localhost';
+
+function isLocalDevServer(req) {
+    if (process.env.NODE_ENV === 'production' && process.env.ALLOW_DEV_LOGIN !== '1') {
+        return false;
+    }
+    const host = String(req.hostname || '')
+        .trim()
+        .toLowerCase();
+    return host === 'localhost' || host === '127.0.0.1';
+}
+
+async function ensureDevMonitorUser() {
+    const emailNorm = DEV_MONITOR_EMAIL;
+    let user = await store.findUserByEmail(emailNorm);
+    if (!user) {
+        const hashedPassword = await bcrypt.hash('dev-local-only-not-for-prod', 10);
+        user = {
+            id: 'dev-monitor-local',
+            name: 'Dev Monitor',
+            email: emailNorm,
+            password: hashedPassword,
+            sexuality: '',
+            birthDate: '1990-01-01',
+            createdAt: new Date().toISOString()
+        };
+        try {
+            await store.createUser(user);
+        } catch (e) {
+            const dup =
+                e.code === '23505' ||
+                e.code === 'DUPLICATE_EMAIL' ||
+                /já cadastrado|already exists/i.test(String((e && e.message) || ''));
+            if (dup) {
+                user = await store.findUserByEmail(emailNorm);
+            } else {
+                throw e;
+            }
+        }
+    }
+    if (user && (!user.birthDate || String(user.birthDate).length < 10)) {
+        user.birthDate = '1990-01-01';
+        if (typeof store.updateUser === 'function') {
+            await store.updateUser(user);
+        }
+    }
+    return user;
+}
+
+/** Login sem palavra-passe — só com npm start em localhost (monitorização local). */
+app.post('/api/dev/login', async (req, res) => {
+    if (!isLocalDevServer(req)) {
+        return res.status(404).json({ error: 'Não encontrado' });
+    }
+    try {
+        const user = await ensureDevMonitorUser();
+        if (!user) {
+            return res.status(500).json({ error: 'Utilizador de desenvolvimento indisponível' });
+        }
+        const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '30d' });
+        console.log('[dev] Login local: dev.monitor@localhost → dashboard');
+        res.json({
+            message: 'Sessão local de monitorização',
+            token,
+            user: userPayloadForClient(user)
+        });
+    } catch (error) {
+        console.error('Erro no login de desenvolvimento:', error);
+        res.status(500).json({ error: 'Erro ao iniciar sessão local' });
+    }
+});
 
 app.post('/api/register', authRouteLimiter, async (req, res) => {
     try {
@@ -581,16 +699,24 @@ app.post('/api/uploads', authenticateToken, uploadSingle, async (req, res) => {
 
 app.get('/api/attachments/:id', authenticateToken, async (req, res) => {
     try {
-        const id = req.params.id;
+        let id = req.params.id;
+        try {
+            id = decodeURIComponent(id);
+        } catch {
+            /* mantém id original */
+        }
         if (!id || id.indexOf('..') !== -1 || /[\\/]/.test(id)) {
             return res.status(400).json({ error: 'ID inválido' });
         }
         const entry = await store.getAttachmentMeta(id);
-        if (!entry || entry.userId !== req.user.id) {
+        if (!entry || String(entry.userId) !== String(req.user.id)) {
             return res.status(404).json({ error: 'Anexo não encontrado' });
         }
         const filePath = path.join(ATTACHMENTS_DIR, entry.filename);
         await fs.access(filePath);
+        if (entry.mimeType) {
+            res.type(entry.mimeType);
+        }
         res.sendFile(path.resolve(filePath));
     } catch (e) {
         if (e.code === 'ENOENT') return res.status(404).json({ error: 'Anexo não encontrado' });
@@ -619,6 +745,7 @@ app.post('/api/routines', authenticateToken, async (req, res) => {
         const {
             title,
             description,
+            category,
             tasks,
             schedule,
             planType,
@@ -626,7 +753,10 @@ app.post('/api/routines', authenticateToken, async (req, res) => {
             reasons,
             bulletType,
             context,
-            tags
+            tags,
+            studyGoal,
+            studySessions,
+            studySubjects
         } = req.body;
 
         if (!title) {
@@ -638,6 +768,7 @@ app.post('/api/routines', authenticateToken, async (req, res) => {
             userId: req.user.id,
             title,
             description: description || '',
+            ...(category !== undefined && { category: category || null }),
             tasks: tasks || [],
             schedule: schedule || {},
             planType: planType || 'daily',
@@ -649,6 +780,9 @@ app.post('/api/routines', authenticateToken, async (req, res) => {
             checkIns: [],
             completed: false,
             progress: calculateProgress({ tasks: tasks || [] }),
+            ...(studyGoal !== undefined && { studyGoal: studyGoal || null }),
+            studySessions: Array.isArray(studySessions) ? studySessions : [],
+            studySubjects: Array.isArray(studySubjects) ? studySubjects : [],
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         };
@@ -668,6 +802,7 @@ app.put('/api/routines/:id', authenticateToken, async (req, res) => {
         const {
             title,
             description,
+            category,
             tasks,
             schedule,
             completed,
@@ -677,7 +812,10 @@ app.put('/api/routines/:id', authenticateToken, async (req, res) => {
             bulletType,
             context,
             tags,
-            checkIns
+            checkIns,
+            studyGoal,
+            studySessions,
+            studySubjects
         } = req.body;
 
         const prev = await store.getRoutine(req.user.id, id);
@@ -689,6 +827,7 @@ app.put('/api/routines/:id', authenticateToken, async (req, res) => {
             ...prev,
             ...(title && { title }),
             ...(description !== undefined && { description }),
+            ...(category !== undefined && { category: category || null }),
             ...(tasks && { tasks }),
             ...(schedule && { schedule }),
             ...(completed !== undefined && { completed }),
@@ -700,6 +839,13 @@ app.put('/api/routines/:id', authenticateToken, async (req, res) => {
             ...(tags !== undefined && { tags: Array.isArray(tags) ? tags : [] }),
             ...(checkIns !== undefined && {
                 checkIns: Array.isArray(checkIns) ? checkIns : prev.checkIns || []
+            }),
+            ...(studyGoal !== undefined && { studyGoal: studyGoal || null }),
+            ...(studySessions !== undefined && {
+                studySessions: Array.isArray(studySessions) ? studySessions : prev.studySessions || []
+            }),
+            ...(studySubjects !== undefined && {
+                studySubjects: Array.isArray(studySubjects) ? studySubjects : prev.studySubjects || []
             }),
             updatedAt: new Date().toISOString()
         };
@@ -910,14 +1056,25 @@ app.delete('/api/routines/:id/tasks/:taskId', authenticateToken, async (req, res
 });
 
 // ==================== FINANCEIRO (Open Finance / Pluggy) ====================
-const { createFinanceiroRouter } = require('./financeiro/openfinance/routes');
-app.use(
-    '/api/financeiro',
-    createFinanceiroRouter({ rootDir: __dirname, authenticateToken })
-);
-app.get('/financeiro/conectar', (req, res) => {
-    res.sendFile(path.join(__dirname, 'financeiro', 'conectar-nubank.html'));
-});
+const featureFlags = require('./lib/ec-feature-flags');
+
+if (featureFlags.financeiroEnabled) {
+    const { createFinanceiroRouter } = require('./financeiro/openfinance/routes');
+    app.use(
+        '/api/financeiro',
+        createFinanceiroRouter({ rootDir: __dirname, authenticateToken })
+    );
+    app.get('/financeiro/conectar', (req, res) => {
+        res.sendFile(path.join(__dirname, 'financeiro', 'conectar-nubank.html'));
+    });
+} else {
+    app.use('/api/financeiro', (req, res) => {
+        res.status(503).json({ error: 'Módulo financeiro temporariamente indisponível.' });
+    });
+    app.use('/financeiro', (req, res) => {
+        res.redirect(302, '/dashboard.html');
+    });
+}
 
 // Estático por último: garante que nenhum ficheiro/pasta sob `api/` ou outro nome possa “roubar” pedidos a /api/*.
 app.use(express.static('.'));
@@ -954,6 +1111,9 @@ async function startServer() {
     app.listen(PORT, () => {
         const backend = store.usingPostgres() ? 'PostgreSQL' : 'ficheiros JSON (data/)';
         console.log(`Servidor na porta ${PORT} · armazenamento: ${backend}`);
+        if (process.env.NODE_ENV !== 'production' || process.env.ALLOW_DEV_LOGIN === '1') {
+            console.log('Modo local: POST /api/dev/login + botão "Entrar em modo local" em auth.html');
+        }
         console.log(`Anexos em: ${ATTACHMENTS_DIR}`);
         console.log(`Raiz do servidor (confirme que é a pasta EC ROUTINE): ${__dirname}`);
         const adminPath = path.join(__dirname, 'admin.html');
