@@ -1,0 +1,191 @@
+/* Transição de entrada: EC ROUTINE (typewriter) → fade suave */
+
+:root {
+    --ec-entry-bg: #f4f4f5;
+    --ec-entry-fg: #0a0a0a;
+}
+
+html[data-theme="dark"] {
+    --ec-entry-bg: #000000;
+    --ec-entry-fg: #ffffff;
+}
+
+.ec-entry-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 10150;
+    pointer-events: none;
+    visibility: hidden;
+    opacity: 1;
+    transition: opacity 0.85s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ec-entry-screen:not(.is-hidden) {
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.ec-entry-screen.is-hidden {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.ec-entry-screen.is-phase-exit {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.ec-entry-stage {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--ec-entry-bg);
+    padding: 24px;
+    box-sizing: border-box;
+}
+
+.ec-entry-wordmark {
+    display: inline-grid;
+    margin: 0;
+    padding: 0;
+    font-family: Inter, system-ui, sans-serif;
+    font-size: clamp(2.75rem, 11vw, 5.5rem);
+    font-weight: 900;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    line-height: 1.05;
+    color: var(--ec-entry-fg);
+    text-align: center;
+    opacity: 0;
+    transform: translateY(6px);
+    transition:
+        opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+        transform 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ec-entry-wordmark__ghost,
+.ec-entry-wordmark__text {
+    grid-area: 1 / 1;
+    justify-self: center;
+}
+
+.ec-entry-wordmark__ghost {
+    visibility: hidden;
+    pointer-events: none;
+    user-select: none;
+}
+
+.ec-entry-wordmark__text {
+    display: inline-block;
+    min-height: 1.05em;
+    white-space: pre;
+}
+
+.ec-entry-wordmark__text.typewriter-active::after {
+    content: '';
+    display: inline-block;
+    width: 0.08em;
+    min-width: 3px;
+    height: 0.82em;
+    margin-left: 0.06em;
+    vertical-align: -0.08em;
+    background: var(--ec-entry-fg);
+    border-radius: 1px;
+    animation: ecEntryTypewriterCaret 0.85s steps(1, end) infinite;
+}
+
+.ec-entry-wordmark__text.typewriter-done::after {
+    display: none;
+}
+
+@keyframes ecEntryTypewriterCaret {
+    0%,
+    45% {
+        opacity: 1;
+    }
+    46%,
+    100% {
+        opacity: 0;
+    }
+}
+
+.ec-entry-screen.is-phase-active .ec-entry-wordmark {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Transição gradual entre páginas (dashboard → create) */
+html.ec-page-exit-active body > .header,
+html.ec-page-exit-active body > .main-content {
+    opacity: 0;
+    transform: translateY(10px);
+    transition:
+        opacity 0.42s cubic-bezier(0.4, 0, 0.2, 1),
+        transform 0.42s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+}
+
+html.ec-page-enter-pending body > .header,
+html.ec-page-enter-pending body > .main-content,
+html.ec-page-enter-pending #notificationContainer {
+    opacity: 0;
+    transform: translateY(12px);
+}
+
+html.ec-page-enter-reveal body > .header {
+    opacity: 1;
+    transform: translateY(0);
+    transition:
+        opacity 0.58s cubic-bezier(0.22, 1, 0.36, 1),
+        transform 0.58s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+html.ec-page-enter-reveal body > .main-content,
+html.ec-page-enter-reveal #notificationContainer {
+    opacity: 1;
+    transform: translateY(0);
+    transition:
+        opacity 0.62s cubic-bezier(0.22, 1, 0.36, 1) 0.1s,
+        transform 0.62s cubic-bezier(0.22, 1, 0.36, 1) 0.1s;
+}
+
+/* Anti-flash antes do JS — não bloquear cliques após o boot */
+html.ec-entry-boot .ec-entry-screen.is-hidden {
+    visibility: visible;
+    pointer-events: none;
+    opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ec-entry-screen,
+    .ec-entry-wordmark {
+        transition: none !important;
+    }
+
+    html.ec-page-exit-active body > .header,
+    html.ec-page-exit-active body > .main-content,
+    html.ec-page-enter-pending body > .header,
+    html.ec-page-enter-pending body > .main-content,
+    html.ec-page-enter-reveal body > .header,
+    html.ec-page-enter-reveal body > .main-content {
+        transition: none !important;
+        transform: none !important;
+    }
+
+    .ec-entry-wordmark__text.typewriter-active::after {
+        animation: none;
+        opacity: 1;
+    }
+
+    .ec-entry-screen.is-reduced.is-phase-exit {
+        opacity: 0;
+        transition: opacity 0.35s ease !important;
+    }
+
+    .ec-entry-screen.is-reduced .ec-entry-wordmark {
+        opacity: 1;
+        transform: none;
+    }
+}

@@ -1,12 +1,16 @@
 (function () {
     'use strict';
 
-    var API_BASE =
-        (typeof window !== 'undefined' && window.__EC_API_BASE__) ||
-        'https://ec-routine-api.onrender.com/api';
+    function getApiBase() {
+        if (typeof window !== 'undefined' && window.__EC_API_BASE__) {
+            return window.__EC_API_BASE__;
+        }
+        return 'https://ec-routine-api.onrender.com/api';
+    }
     var MIN_PASSWORD = 8;
 
     var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    var DEV_MONITOR_EMAIL = 'dev.monitor@localhost';
 
     var loginPanel = document.getElementById('loginPanel');
     var registerPanel = document.getElementById('registerPanel');
@@ -66,7 +70,9 @@
     }
 
     function validateEmail(value) {
-        return EMAIL_RE.test(String(value || '').trim());
+        var v = String(value || '').trim().toLowerCase();
+        if (EMAIL_RE.test(v)) return true;
+        return /^[^\s@]+@localhost$/i.test(v);
     }
 
     /** Evita tratar HTML (502, página de erro) como JSON; devolve { ok, data, isHtml }. */
@@ -151,7 +157,7 @@
         } catch (e) {}
 
         try {
-            var existingRes = await fetch(API_BASE + '/routines', {
+            var existingRes = await fetch(getApiBase() + '/routines', {
                 headers: { Authorization: 'Bearer ' + token }
             });
             if (!existingRes.ok) return;
@@ -172,7 +178,7 @@
                 var fp = [payload.title.toLowerCase(), String(payload.planType || 'daily'), String(routine.createdAt || '')].join('|');
                 if (existingFingerprints.has(fp)) continue;
 
-                var createRes = await fetch(API_BASE + '/routines', {
+                var createRes = await fetch(getApiBase() + '/routines', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -252,7 +258,7 @@
 
     function redirectToProfileSetupFromLogin() {
         clearEntryTransitionFlags();
-    setEntryTransitionFlags('login', { showBootLoader: false, forceDaily: true, postLoginWelcome: false });
+    setEntryTransitionFlags('login', { showBootLoader: true, forceDaily: true, postLoginWelcome: false });
         window.location.href = 'profile-setup.html';
     }
 
@@ -269,7 +275,7 @@
      */
     function redirectAfterLogin() {
         clearEntryTransitionFlags();
-    setEntryTransitionFlags('login', { showBootLoader: false, forceDaily: true, postLoginWelcome: false });
+    setEntryTransitionFlags('login', { showBootLoader: true, forceDaily: true, postLoginWelcome: false });
         if (redirectAfterAuthSuccess()) return;
         redirectDashboard();
     }
@@ -285,10 +291,76 @@
         redirectDashboard();
     }
 
+    function isLocalDevFrontend() {
+        if (typeof window === 'undefined' || !window.location) return false;
+        var host = String(window.location.hostname || '').toLowerCase();
+        if (host !== 'localhost' && host !== '127.0.0.1') return false;
+        var port = String(window.location.port || '');
+        return port === '3000' || port === '';
+    }
+
+    function setDevLoginError(msg) {
+        var devErr = document.getElementById('authDevLoginError');
+        var formErr = document.getElementById('loginFormError');
+        if (devErr) devErr.textContent = msg || '';
+        if (formErr) formErr.textContent = msg || '';
+    }
+
+    function setupDevLocalLogin() {
+        if (!isLocalDevFrontend()) return;
+        var box = document.getElementById('authDevLocal');
+        var btn = document.getElementById('authDevLoginBtn');
+        if (!box || !btn) return;
+        box.hidden = false;
+        btn.addEventListener('click', handleDevLocalLogin);
+    }
+
+    async function handleDevLocalLogin() {
+        var btn = document.getElementById('authDevLoginBtn');
+        setDevLoginError('');
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'A entrar…';
+        }
+        try {
+            var res = await fetch(getApiBase() + '/dev/login', { method: 'POST' });
+            var parsed = await readApiJson(res);
+            if (parsed.isHtml || !parsed.ok) {
+                var msg =
+                    (parsed.data && parsed.data.error) ||
+                    (parsed.status === 404
+                        ? 'Servidor antigo em execução. No terminal: Ctrl+C e depois npm start.'
+                        : 'Não foi possível iniciar sessão local. Confirme npm start em localhost:3000.');
+                setDevLoginError(msg);
+                return;
+            }
+            persistSession(parsed.data);
+            try {
+                sessionStorage.setItem('ec_dev_local_session', '1');
+            } catch (eDev) {}
+            Promise.resolve()
+                .then(syncLocalRoutinesToServer)
+                .catch(function () {});
+            var devUser = parsed.data && parsed.data.user;
+            if (userNeedsProfileSetup(devUser)) {
+                redirectToProfileSetupFromLogin();
+                return;
+            }
+            redirectAfterLogin();
+        } catch (err) {
+            setDevLoginError('Servidor local indisponível. Execute npm start na pasta do projeto.');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = 'Entrar em modo local (sem senha)';
+            }
+        }
+    }
+
     async function performLoginWithCredentials(email, password) {
         setLoginLoading(true);
         try {
-            var res = await fetch(API_BASE + '/login', {
+            var res = await fetch(getApiBase() + '/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: email, password: password })
@@ -356,6 +428,10 @@
                 'Use o endereço de e-mail completo (ex.: nome@gmail.com), não o seu nome.';
             ok = false;
         }
+        if (isLocalDevFrontend() && email === DEV_MONITOR_EMAIL) {
+            await handleDevLocalLogin();
+            return;
+        }
         if (!password) {
             document.getElementById('loginPasswordError').textContent = 'Informe a senha.';
             ok = false;
@@ -407,7 +483,7 @@
 
         setRegisterLoading(true);
         try {
-            var res = await fetch(API_BASE + '/register', {
+            var res = await fetch(getApiBase() + '/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: name, email: email, password: password })
@@ -465,6 +541,7 @@
     document.addEventListener('DOMContentLoaded', function () {
         lucideRefresh();
         setupPasswordToggles();
+        setupDevLocalLogin();
 
         document.getElementById('loginForm').addEventListener('submit', handleLogin);
         document.getElementById('registerForm').addEventListener('submit', handleRegister);
@@ -485,24 +562,38 @@
         try {
             if (localStorage.getItem('token')) {
                 (async function () {
+                    var tok = localStorage.getItem('token');
                     try {
-                        var tok = localStorage.getItem('token');
-                        var res = await fetch(API_BASE + '/profile', {
+                        var res = await fetch(getApiBase() + '/verify', {
                             headers: { Authorization: 'Bearer ' + tok }
                         });
                         var data = await res.json().catch(function () {
                             return {};
                         });
-                        if (res.ok && data.user && userNeedsProfileSetup(data.user)) {
+                        if (!res.ok) {
+                            try {
+                                localStorage.removeItem('token');
+                                localStorage.removeItem('userName');
+                                localStorage.removeItem('userId');
+                            } catch (eClr) {}
+                            return;
+                        }
+                        if (data.user && userNeedsProfileSetup(data.user)) {
                             window.location.replace('profile-setup.html');
                             return;
                         }
-                    } catch (e0) {}
-                    try {
-                        clearEntryTransitionFlags();
-                        setEntryTransitionFlags('login', { showBootLoader: false, forceDaily: true, postLoginWelcome: false });
-                    } catch (e1) {}
-                    window.location.replace('dashboard.html');
+                        try {
+                            clearEntryTransitionFlags();
+                            setEntryTransitionFlags('login', {
+                                showBootLoader: true,
+                                forceDaily: true,
+                                postLoginWelcome: false
+                            });
+                        } catch (e1) {}
+                        window.location.replace('dashboard.html');
+                    } catch (eNet) {
+                        /* Sem rede: fica no login — evita loop com dashboard + token inválido */
+                    }
                 })();
                 return;
             }

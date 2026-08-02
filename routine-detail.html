@@ -16,26 +16,23 @@
     <script src="api-base.js?v=20260419deploy"></script>
     <script src="auth-guard.js?v=20260418guard"></script>
     <title>EC ROUTINE - Detalhes da Rotina</title>
-    <link rel="stylesheet" href="dashboard.css?v=20260420profile-admin">
-    <link rel="stylesheet" href="dashboard-theme.css?v=20260420profile-admin">
-    <link rel="stylesheet" href="routine-detail.css?v=20260420routine-detail-theme">
-    <link rel="stylesheet" href="uiverse-trash-bin.css">
+    <link rel="stylesheet" href="dashboard.css?v=20260715profileTouch">
+    <link rel="stylesheet" href="routine-detail.css?v=20260715studyConfirmModal">
+    <link rel="stylesheet" href="dashboard-theme.css?v=20260715studyConfirmModal">
+    <link rel="stylesheet" href="uiverse-trash-bin.css?v=20260704cleanup">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<body>
+<body class="routine-detail-page">
     <header class="header">
         <div class="header-left">
-            <button class="back-btn" onclick="window.location.href='dashboard.html?view=cards'">
-                ← Voltar
-            </button>
+            <button type="button" class="back-btn" id="routineDetailBackBtn">← Voltar</button>
         </div>
         <div class="header-center">
             <h1 class="header-title">EC ROUTINE</h1>
         </div>
         <div class="header-right">
-            <a href="financeiro/index.html" class="header-financeiro-btn" title="Orçamento e extrato (CSV Nubank)">FINANCEIRO</a>
             <button type="button" class="header-admin-btn hidden" id="headerAdminBtn" hidden aria-hidden="true" title="Painel de administrador">ADM</button>
             <button type="button" class="header-profile-trigger" id="headerProfileTrigger" aria-haspopup="dialog" aria-expanded="false" aria-controls="userProfileModal" title="Ver perfil">
                 <span class="username" id="username">USUÁRIO</span>
@@ -49,72 +46,469 @@
 
     <main class="main-content">
         <div class="routine-detail-container" id="routineDetailContainer">
-            <div class="routine-header">
-                <h2 class="routine-title"><span class="routine-icon" id="routineIcon"></span><span id="routineTitle">Carregando...</span></h2>
-                <div class="routine-actions">
-                    <button class="action-btn edit-btn" id="editBtn">Editar</button>
-                    <button class="action-btn delete-btn" id="deleteBtn">Excluir</button>
-                </div>
-            </div>
+            <div class="routine-detail-unified">
+                <div class="routine-detail-top">
+                    <div class="routine-header">
+                        <h2 class="routine-title"><span class="routine-icon" id="routineIcon"></span><span id="routineTitle">Carregando...</span></h2>
+                        <div class="routine-actions">
+                            <button class="action-btn edit-btn" id="editBtn">Editar</button>
+                            <button class="action-btn delete-btn" id="deleteBtn">Excluir</button>
+                        </div>
+                    </div>
 
-            <div class="routine-description" id="routineDescription"></div>
+                    <div class="routine-description" id="routineDescription"></div>
+                </div>
 
-            <div class="routine-meta">
-                <div class="meta-item">
-                    <span class="meta-label">Data:</span>
-                    <span class="meta-value" id="routineDate">-</span>
+                <div class="routine-detail-meta-row">
+                    <div class="routine-meta">
+                        <div class="meta-item">
+                            <span class="meta-label">Data:</span>
+                            <span class="meta-value" id="routineDate">-</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Horário:</span>
+                            <span class="meta-value" id="routineTime">-</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Planejamento:</span>
+                            <span class="meta-value routine-plan-type" id="routinePlanType">-</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Categoria:</span>
+                            <span class="meta-value" id="routineCategoryLabel">—</span>
+                        </div>
+                        <div class="meta-item meta-item--weekdays" id="routineWeekDaysWrap">
+                            <span class="meta-label">Dias da semana</span>
+                            <span class="meta-value routine-weekdays-text" id="routineWeekDays">—</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="meta-item">
-                    <span class="meta-label">Horário:</span>
-                    <span class="meta-value" id="routineTime">-</span>
-                </div>
-                <div class="meta-item">
-                    <span class="meta-label">Planejamento:</span>
-                    <span class="meta-value routine-plan-type" id="routinePlanType">-</span>
-                </div>
-            </div>
 
-            <div class="routine-complete-block" id="routineCompleteBlock" style="display: none;">
-                <p class="routine-complete-question">TAREFA COMPLETA?</p>
-                <div class="routine-complete-actions">
-                    <button type="button" class="btn-task-complete-detail" id="btnTaskCompleteDetail" title="Sim, tarefa completa">✓</button>
-                    <button type="button" class="btn-task-incomplete-detail" id="btnTaskIncompleteDetail" title="Não, tarefa incompleta">✗</button>
-                </div>
-            </div>
+                <div class="routine-detail-panel" id="routineDetailPanel">
+                    <div class="routine-detail-panel__left">
+                        <div class="completion-reward routine-task-complete-success" id="routineTaskCompleteSuccess" hidden aria-live="polite">
+                            <div class="completion-reward__card routine-task-complete-success__card">
+                                <div class="completion-reward__content">
+                                    <p class="completion-reward__title routine-task-complete-success__title" id="routineTaskCompleteSuccessTitle">Meta diária concluída!</p>
+                                    <div class="completion-reward__flame-group">
+                                        <span class="completion-reward__flame routine-stats-streak-card__flame" aria-hidden="true">
+                                            <span class="rd-css-flame">
+                                                <span class="rd-css-flame__glow"></span>
+                                                <span class="rd-css-flame__tongue rd-css-flame__tongue--left"></span>
+                                                <span class="rd-css-flame__tongue rd-css-flame__tongue--center"></span>
+                                                <span class="rd-css-flame__tongue rd-css-flame__tongue--right"></span>
+                                                <span class="rd-css-flame__core"></span>
+                                            </span>
+                                        </span>
+                                        <p class="completion-reward__streak-days header-title" id="routineTaskCompleteSuccessStreak">0 dias</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-            <section class="detail-section routine-objectives-section" id="routineObjectivesSection" style="display: none;">
-                <h3>Objetivos</h3>
-                <p class="routine-objectives-text" id="routineObjectives"></p>
-            </section>
+                        <div class="routine-complete-block routine-mission-block" id="routineCompleteBlock" style="display: none;" role="group" aria-labelledby="routineMissionHeading">
+                            <div class="routine-complete-block__accent" aria-hidden="true"></div>
+                            <div class="routine-complete-block__inner">
+                                <header class="routine-complete-block__head routine-mission-block__head">
+                                    <div class="routine-complete-block__badge">
+                                        <i data-lucide="target" class="routine-complete-block__badge-icon" aria-hidden="true"></i>
+                                        <span>Missão de Hoje</span>
+                                    </div>
+                                    <p class="routine-complete-block__date" id="routineCompleteDate"></p>
+                                </header>
+                                <h2 class="routine-mission-block__title" id="routineMissionHeading">Missão de Hoje</h2>
+                                <p class="routine-mission-block__routine-name" id="routineMissionName"></p>
+                                <p class="routine-complete-question routine-mission-block__question hidden" id="routineCompleteHeading">Concluiu a rotina de hoje?</p>
+                                <p class="routine-complete-desc routine-mission-block__desc hidden" id="routineCompleteDesc"></p>
+                                <ul class="routine-mission-task-list" id="routineMissionTaskList" aria-label="Tarefas de hoje"></ul>
+                                <div class="routine-mission-progress">
+                                    <div class="routine-mission-progress__bar" id="routineMissionProgressBar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                                        <div class="routine-mission-progress__fill" id="routineMissionProgressFill"></div>
+                                    </div>
+                                    <p class="routine-mission-progress__text" id="routineMissionProgressText">—</p>
+                                </div>
+                                <div class="routine-complete-actions routine-mission-block__actions">
+                                    <button type="button" class="routine-complete-btn routine-complete-btn--yes" id="btnTaskCompleteDetail" aria-label="Concluir">
+                                        <span class="routine-complete-btn__icon" aria-hidden="true"><i data-lucide="check"></i></span>
+                                        <span class="routine-complete-btn__text">
+                                            <span class="routine-complete-btn__label" id="btnTaskCompleteLabel">Sim, concluí</span>
+                                            <span class="routine-complete-btn__hint" id="btnTaskCompleteHint">Marcar tudo como feito</span>
+                                        </span>
+                                    </button>
+                                    <button type="button" class="routine-complete-btn routine-complete-btn--no" id="btnTaskIncompleteDetail" aria-label="Não concluí a rotina de hoje">
+                                        <span class="routine-complete-btn__icon" aria-hidden="true"><i data-lucide="x"></i></span>
+                                        <span class="routine-complete-btn__text">
+                                            <span class="routine-complete-btn__label">Ainda não</span>
+                                            <span class="routine-complete-btn__hint">Manter pendente</span>
+                                        </span>
+                                    </button>
+                                    <button type="button" class="routine-complete-btn routine-complete-btn--snooze" id="btnTaskSnoozeDetail" aria-label="Lembrar mais tarde">
+                                        <span class="routine-complete-btn__icon" aria-hidden="true"><i data-lucide="clock"></i></span>
+                                        <span class="routine-complete-btn__text">
+                                            <span class="routine-complete-btn__label">Lembrar mais tarde</span>
+                                            <span class="routine-complete-btn__hint">Ocultar até amanhã</span>
+                                        </span>
+                                    </button>
+                                </div>
+                                <p class="routine-complete-footnote">Uma resposta por dia · o progresso é atualizado automaticamente</p>
+                            </div>
+                        </div>
 
-            <section class="detail-section routine-reasons-section" id="routineReasonsSection" style="display: none;">
-                <h3>Por que estou fazendo</h3>
-                <p class="routine-reasons-text" id="routineReasons"></p>
-            </section>
+                        <section class="detail-section routine-objectives-section" id="routineObjectivesSection" style="display: none;">
+                            <h3>Objetivos</h3>
+                            <p class="routine-objectives-text" id="routineObjectives"></p>
+                        </section>
 
-            <div class="progress-section">
-                <div class="progress-header">
-                    <h3>Progresso</h3>
-                    <span class="progress-percent" id="progressPercent">0%</span>
-                </div>
-                <div class="progress-bar-large">
-                    <div class="progress-fill-large" id="progressFill"></div>
-                </div>
-            </div>
+                        <section class="detail-section routine-reasons-section" id="routineReasonsSection" style="display: none;">
+                            <h3>Por que estou fazendo</h3>
+                            <p class="routine-reasons-text" id="routineReasons"></p>
+                        </section>
 
-            <section id="routineStudySection" class="routine-study-section" hidden aria-label="Estudo"></section>
+                        <section id="routineStudySection" class="study-timer-card routine-study-section routine-study-section--panel" hidden aria-label="Cronômetro de estudos">
+                            <header class="study-timer-card__head">
+                                <div class="study-timer-card__head-text">
+                                    <h3 class="study-timer-card__title">Cronômetro de estudos</h3>
+                                    <p class="study-timer-card__status" id="studyTimerStatus" hidden>
+                                        <span class="study-timer-card__status-dot" aria-hidden="true"></span>
+                                        <span>Sessão ativa</span>
+                                    </p>
+                                </div>
+                                <div class="study-timer-card__toolbar">
+                                    <button type="button" class="study-timer-card__tool-btn" id="studyTimerFullscreenBtn" aria-label="Encher tela" title="Encher tela">
+                                        <i data-lucide="maximize-2" aria-hidden="true"></i>
+                                    </button>
+                                </div>
+                            </header>
 
-            <div class="tasks-section">
-                <div class="tasks-header">
-                    <h3>Tarefas</h3>
-                    <button class="add-task-btn" id="addTaskBtn">+ Adicionar Tarefa</button>
+                            <div class="study-timer-body">
+                                <div class="study-flip-clock" id="studyFlipClock" aria-live="polite" aria-label="Tempo de estudo">
+                                    <div class="study-flip-clock__group">
+                                        <div class="study-flip-digit" data-digit="0" data-value="0">
+                                            <div class="study-flip-digit__top"><span class="study-flip-digit__num">0</span></div>
+                                            <div class="study-flip-digit__bottom"><span class="study-flip-digit__num">0</span></div>
+                                            <div class="study-flip-digit__flip" aria-hidden="true">
+                                                <div class="study-flip-digit__flip-front"><span class="study-flip-digit__num">0</span></div>
+                                                <div class="study-flip-digit__flip-back"><span class="study-flip-digit__num">0</span></div>
+                                            </div>
+                                        </div>
+                                        <div class="study-flip-digit" data-digit="1" data-value="0">
+                                            <div class="study-flip-digit__top"><span class="study-flip-digit__num">0</span></div>
+                                            <div class="study-flip-digit__bottom"><span class="study-flip-digit__num">0</span></div>
+                                            <div class="study-flip-digit__flip" aria-hidden="true">
+                                                <div class="study-flip-digit__flip-front"><span class="study-flip-digit__num">0</span></div>
+                                                <div class="study-flip-digit__flip-back"><span class="study-flip-digit__num">0</span></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="study-flip-clock__group">
+                                        <div class="study-flip-digit" data-digit="2" data-value="0">
+                                            <div class="study-flip-digit__top"><span class="study-flip-digit__num">0</span></div>
+                                            <div class="study-flip-digit__bottom"><span class="study-flip-digit__num">0</span></div>
+                                            <div class="study-flip-digit__flip" aria-hidden="true">
+                                                <div class="study-flip-digit__flip-front"><span class="study-flip-digit__num">0</span></div>
+                                                <div class="study-flip-digit__flip-back"><span class="study-flip-digit__num">0</span></div>
+                                            </div>
+                                        </div>
+                                        <div class="study-flip-digit" data-digit="3" data-value="0">
+                                            <div class="study-flip-digit__top"><span class="study-flip-digit__num">0</span></div>
+                                            <div class="study-flip-digit__bottom"><span class="study-flip-digit__num">0</span></div>
+                                            <div class="study-flip-digit__flip" aria-hidden="true">
+                                                <div class="study-flip-digit__flip-front"><span class="study-flip-digit__num">0</span></div>
+                                                <div class="study-flip-digit__flip-back"><span class="study-flip-digit__num">0</span></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="study-timer-meta">
+                                    <div class="study-timer-subject-display" id="studyTimerSubjectDisplay">
+                                        <p class="study-timer-subject-display__empty" id="studyTimerSubjectEmpty">Toque em Iniciar para escolher a matéria</p>
+                                        <button type="button" class="study-timer-subject-chip hidden" id="studyTimerSubjectChip" aria-label="Alterar matéria">
+                                            <span class="study-timer-subject-chip__icon" id="studyTimerSubjectChipIcon" aria-hidden="true"></span>
+                                            <span class="study-timer-subject-chip__name" id="studyTimerSubjectChipName"></span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="study-timer-controls">
+                                    <button type="button" class="study-timer-btn study-timer-btn--round" id="studyTimerResetBtn" aria-label="Reiniciar cronômetro" title="Reiniciar">
+                                        <i data-lucide="rotate-ccw" aria-hidden="true"></i>
+                                    </button>
+                                    <button type="button" class="study-timer-btn study-timer-btn--pill" id="studyTimerToggleBtn" aria-label="Iniciar ou pausar">
+                                        <i data-lucide="play" id="studyTimerToggleIcon" aria-hidden="true"></i>
+                                        <span id="studyTimerToggleLabel">Iniciar</span>
+                                    </button>
+                                    <button type="button" class="study-timer-btn study-timer-btn--round study-timer-btn--stop" id="studyTimerFinishBtn" aria-label="Finalizar sessão" title="Finalizar sessão">
+                                        <i data-lucide="square" aria-hidden="true"></i>
+                                    </button>
+                                </div>
+                                <button type="button" class="study-timer-new-session" id="studyTimerNewSessionBtn" aria-label="Nova sessão">Nova sessão</button>
+                            </div>
+
+                            <footer class="study-timer-footer">
+                                <div class="study-timer-stat study-timer-stat--right">
+                                    <span class="study-timer-stat__label">Tempo decorrido</span>
+                                    <span class="study-timer-stat__value" id="studyTimerElapsedLabel">0 min</span>
+                                </div>
+                            </footer>
+                        </section>
+                    </div>
+
+                    <div class="routine-detail-panel__right">
+                        <section class="routine-stats-section" id="routineStatsSection" aria-label="Estatísticas da rotina">
+                            <div class="routine-stats-head">
+                                <div class="routine-stats-head__text">
+                                    <h3 class="routine-stats-title">Estatísticas da rotina</h3>
+                                </div>
+                                <div class="routine-stats-today" id="routineStatsTodayBadge" aria-live="polite">—</div>
+                            </div>
+                            <div class="routine-stats-cards">
+                                <dl class="routine-stats-summary routine-stats-summary--compact">
+                                    <div class="routine-stats-summary__item" id="routineStatsBestStreakItem">
+                                        <dt id="routineStatsBestStreakLabel">Melhor sequência</dt>
+                                        <dd id="routineStatsBestStreak">—</dd>
+                                    </div>
+                                    <div class="routine-stats-summary__item" id="routineStatsRecentDoneItem">
+                                        <dt id="routineStatsRecentDoneLabel">Últimos 30 dias</dt>
+                                        <dd id="routineStatsRecentDone">—</dd>
+                                    </div>
+                                    <div class="routine-stats-summary__item" id="routineStatsCurrentStreakItem">
+                                        <dt id="routineStatsCurrentStreakLabel">Sequência atual</dt>
+                                        <dd id="routineStatsCurrentStreak">—</dd>
+                                    </div>
+                                    <div class="routine-stats-summary__item" id="routineStatsTotalDoneItem">
+                                        <dt id="routineStatsTotalDoneLabel">Dias concluídos</dt>
+                                        <dd id="routineStatsTotalDone">—</dd>
+                                    </div>
+                                </dl>
+                            </div>
+                            <div class="routine-stats-heatmap-panel" id="routineStatsHeatmapWrap">
+                                <header class="routine-stats-heatmap-head">
+                                    <i data-lucide="calendar-days" class="routine-stats-heatmap-head__icon" aria-hidden="true"></i>
+                                    <h4 class="routine-stats-heatmap-title">Histórico dos últimos 30 dias</h4>
+                                </header>
+                                <div class="routine-stats-heatmap routine-stats-heatmap--15x2" id="routineStatsHeatmap" role="img" aria-label="Histórico de conclusão dos últimos 30 dias"></div>
+                                <div class="routine-stats-heatmap-legend routine-stats-heatmap-legend--status" id="routineStatsHeatmapLegend" aria-hidden="true">
+                                    <span class="routine-stats-heatmap-legend-item">
+                                        <span class="routine-stats-heatmap-legend-dot routine-stats-heatmap-legend-dot--done" aria-hidden="true"></span>
+                                        <span class="routine-stats-heatmap-legend-label">Concluído</span>
+                                    </span>
+                                    <span class="routine-stats-heatmap-legend-item">
+                                        <span class="routine-stats-heatmap-legend-dot routine-stats-heatmap-legend-dot--pending" aria-hidden="true"></span>
+                                        <span class="routine-stats-heatmap-legend-label">Pendente</span>
+                                    </span>
+                                    <span class="routine-stats-heatmap-legend-item">
+                                        <span class="routine-stats-heatmap-legend-dot routine-stats-heatmap-legend-dot--today" aria-hidden="true"></span>
+                                        <span class="routine-stats-heatmap-legend-label">Hoje</span>
+                                    </span>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
                 </div>
-                <div class="task-list" id="taskList">
-                    <!-- Tarefas serão inseridas aqui via JavaScript -->
-                </div>
+
+                <section class="study-sessions-card" id="routineStudySessionsSection" hidden aria-label="Histórico de sessões">
+                    <header class="study-sessions-card__head">
+                        <h3 class="study-sessions-card__title">Histórico de sessões</h3>
+                        <div class="study-sessions-card__toolbar">
+                            <label class="study-sessions-filter">
+                                <span class="study-sessions-filter__label">Matéria</span>
+                                <div class="ec-filter-select study-sessions-filter__select" id="studySessionFilterSubject" data-value="" aria-label="Filtrar por matéria">
+                                    <button type="button" class="ec-filter-select__trigger" aria-haspopup="listbox" aria-expanded="false">
+                                        <span class="ec-filter-select__value">Todas as matérias</span>
+                                        <span class="ec-filter-select__chevron" aria-hidden="true"></span>
+                                    </button>
+                                    <div class="ec-filter-select__panel" role="listbox" hidden>
+                                        <button type="button" class="ec-filter-select__option is-selected" role="option" data-value="" aria-selected="true" tabindex="-1">Todas as matérias</button>
+                                    </div>
+                                </div>
+                            </label>
+                            <label class="study-sessions-filter">
+                                <span class="study-sessions-filter__label">Período</span>
+                                <div class="ec-filter-select study-sessions-filter__select" id="studySessionFilterPeriod" data-value="30" aria-label="Filtrar por período">
+                                    <button type="button" class="ec-filter-select__trigger" aria-haspopup="listbox" aria-expanded="false">
+                                        <span class="ec-filter-select__value">Últimos 30 dias</span>
+                                        <span class="ec-filter-select__chevron" aria-hidden="true"></span>
+                                    </button>
+                                    <div class="ec-filter-select__panel" role="listbox" hidden>
+                                        <button type="button" class="ec-filter-select__option" role="option" data-value="7" aria-selected="false" tabindex="-1">Últimos 7 dias</button>
+                                        <button type="button" class="ec-filter-select__option is-selected" role="option" data-value="30" aria-selected="true" tabindex="-1">Últimos 30 dias</button>
+                                        <button type="button" class="ec-filter-select__option" role="option" data-value="90" aria-selected="false" tabindex="-1">Últimos 90 dias</button>
+                                        <button type="button" class="ec-filter-select__option" role="option" data-value="all" aria-selected="false" tabindex="-1">Todo o histórico</button>
+                                    </div>
+                                </div>
+                            </label>
+                            <button type="button" class="study-sessions-deleted-toggle" id="studySessionToggleDeletedBtn" aria-pressed="false" hidden>
+                                <i data-lucide="archive" aria-hidden="true"></i>
+                                <span id="studySessionToggleDeletedLabel">Ver excluídas</span>
+                                <span class="study-sessions-deleted-count" id="studySessionDeletedCount" aria-hidden="true"></span>
+                            </button>
+                            <button type="button" class="study-sessions-export-btn" id="studySessionExportBtn">
+                                <i data-lucide="download" aria-hidden="true"></i>
+                                <span>Exportar</span>
+                            </button>
+                        </div>
+                    </header>
+                    <div class="study-sessions-table-wrap">
+                        <table class="study-sessions-table" id="studySessionsTable">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Matéria</th>
+                                    <th scope="col">Descrição</th>
+                                    <th scope="col">Início</th>
+                                    <th scope="col">Fim</th>
+                                    <th scope="col">Duração</th>
+                                    <th scope="col">Status</th>
+                                    <th scope="col" class="study-sessions-table__actions-head"><span class="sr-only">Ações</span></th>
+                                </tr>
+                            </thead>
+                            <tbody id="studySessionsTableBody"></tbody>
+                        </table>
+                        <p class="study-sessions-empty hidden" id="studySessionsEmpty" role="status">Nenhuma sessão registrada ainda.</p>
+                        <p class="study-sessions-empty hidden" id="studySessionsDeletedEmpty" role="status">Nenhuma sessão excluída.</p>
+                    </div>
+                    <div class="study-session-row-menu-popover" id="studySessionRowMenu" hidden role="menu" aria-label="Opções da sessão">
+                        <button type="button" class="study-session-row-menu-popover__item" data-action="delete" role="menuitem">Excluir sessão</button>
+                        <button type="button" class="study-session-row-menu-popover__item" data-action="restore" role="menuitem" hidden>Restaurar sessão</button>
+                        <button type="button" class="study-session-row-menu-popover__item study-session-row-menu-popover__item--muted" data-action="toggle-deleted" role="menuitem">Ver excluídas</button>
+                    </div>
+                    <nav class="study-sessions-pagination" id="studySessionPagination" aria-label="Paginação do histórico"></nav>
+                </section>
+
             </div>
         </div>
     </main>
+
+    <div class="study-fullscreen" id="routineStudyFullscreen" hidden aria-hidden="true">
+        <button type="button" class="study-fullscreen__exit" id="studyFullscreenExitBtn" aria-label="Sair da tela cheia" title="Sair da tela cheia">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="lucide lucide-minimize-2">
+                <polyline points="4 14 10 14 10 20"></polyline>
+                <polyline points="20 10 14 10 14 4"></polyline>
+                <line x1="14" x2="21" y1="10" y2="3"></line>
+                <line x1="3" x2="10" y1="21" y2="14"></line>
+            </svg>
+        </button>
+        <div class="study-fullscreen__inner">
+            <div class="study-fullscreen__clock" id="studyFullscreenClock" aria-live="polite"></div>
+            <div class="study-fullscreen__meta">
+                <p class="study-fullscreen__subject" id="studyFullscreenSubject" hidden></p>
+                <p class="study-fullscreen__desc" id="studyFullscreenDesc" hidden></p>
+            </div>
+            <div class="study-fullscreen__controls">
+                <button type="button" class="study-timer-btn study-timer-btn--round" id="studyFullscreenResetBtn" aria-label="Reiniciar cronômetro" title="Reiniciar">
+                    <i data-lucide="rotate-ccw" aria-hidden="true"></i>
+                </button>
+                <button type="button" class="study-timer-btn study-timer-btn--pill" id="studyFullscreenToggleBtn" aria-label="Iniciar ou pausar">
+                    <i data-lucide="play" id="studyFullscreenToggleIcon" aria-hidden="true"></i>
+                    <span id="studyFullscreenToggleLabel">Iniciar</span>
+                </button>
+                <button type="button" class="study-timer-btn study-timer-btn--round study-timer-btn--stop" id="studyFullscreenFinishBtn" aria-label="Finalizar sessão" title="Finalizar sessão">
+                    <i data-lucide="square" aria-hidden="true"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="study-subject-modal" id="routineStudySubjectModal" hidden role="dialog" aria-modal="true" aria-labelledby="studySubjectModalTitle" aria-hidden="true">
+        <div class="study-subject-modal__overlay" id="studySubjectModalOverlay"></div>
+        <div class="study-subject-modal__panel">
+            <button type="button" class="study-subject-modal__close" id="studySubjectModalCloseBtn" aria-label="Fechar">×</button>
+
+            <div class="study-subject-modal__view" id="studySubjectPickView">
+                <h2 class="study-subject-modal__title" id="studySubjectModalTitle">Escolher matéria</h2>
+                <p class="study-subject-modal__subtitle">Selecione uma matéria para iniciar o cronômetro ou crie uma nova.</p>
+                <div class="study-subject-picker__list" id="studySubjectPickerList" role="listbox" aria-label="Matérias disponíveis"></div>
+                <p class="study-subject-picker__empty hidden" id="studySubjectPickerEmpty" role="status">Nenhuma matéria cadastrada ainda.</p>
+                <div class="study-subject-modal__actions">
+                    <button type="button" class="study-subject-modal__btn study-subject-modal__btn--ghost" id="studySubjectPickCancelBtn">Cancelar</button>
+                    <button type="button" class="study-subject-modal__btn study-subject-modal__btn--light" id="studySubjectCreateBtn">
+                        <i data-lucide="plus" aria-hidden="true"></i>
+                        <span>Nova matéria</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="study-subject-modal__view" id="studySubjectCreateView" hidden>
+                <h2 class="study-subject-modal__title">Nova matéria</h2>
+                <p class="study-subject-modal__subtitle">Defina nome, cor e ícone da matéria.</p>
+                <form class="study-subject-form" id="studySubjectCreateForm">
+                    <label class="study-subject-form__field">
+                        <span class="study-subject-form__label">Nome</span>
+                        <input type="text" id="studySubjectCreateName" maxlength="120" placeholder="Ex.: Matemática" autocomplete="off" required />
+                    </label>
+                    <div class="study-subject-form__field">
+                        <span class="study-subject-form__label">Cor</span>
+                        <div class="study-subject-color-picker" id="studySubjectColorPicker" role="radiogroup" aria-label="Cor da matéria"></div>
+                    </div>
+                    <div class="study-subject-form__field">
+                        <span class="study-subject-form__label">Ícone</span>
+                        <div class="study-subject-icon-picker" id="studySubjectIconPicker" role="radiogroup" aria-label="Ícone da matéria"></div>
+                    </div>
+                    <label class="study-subject-form__field">
+                        <span class="study-subject-form__label">Observações <span class="study-subject-form__optional">(opcional)</span></span>
+                        <textarea id="studySubjectCreateNotes" maxlength="300" rows="2" placeholder="Anotações sobre esta matéria"></textarea>
+                    </label>
+                    <div class="study-subject-modal__actions">
+                        <button type="button" class="study-subject-modal__btn study-subject-modal__btn--ghost" id="studySubjectCreateBackBtn">Voltar</button>
+                        <button type="submit" class="study-subject-modal__btn study-subject-modal__btn--light" id="studySubjectCreateSaveBtn">Criar e iniciar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="study-finish-modal" id="routineStudyFinishModal" hidden role="dialog" aria-modal="true" aria-labelledby="studyFinishModalTitle" aria-hidden="true">
+        <div class="study-finish-modal__overlay" id="studyFinishModalOverlay"></div>
+        <div class="study-finish-modal__panel">
+            <button type="button" class="study-finish-modal__close" id="studyFinishModalCloseBtn" aria-label="Fechar">×</button>
+            <div class="study-finish-modal__icon" aria-hidden="true"><i data-lucide="check-circle"></i></div>
+            <h2 class="study-finish-modal__title" id="studyFinishModalTitle">Sessão concluída</h2>
+            <p class="study-finish-modal__subtitle">Revise os dados antes de salvar.</p>
+            <dl class="study-finish-modal__summary">
+                <div><dt>Tempo estudado</dt><dd id="studyFinishModalDuration">—</dd></div>
+                <div><dt>Matéria</dt><dd id="studyFinishModalSubject">—</dd></div>
+                <div><dt>Descrição</dt><dd id="studyFinishModalDescription">—</dd></div>
+            </dl>
+            <div class="study-finish-modal__actions">
+                <button type="button" class="study-finish-modal__btn study-finish-modal__btn--ghost" id="studyFinishDiscardBtn">Descartar sessão</button>
+                <button type="button" class="study-finish-modal__btn study-finish-modal__btn--light" id="studyFinishSaveBtn">Salvar sessão</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="study-confirm-modal" id="routineStudyConfirmModal" hidden role="dialog" aria-modal="true" aria-labelledby="studyConfirmModalTitle" aria-describedby="studyConfirmModalMessage" aria-hidden="true">
+        <div class="study-confirm-modal__overlay" id="studyConfirmModalOverlay"></div>
+        <div class="study-confirm-modal__panel" role="document">
+            <div class="study-confirm-modal__icon" id="studyConfirmModalIcon" aria-hidden="true"><i data-lucide="triangle-alert"></i></div>
+            <h2 class="study-confirm-modal__title" id="studyConfirmModalTitle">Confirmar</h2>
+            <p class="study-confirm-modal__message" id="studyConfirmModalMessage"></p>
+            <div class="study-confirm-modal__actions">
+                <button type="button" class="study-confirm-modal__btn study-confirm-modal__btn--ghost" id="studyConfirmCancelBtn">Cancelar</button>
+                <button type="button" class="study-confirm-modal__btn study-confirm-modal__btn--danger" id="studyConfirmOkBtn">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="study-subject-insights-modal" id="routineStudySubjectInsightsModal" hidden role="dialog" aria-modal="true" aria-labelledby="studySubjectInsightsTitle" aria-hidden="true">
+        <div class="study-subject-insights-modal__overlay" id="studySubjectInsightsOverlay"></div>
+        <div class="study-subject-insights-modal__panel">
+            <button type="button" class="study-subject-insights-modal__close" id="studySubjectInsightsCloseBtn" aria-label="Fechar">×</button>
+            <header class="study-subject-insights-modal__head">
+                <div class="study-subject-insights-modal__subject" id="studySubjectInsightsSubjectChip"></div>
+                <h2 class="study-subject-insights-modal__title" id="studySubjectInsightsTitle">Produtividade</h2>
+                <p class="study-subject-insights-modal__subtitle" id="studySubjectInsightsSubtitle">Últimos 30 dias</p>
+            </header>
+            <div class="study-subject-insights-modal__stats" id="studySubjectInsightsStats"></div>
+            <div class="study-subject-insights-modal__chart-wrap">
+                <div class="study-subject-insights-modal__chart" id="studySubjectInsightsChart" role="img" aria-label="Gráfico de produtividade por dia"></div>
+            </div>
+            <section class="study-subject-insights-modal__history" aria-labelledby="studySubjectInsightsHistoryTitle">
+                <h3 class="study-subject-insights-modal__history-title" id="studySubjectInsightsHistoryTitle">Histórico de sessões</h3>
+                <div class="study-subject-insights-modal__history-list" id="studySubjectInsightsHistory"></div>
+                <p class="study-subject-insights-modal__empty hidden" id="studySubjectInsightsEmpty" role="status">Nenhuma sessão registrada para esta matéria.</p>
+            </section>
+        </div>
+    </div>
 
     <div class="save-toast" id="saveToast" aria-live="polite">
         <span class="save-toast-icon">✓</span>
@@ -219,8 +613,10 @@
     </div>
 
     <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
-    <script src="trash-bin-button.js"></script>
-    <script src="routine-detail.js?v=20260420routine-detail-theme"></script>
+    <script src="trash-bin-button.js?v=20260704cleanup"></script>
+    <script src="lib/routine-streak.js?v=20260704cleanup"></script>
+    <script src="lib/study-routine-core.js?v=20260613session-menu"></script>
+    <script src="routine-detail.js?v=20260715studyConfirmModal"></script>
     <script src="user-profile-modal-setup.js?v=20260420profile-admin-race"></script>
 </body>
 </html>

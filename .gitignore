@@ -1,4 +1,7 @@
 node_modules/
+.next/
+out/
+.env.local
 data/
 .env
 *.log
@@ -12,3 +15,9 @@ financeiro/Planilha_Orcamento.html
 financeiro/Planilha_Resumo.csv
 financeiro/Planilha_Fluxo.csv
 financeiro/lancamentos.json
+
+# Cursor debug artifacts (video frame dumps)
+.cursor/video-frames/
+.cursor/video-frames-hd/
+.cursor/video-frames-bug/
+.cursor/video-review/

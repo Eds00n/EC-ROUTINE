@@ -21,6 +21,7 @@ on:
       - '**.css'
       - '**.js'
       - 'assets/**'
+      - 'lib/**'
       - 'financeiro/**'
       - '.github/workflows/deploy-hostinger.yml'
   workflow_dispatch:
@@ -58,7 +59,10 @@ jobs:
             **/.vscode/**
             **/.cursor/**
             **/migrations/**
-            **/lib/**
+            lib/store.js
+            lib/store-pg.js
+            lib/store-files.js
+            lib/**/*.mjs
             package.json
             package-lock.json
             server.js

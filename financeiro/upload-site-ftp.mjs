@@ -1,24 +1,33 @@
 /**
- * Envia HTML/JS/CSS do módulo financeiro para a Hostinger (FTPS).
+ * Envia HTML/JS/CSS do módulo financeiro + pasta lib/ (front) para a Hostinger (FTPS).
  * Usa as mesmas variáveis FTP_* do .env que upload-hostinger.mjs.
  */
-import { existsSync, readFileSync } from "fs";
+import { existsSync, readdirSync, statSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath, pathToFileURL } from "url";
 import { Client } from "basic-ftp";
 import { loadDotEnv } from "./load-env.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const ROOT = join(__dirname, "..");
 
-const FILES = [
+const FINANCEIRO_FILES = [
   "index.html",
   "import.js",
-  "import-ui.css",
   "painel.html",
   "painel.js",
+  "financeiro-theme.css",
+  "financeiro-painel.css",
   "entry.html",
   "entry.js",
   "conectar-nubank.html",
+];
+
+const ROOT_FILES = [
+  "ec-global-responsive.css",
+  "dashboard.css",
+  "dashboard-theme.css",
+  "api-base.js",
 ];
 
 function normalizeDir(dir) {
@@ -66,6 +75,37 @@ function ftpConfig() {
   };
 }
 
+const LIB_SKIP = new Set(["store.js", "store-pg.js", "store-files.js"]);
+
+function shouldUploadLibFile(name) {
+  if (LIB_SKIP.has(name)) return false;
+  if (name.endsWith(".mjs")) return false;
+  return true;
+}
+
+async function uploadLibTree(client, localRoot, remoteRoot) {
+  let count = 0;
+  const stack = [{ local: localRoot, remote: remoteRoot }];
+  while (stack.length) {
+    const { local, remote } = stack.pop();
+    await client.ensureDir(remote);
+    for (const name of readdirSync(local)) {
+      const localPath = join(local, name);
+      const remotePath = remote + name.replace(/\\/g, "/");
+      const st = statSync(localPath);
+      if (st.isDirectory()) {
+        stack.push({ local: localPath, remote: remotePath + "/" });
+        continue;
+      }
+      if (!shouldUploadLibFile(name)) continue;
+      await client.uploadFrom(localPath, remotePath);
+      console.log("  →", remotePath);
+      count++;
+    }
+  }
+  return count;
+}
+
 async function main() {
   const cfg = ftpConfig();
   if (!cfg.ok) {
@@ -89,25 +129,37 @@ async function main() {
     let n = 0;
     for (const serverDir of cfg.serverDirs) {
       console.log("\nDestino:", serverDir);
-      const remoteDir = serverDir + "financeiro/";
-      await client.ensureDir(remoteDir);
+      const remoteFin = serverDir + "financeiro/";
+      await client.ensureDir(remoteFin);
 
-      for (const name of FILES) {
+      for (const name of FINANCEIRO_FILES) {
         const local = join(__dirname, name);
         if (!existsSync(local)) {
           console.warn("  omitido (não existe):", name);
           continue;
         }
-        await client.uploadFrom(local, remoteDir + name);
-        console.log("  →", remoteDir + name);
+        await client.uploadFrom(local, remoteFin + name);
+        console.log("  →", remoteFin + name);
         n++;
       }
 
-      const apiBase = join(__dirname, "..", "api-base.js");
-      if (existsSync(apiBase)) {
-        await client.uploadFrom(apiBase, serverDir + "api-base.js");
-        console.log("  →", serverDir + "api-base.js");
+      for (const name of ROOT_FILES) {
+        const local = join(ROOT, name);
+        if (!existsSync(local)) {
+          console.warn("  omitido raiz (não existe):", name);
+          continue;
+        }
+        await client.uploadFrom(local, serverDir + name);
+        console.log("  →", serverDir + name);
         n++;
+      }
+
+      const localLib = join(ROOT, "lib");
+      if (existsSync(localLib)) {
+        console.log("  lib/ (front):");
+        n += await uploadLibTree(client, localLib, serverDir + "lib/");
+      } else {
+        console.warn("  omitido: pasta lib/ não encontrada em", ROOT);
       }
     }
 

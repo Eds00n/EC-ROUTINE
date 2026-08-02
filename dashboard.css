@@ -8,7 +8,7 @@
     display: none !important;
 }
 
-/* Paleta semântica: verde = concluído, azul = neutro, vermelho/laranja = alertas */
+/* Paleta sem?ntica: verde = conclu?do, azul = neutro, vermelho/laranja = alertas */
 :root {
     --color-done: #16a34a;
     --color-done-bg: #dcfce7;
@@ -38,6 +38,7 @@
     --ec-hint-text: #666666;
     --ec-strong: #0b0b0b;
     --ec-card-title: #000000;
+    --ec-brand-title-font: Inter, system-ui, sans-serif;
     --ec-badge-text: #333333;
     --ec-input-bg: #ffffff;
     --ec-input-border: #d1d5db;
@@ -90,10 +91,14 @@ body {
     color: var(--ec-body-text);
 }
 
-/* Evita “vazamento” horizontal típico em mobile (mantém estrutura) */
+/* Evita ?vazamento? horizontal t?pico em mobile (mant?m estrutura) */
 html {
     overflow-x: hidden;
     max-width: 100%;
+}
+
+html:has(body.dashboard-overview-visible) {
+    overflow-x: hidden;
 }
 
 .header {
@@ -160,24 +165,27 @@ html {
 
 .header-title {
     margin: 0;
-    font-size: clamp(1.2rem, 2.3vw, 1.85rem);
-    font-weight: 700;
-    letter-spacing: 0.12em;
+    font-family: var(--ec-brand-title-font);
+    font-size: clamp(1.15rem, 1.852vw, 1.85rem);
+    font-weight: 900;
+    letter-spacing: 0.02em;
     color: var(--ec-heading);
     text-transform: uppercase;
-    line-height: 1.1;
+    line-height: 1.25;
+    -webkit-font-smoothing: antialiased;
 }
 
-/* Marca — máquina de escrever (caret em ::after) */
-.header-title-text,
-.dashboard-boot-loader__brand-text {
+/* Marca ? m?quina de escrever (caret em ::after) */
+.header-title-text {
     display: inline-block;
     min-height: 1.15em;
     vertical-align: bottom;
+    font-family: inherit;
+    font-weight: inherit;
+    letter-spacing: inherit;
 }
 
-.header-title-text.typewriter-active::after,
-.dashboard-boot-loader__brand-text.typewriter-active::after {
+.header-title-text.typewriter-active::after {
     content: '';
     display: inline-block;
     width: 0.09em;
@@ -189,9 +197,20 @@ html {
     animation: ecTypewriterCaret 0.9s steps(1, end) infinite;
 }
 
-.header-title-text.typewriter-done::after,
-.dashboard-boot-loader__brand-text.typewriter-done::after {
+.header-title-text.typewriter-done::after {
     display: none;
+}
+
+/* T?tulos do dashboard e cards ? mesma fonte do header EC ROUTINE */
+.dashboard-card-label,
+.dashboard-day-summary-date,
+.dashboard-metric-card-title,
+.dashboard-pending-tasks-title,
+.routine-card-title,
+.routine-card-heatmap .calendar-month-header,
+.calendar-month-header {
+    font-family: var(--ec-brand-title-font);
+    -webkit-font-smoothing: antialiased;
 }
 
 @keyframes ecTypewriterCaret {
@@ -248,6 +267,11 @@ html {
 .header-admin-btn:focus-visible {
     outline: 2px solid var(--ec-focus-ring);
     outline-offset: 2px;
+}
+
+/* Dashboard: Financeiro s? na barra de vistas (n?o ao lado do perfil) */
+.header:not(.fin-header) .header-financeiro-btn {
+    display: none !important;
 }
 
 .header-financeiro-btn {
@@ -357,25 +381,24 @@ html {
     border-radius: 2px;
 }
 
-/* Modal de perfil: scroll no overlay (viewport), não dentro do painel branco */
+/* Modal de perfil: mesma transi??o de abertura do detalhe do dia no calend?rio */
 .user-profile-modal {
     position: fixed;
     inset: 0;
     z-index: 12000;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-height: 100%;
-    box-sizing: border-box;
-    padding: max(12px, env(safe-area-inset-top, 0px)) 16px max(12px, env(safe-area-inset-bottom, 0px));
-    overflow-x: hidden;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
+    pointer-events: none;
+    visibility: hidden;
+}
+
+.user-profile-modal:not(.hidden) {
+    pointer-events: auto;
+    visibility: visible;
 }
 
 .user-profile-modal.hidden {
-    display: none;
+    display: block;
+    pointer-events: none;
+    visibility: hidden;
 }
 
 .user-profile-overlay {
@@ -384,20 +407,50 @@ html {
     background: var(--ec-profile-overlay);
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+.user-profile-modal.is-open .user-profile-overlay {
+    opacity: 1;
+}
+
+.user-profile-modal.is-closing .user-profile-overlay {
+    opacity: 0;
+    transition: opacity 0.3s ease;
 }
 
 .user-profile-panel {
-    position: relative;
-    flex-shrink: 0;
-    width: 100%;
-    max-width: 360px;
-    margin-top: auto;
-    margin-bottom: auto;
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    width: min(360px, calc(100vw - 32px));
+    max-height: calc(100dvh - 40px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    z-index: 1;
     background: var(--ec-profile-panel);
     border-radius: 16px;
-    box-shadow: 0 10px 36px rgba(15, 23, 42, 0.07), 0 1px 3px rgba(15, 23, 42, 0.06);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.22);
     border: 1px solid var(--ec-border);
     padding: 20px 20px 18px;
+}
+
+.user-profile-modal.is-open:not(.is-closing):not(.is-settled) .user-profile-panel {
+    animation: calendar-day-detail-grow 0.38s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.user-profile-modal.is-open.is-settled .user-profile-panel {
+    transform: translate(-50%, -50%);
+    opacity: 1;
+}
+
+.user-profile-modal.is-closing .user-profile-panel {
+    animation: calendar-day-detail-shrink 0.3s cubic-bezier(0.4, 0, 0.22, 1) forwards;
 }
 
 .user-profile-settings-btn {
@@ -548,7 +601,7 @@ html {
     stroke-width: 2;
 }
 
-/* Só o interruptor de tema segue o modo escuro; o de “números dos dias” usa aria-checked no próprio botão */
+/* S? o interruptor de tema segue o modo escuro; o de ?n?meros dos dias? usa aria-checked no pr?prio bot?o */
 html[data-theme="dark"] #userProfileThemeToggle .user-profile-theme-toggle__thumb {
     transform: translateX(22px);
 }
@@ -557,9 +610,80 @@ html[data-theme="dark"] #userProfileThemeToggle .user-profile-theme-toggle__thum
     transform: translateX(22px);
 }
 
-/* Preferência: ocultar números do dia no calendário da agenda e nos heatmaps dos cartões */
+/* Mobile: alvos de toque maiores (config + toggles do perfil) */
+@media (max-width: 640px) {
+    .user-profile-settings-btn {
+        width: 44px;
+        height: 44px;
+        top: 10px;
+        left: 10px;
+        border-radius: 12px;
+    }
+
+    .user-profile-settings-btn__icon {
+        width: 22px;
+        height: 22px;
+    }
+
+    .user-profile-settings-btn__icon svg,
+    .user-profile-settings-btn svg {
+        width: 22px;
+        height: 22px;
+    }
+
+    .user-profile-settings-menu {
+        top: 62px;
+        left: 10px;
+        min-width: min(280px, calc(100% - 20px));
+        padding: 14px 16px;
+        border-radius: 14px;
+    }
+
+    .user-profile-settings-row {
+        gap: 14px;
+        margin-bottom: 14px;
+        min-height: 44px;
+    }
+
+    .user-profile-settings-label {
+        font-size: 0.92rem;
+        line-height: 1.3;
+    }
+
+    .user-profile-theme-toggle {
+        width: 60px;
+        height: 36px;
+        border-radius: 18px;
+    }
+
+    .user-profile-theme-toggle__thumb {
+        top: 4px;
+        left: 4px;
+        width: 26px;
+        height: 26px;
+    }
+
+    .user-profile-theme-toggle__icon-host svg {
+        width: 15px;
+        height: 15px;
+    }
+
+    html[data-theme="dark"] #userProfileThemeToggle .user-profile-theme-toggle__thumb,
+    .user-profile-day-numbers-toggle[aria-checked='true'] .user-profile-theme-toggle__thumb {
+        transform: translateX(26px);
+    }
+}
+
+/* Prefer?ncia: ocultar n?meros do dia no calend?rio da agenda e nos heatmaps dos cart?es */
+html[data-ec-day-numbers="off"] .dashboard-week-heatmap .heatmap-day-number {
+    opacity: 1 !important;
+    pointer-events: auto;
+    user-select: auto;
+}
+
 html[data-ec-day-numbers="off"] .heatmap-day-number,
-html[data-ec-day-numbers="off"] .calendar-day .day-number {
+html[data-ec-day-numbers="off"] .calendar-day .day-number,
+html[data-ec-day-numbers="off"] .calendar-mobile-day .day-number {
     opacity: 0 !important;
     pointer-events: none;
     user-select: none;
@@ -893,21 +1017,15 @@ html[data-ec-day-numbers="off"] .routine-compact-cal__day-num {
     padding-left: max(20px, env(safe-area-inset-left, 0px));
     max-width: 1400px;
     margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 body.dashboard-overview-visible .main-content {
-    padding-top: 10px;
-    padding-right: max(12px, env(safe-area-inset-right, 0px));
-    padding-bottom: max(10px, calc(10px + env(safe-area-inset-bottom, 0px)));
-    padding-left: max(12px, env(safe-area-inset-left, 0px));
-    height: calc(100vh - 80px);
-    min-height: calc(100vh - 80px);
-    overflow: hidden;
-}
-
-/* Evita scrollbar dupla: body fixo + scroll apenas no conteúdo do dashboard */
-body.dashboard-overview-visible {
-    overflow: hidden;
+    padding-top: 12px;
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-bottom: max(14px, calc(14px + env(safe-area-inset-bottom, 0px)));
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
 }
 
 .welcome-section {
@@ -985,42 +1103,225 @@ body.dashboard-overview-visible {
     gap: 5px;
     background: var(--ec-view-toggle-bg);
     padding: 4px;
-    border-radius: 8px;
+    border-radius: 10px;
     min-width: 0;
     max-width: 100%;
 }
 
 .view-btn {
-    padding: 8px 16px;
+    position: relative;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
     background: transparent;
     border: none;
     border-radius: 6px;
     font-family: 'Rajdhani', sans-serif;
-    transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
-    font-size: 0.9rem;
+    transition: color 0.25s ease;
+    font-size: 0.88rem;
     font-weight: 600;
     color: var(--ec-view-btn);
     cursor: pointer;
-    transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
     outline: none;
     box-shadow: none;
 }
 
+.view-btn-icon {
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+}
+
+.view-btn-label {
+    white-space: nowrap;
+}
+
+.dashboard-nav-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+.dashboard-nav-row .view-toggle {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.dashboard-nav-row .view-toggle {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.dashboard-nav-cta.btn-ver-cards {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: auto;
+    max-width: none;
+    min-width: 0;
+    margin: 0;
+    padding: 10px 16px;
+    border-radius: 10px;
+    grid-template-columns: unset;
+    min-height: 40px;
+    flex-shrink: 0;
+    letter-spacing: 0.02em;
+    text-transform: none;
+    font-size: 0.88rem;
+    font-weight: 700;
+    overflow: hidden;
+    isolation: isolate;
+    transition:
+        transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+        background 0.28s ease,
+        border-color 0.28s ease,
+        color 0.28s ease,
+        box-shadow 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.dashboard-nav-cta.btn-ver-cards::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        105deg,
+        transparent 38%,
+        rgba(255, 255, 255, 0.14) 50%,
+        transparent 62%
+    );
+    transform: translateX(-130%);
+    transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.dashboard-nav-cta.btn-ver-cards .btn-ver-cards-label,
+.dashboard-nav-cta.btn-ver-cards .btn-ver-cards-chevron {
+    position: relative;
+    z-index: 1;
+}
+
+.dashboard-nav-cta.btn-ver-cards:hover {
+    transform: translateY(-2px);
+    background: #161616;
+    border-color: #454545;
+    box-shadow:
+        0 10px 22px rgba(0, 0, 0, 0.24),
+        0 3px 8px rgba(0, 0, 0, 0.14),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.dashboard-nav-cta.btn-ver-cards:hover::before {
+    transform: translateX(130%);
+}
+
+.dashboard-nav-cta.btn-ver-cards--complete:hover {
+    border-color: rgba(34, 197, 94, 0.58);
+    box-shadow:
+        0 10px 22px rgba(0, 0, 0, 0.22),
+        0 0 0 1px rgba(34, 197, 94, 0.16),
+        0 0 18px rgba(34, 197, 94, 0.12);
+}
+
+.dashboard-nav-cta.btn-ver-cards:hover .btn-ver-cards-chevron,
+.dashboard-nav-cta.btn-ver-cards:focus-visible .btn-ver-cards-chevron {
+    transform: translateX(4px);
+    color: #ffffff;
+}
+
+.dashboard-nav-cta.btn-ver-cards:active {
+    transform: translateY(0) scale(0.98);
+    box-shadow:
+        0 4px 12px rgba(0, 0, 0, 0.18),
+        inset 0 1px 3px rgba(0, 0, 0, 0.22);
+    transition-duration: 0.1s;
+}
+
+.dashboard-nav-cta.btn-ver-cards:active .btn-ver-cards-chevron {
+    transform: translateX(2px);
+}
+
+.btn-ver-todas.dashboard-nav-cta.btn-ver-cards:hover {
+    transform: translateY(-2px);
+    background: #161616;
+    border-color: #454545;
+    box-shadow:
+        0 10px 22px rgba(0, 0, 0, 0.24),
+        0 3px 8px rgba(0, 0, 0, 0.14),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.btn-ver-todas.dashboard-nav-cta.btn-ver-cards--complete:hover {
+    border-color: rgba(34, 197, 94, 0.58);
+    box-shadow:
+        0 10px 22px rgba(0, 0, 0, 0.22),
+        0 0 0 1px rgba(34, 197, 94, 0.16),
+        0 0 18px rgba(34, 197, 94, 0.12);
+}
+
+.btn-ver-todas.dashboard-nav-cta.btn-ver-cards:active {
+    transform: translateY(0) scale(0.98);
+}
+
+.dashboard-nav-cta .btn-ver-cards-label {
+    grid-column: auto;
+    text-align: left;
+    transition: color 0.28s ease;
+}
+
+.dashboard-nav-cta.btn-ver-cards:hover .btn-ver-cards-label {
+    letter-spacing: 0.02em;
+}
+
+.dashboard-nav-cta .btn-ver-cards-chevron {
+    grid-column: auto;
+    width: 1rem;
+    height: 1rem;
+    transition:
+        transform 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+        color 0.28s ease;
+}
+
+.dashboard-nav-cta .btn-ver-cards-icon {
+    display: none;
+}
+
+a.view-btn.view-btn--link {
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+}
+
+/* Altura da 2ª linha: estável via .is-nav-inert (sem display:none no overview) */
+
+#dashboardMainNav {
+    margin-bottom: 20px;
+}
+
 .view-btn.active {
-    background: var(--ec-view-btn-active-bg);
-    color: var(--ec-view-btn-active-fg);
+    background: transparent;
+    color: #ffffff;
     border: none;
     box-shadow: none;
 }
 
 .view-btn:hover:not(.active) {
-    background: var(--ec-view-btn-hover-bg);
-    transform: translateY(-3px) scale(1.02);
+    background: transparent;
+    color: var(--ec-heading, #18181b);
+    transform: none;
     box-shadow: none;
 }
 
 .view-btn:active {
-    transform: translateY(-1px) scale(1);
+    transform: none;
 }
 
 .view-btn:focus,
@@ -1099,39 +1400,127 @@ body.dashboard-overview-visible {
     transform: translateY(-1px) scale(1);
 }
 
-/* Rotinas: fila de vistas; Todas / Sequências na linha de baixo (abaixo de Cards, etc.) */
+/* Rotinas: shell único (abas + filtros) — altura estável no deslize */
+#dashboardMainNav .view-toggle,
 #rotinasView .view-toggle {
     display: flex;
     flex-direction: column;
     align-items: stretch;
     flex-wrap: nowrap;
     gap: 0;
+    background: transparent;
+    padding: 0;
 }
 
-#rotinasView .view-toggle__views {
+#dashboardMainNav .view-toggle__shell,
+#rotinasView .view-toggle__shell {
     display: flex;
     flex-direction: row;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
-    gap: 5px;
+    gap: 8px;
+    width: 100%;
     min-width: 0;
+    padding: 4px;
+    background: #f4f4f5;
+    border: 1px solid #e5e5e5;
+    border-radius: 10px;
+    box-sizing: border-box;
 }
 
-#rotinasView .view-toggle > .filters {
+#dashboardMainNav .view-toggle__views,
+#rotinasView .view-toggle__views {
+    position: relative;
     display: flex;
     flex-direction: row;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 4px;
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    max-width: 100%;
+    padding: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-sizing: border-box;
+}
+
+#dashboardMainNav .view-toggle__indicator,
+#rotinasView .view-toggle__indicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 0;
+    background: #18181b;
+    border-radius: 6px;
+    z-index: 1;
+    pointer-events: none;
+    transition:
+        transform 0.35s cubic-bezier(0.65, 0, 0.35, 1),
+        width 0.35s cubic-bezier(0.65, 0, 0.35, 1),
+        top 0.35s cubic-bezier(0.65, 0, 0.35, 1);
+    will-change: transform, width;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #dashboardMainNav .view-toggle__indicator,
+    #rotinasView .view-toggle__indicator {
+        transition: none !important;
+    }
+}
+
+#dashboardMainNav .view-toggle__views .view-btn,
+#rotinasView .view-toggle__views .view-btn {
+    flex: 0 0 auto;
+}
+
+/* CTA “Ir para tarefas”: mesma linha das abas, canto direito da barra */
+#dashboardMainNav .view-toggle__shell > .view-toggle__cta.dashboard-nav-cta {
+    position: relative;
+    z-index: 2;
+    margin-left: 0;
+    flex: 0 0 auto;
+    align-self: center;
+    min-height: 36px;
+    padding: 8px 14px;
+    border-radius: 6px;
+    white-space: nowrap;
+}
+
+/* Filtros (+ / Todas / Sequências) FORA da barra cinza, logo abaixo */
+#dashboardMainNav .view-toggle > .filters,
+#dashboardMainNav .view-toggle__filters,
+#rotinasView .view-toggle > .filters,
+#rotinasView .view-toggle__filters {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
     align-items: center;
     gap: 8px;
     flex: 0 0 auto;
     width: 100%;
-    margin: 8px 0 0;
-    padding: 8px 0 0;
-    border-left: none;
-    border-top: 1px solid var(--ec-border-subtle);
+    min-height: 40px;
+    margin: 10px 0 0;
+    padding: 0;
+    border: none;
+    background: transparent;
     box-sizing: border-box;
 }
 
+/* Mantém espaço no deslize (sem display:none) */
+#dashboardMainNav .view-toggle__filters.is-nav-inert {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+#dashboardMainNav .filter-btn,
 #rotinasView .filter-btn {
     padding: 8px 16px;
     background: transparent;
@@ -1148,25 +1537,74 @@ body.dashboard-overview-visible {
     transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, color 0.18s ease;
 }
 
+#dashboardMainNav .filter-btn.active,
 #rotinasView .filter-btn.active {
-    background: #000000;
-    color: #ffffff;
+    background: var(--ec-view-btn-active-bg);
+    color: var(--ec-view-btn-active-fg);
+    border: none;
 }
 
+#dashboardMainNav .filter-btn:hover:not(.active),
 #rotinasView .filter-btn:hover:not(.active) {
-    background: #e5e5e5;
+    background: var(--ec-view-btn-hover-bg);
     transform: translateY(-3px) scale(1.02);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06);
+    box-shadow: none;
 }
 
+#dashboardMainNav .filter-btn:active,
 #rotinasView .filter-btn:active {
     transform: translateY(-1px) scale(1);
 }
 
+#dashboardMainNav .filter-btn--create,
+#rotinasView .filter-btn--create {
+    min-width: 34px;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1;
+    border: 1px solid rgba(0, 0, 0, 0.14);
+    background: #ffffff;
+    color: #18181b;
+    border-radius: 8px;
+}
+
+#dashboardMainNav .filter-btn--create span,
+#rotinasView .filter-btn--create span {
+    color: #18181b;
+}
+
+#dashboardMainNav .filter-btn--create:hover:not(.active),
+#rotinasView .filter-btn--create:hover:not(.active) {
+    background: #f4f4f5;
+    color: #000000;
+    transform: translateY(-2px) scale(1.02);
+}
+
+#dashboardMainNav .filter-btn--create:hover:not(.active) span,
+#rotinasView .filter-btn--create:hover:not(.active) span {
+    color: #000000;
+}
+
+#dashboardMainNav .filter-btn:focus,
+#dashboardMainNav .filter-btn:focus-visible,
+#rotinasView .filter-btn:focus,
+#rotinasView .filter-btn:focus-visible {
+    outline: none;
+    box-shadow: none;
+}
+
 /*
- * Vista rotinas: zonas com scroll horizontal (barra de botões + faixa de meses).
- * A barra nativa só indica overflow; o deslize continua a funcionar sem ela.
+ * Vista rotinas: zonas com scroll horizontal (barra de bot?es + faixa de meses).
+ * A barra nativa s? indica overflow; o deslize continua a funcionar sem ela.
  */
+#dashboardMainNav .view-toggle,
+#dashboardMainNav .view-toggle__views,
 #rotinasView .view-toggle,
 #rotinasView .view-toggle__views,
 #rotinasView .routine-card-heatmap .large-heatmap-block {
@@ -1174,12 +1612,24 @@ body.dashboard-overview-visible {
     -ms-overflow-style: none;
 }
 
+#dashboardMainNav .view-toggle::-webkit-scrollbar,
+#dashboardMainNav .view-toggle__views::-webkit-scrollbar,
 #rotinasView .view-toggle::-webkit-scrollbar,
 #rotinasView .view-toggle__views::-webkit-scrollbar,
 #rotinasView .routine-card-heatmap .large-heatmap-block::-webkit-scrollbar {
     display: none;
     width: 0;
     height: 0;
+}
+
+/* Hover sem scale/translate — indicador deslizante cuida do destaque */
+#dashboardMainNav .view-btn:hover:not(.active),
+#dashboardMainNav .view-btn:active,
+#rotinasView .view-btn:hover:not(.active),
+#rotinasView .view-btn:active {
+    transform: none;
+    box-shadow: none;
+    background: transparent;
 }
 
 .progress-summary {
@@ -1284,12 +1734,112 @@ body.dashboard-overview-visible {
     display: none;
 }
 
-.dashboard-overview.hidden,
-.rotinas-view.hidden {
+.dashboard-overview.hidden {
     display: none;
 }
 
-/* Entrada suave do dashboard após fechar a apresentação diária */
+/* #rotinasView NÃO usa .hidden/display:none — filhos ec-page controlam a vista
+   (evita transição estranha Tarefas ↔ Dashboard vs as outras abas) */
+#ecPages #rotinasView.hidden {
+    display: contents;
+}
+
+/* ---- Páginas deslizantes (nav Dashboard / Tarefas / …) ---- */
+.ec-pages {
+    position: relative;
+    width: 100%;
+    /* Em repouso: não corta o conteúdo. No slide: .is-sliding aplica overflow hidden. */
+    overflow: visible;
+    min-height: 0;
+}
+
+.ec-pages.is-sliding {
+    overflow: hidden;
+}
+
+/* Wrappers transparentes p/ Dashboard e Tarefas/Calendário serem irmãos no slide */
+#ecPages #rotinasView,
+#ecPages #routinesContainer {
+    display: contents;
+}
+
+#ecPages .ec-page {
+    width: 100%;
+    box-sizing: border-box;
+    transition: transform 0.4s cubic-bezier(0.65, 0, 0.35, 1);
+    will-change: transform;
+}
+
+/* Página ativa em fluxo — define a altura do container (não corta cards/heatmap) */
+#ecPages .ec-page.current {
+    position: relative;
+    transform: translateX(0%);
+    z-index: 2;
+    pointer-events: auto;
+    visibility: visible;
+}
+
+/* Durante o slide, as duas páginas ficam absolutas */
+#ecPages.is-sliding .ec-page.current,
+#ecPages .ec-page.enter-from-right,
+#ecPages .ec-page.enter-from-left,
+#ecPages .ec-page.exit-to-left,
+#ecPages .ec-page.exit-to-right {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+}
+
+#ecPages .ec-page.current,
+#ecPages .ec-page.enter-from-right,
+#ecPages .ec-page.enter-from-left,
+#ecPages .ec-page.exit-to-left,
+#ecPages .ec-page.exit-to-right {
+    display: block !important;
+    visibility: visible;
+}
+
+#ecPages .ec-page.enter-from-right,
+#ecPages .ec-page.enter-from-left,
+#ecPages .ec-page.exit-to-left,
+#ecPages .ec-page.exit-to-right {
+    pointer-events: none;
+}
+
+#ecPages .dashboard-layout.ec-page.enter-from-right,
+#ecPages .dashboard-layout.ec-page.enter-from-left,
+#ecPages .dashboard-layout.ec-page.exit-to-left,
+#ecPages .dashboard-layout.ec-page.exit-to-right,
+#ecPages .dashboard-layout.ec-page.current {
+    display: flex !important;
+}
+
+#ecPages .ec-page.enter-from-right { transform: translateX(100%); z-index: 2; }
+#ecPages .ec-page.enter-from-left  { transform: translateX(-100%); z-index: 2; }
+#ecPages .ec-page.exit-to-left     { transform: translateX(-100%); z-index: 1; }
+#ecPages .ec-page.exit-to-right    { transform: translateX(100%); z-index: 1; }
+
+#ecPages .ec-page.ec-page-off,
+#ecPages .ec-page.hidden:not(.enter-from-right):not(.enter-from-left):not(.exit-to-left):not(.exit-to-right):not(.current) {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    transform: translateX(100%);
+    z-index: 0;
+    transition: none;
+    pointer-events: none;
+    visibility: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #ecPages .ec-page {
+        transition: none !important;
+    }
+}
+
+/* Entrada suave do dashboard ap?s fechar a apresenta??o di?ria */
 @keyframes dashboardRevealAfterOnboarding {
     from {
         opacity: 0.65;
@@ -1305,18 +1855,88 @@ body.dashboard-overview-visible {
     animation: dashboardRevealAfterOnboarding 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
-/* Dashboard – visão com scroll para lista detalhada; todas as linhas com altura automática */
+@keyframes dashboardEntryReveal {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dashboard-overview.dashboard-overview--entry-reveal {
+    animation: dashboardEntryReveal 0.78s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Evita flash do header/conte?do antes do boot/onboarding terminar */
+html.ec-entry-pending body > .header,
+html.ec-entry-pending body > .main-content,
+html.ec-entry-boot body > .header,
+html.ec-entry-boot body > .main-content,
+body.dashboard-entry-pending > .header,
+body.dashboard-entry-pending > .main-content {
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+}
+
+body.dashboard-entry-revealing > .header,
+body.dashboard-entry-revealing > .main-content {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+    transition: opacity 0.72s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+
+body.dashboard-boot-active > .header,
+body.dashboard-boot-active > .main-content {
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+}
+
+body.dashboard-daily-onboarding-active > .header,
+body.dashboard-daily-onboarding-active > .main-content {
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Boot / entry / onboarding ? sem scroll na p?gina (conte?do oculto ainda ocupa layout) */
+html.ec-entry-boot,
+html:has(body.dashboard-entry-pending),
+html:has(body.dashboard-boot-active),
+html:has(body.dashboard-daily-onboarding-active) {
+    overflow: hidden;
+    height: 100%;
+}
+
+html.ec-entry-boot body,
+body.dashboard-entry-pending,
+body.dashboard-boot-active,
+body.dashboard-daily-onboarding-active {
+    overflow: hidden;
+    min-height: 100dvh;
+    max-height: 100dvh;
+}
+
+body.dashboard-entry-pending > .main-content,
+body.dashboard-boot-active > .main-content,
+body.dashboard-daily-onboarding-active > .main-content {
+    overflow: hidden;
+}
+
+/* Dashboard ? vis?o com scroll para lista detalhada; todas as linhas com altura autom?tica */
 .dashboard-overview {
     padding: 8px 12px 12px;
     max-width: 1200px;
     margin: 0 auto;
-    min-height: calc(100vh - 80px);
-    max-height: calc(100vh - 80px);
-    overflow-y: auto;
-    overflow-x: hidden;
-    /* Scroll com roda/trackpad; sem barra cinza clássica (Windows) */
-    scrollbar-width: none;
-    -ms-overflow-style: none;
+    min-height: 0;
+    max-height: none;
+    overflow: visible;
     display: grid;
     grid-template-columns: 1fr;
     grid-template-rows: auto;
@@ -1348,27 +1968,56 @@ body.dashboard-overview-visible {
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 8px 16px;
-    padding: 10px 12px;
+    gap: 10px 16px;
+    padding: 12px 16px;
     background: var(--ec-day-summary-bg);
     border: 1px solid var(--ec-day-summary-border);
-    border-radius: 8px;
+    border-radius: 12px;
+}
+
+.dashboard-day-summary-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.dashboard-day-summary-date-block {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
 }
 
 .dashboard-day-summary-date {
-    font-size: 1rem;
-    font-weight: 700;
+    font-size: 1.05rem;
+    font-weight: 800;
     color: var(--ec-day-summary-strong);
+    line-height: 1.15;
+}
+
+.dashboard-day-summary-weekday {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--ec-muted);
+    line-height: 1.2;
 }
 
 .dashboard-day-summary-stats {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
+    justify-content: flex-end;
     gap: 4px 10px;
-    font-size: 0.9rem;
+    font-size: 0.88rem;
     font-weight: 600;
     color: var(--ec-body-text);
+}
+
+.dashboard-day-summary-icon--calendar {
+    color: var(--ec-body-text);
+    width: 1.15rem;
+    height: 1.15rem;
 }
 
 .dashboard-day-summary-stat {
@@ -1407,97 +2056,160 @@ body.dashboard-overview-visible {
     gap: 8px;
 }
 
-/* Removido card "Próximas": produtividade ocupa toda a faixa */
+/* Removido card "Pr?ximas": produtividade ocupa toda a faixa */
 .dashboard-two-col .dashboard-card--next {
     display: none;
 }
 
 .dashboard-overview .dashboard-card--main { grid-column: 1 / -1; }
-.dashboard-overview .dashboard-card--progress { grid-column: 1 / -1; }
-.dashboard-overview .dashboard-card--metrics { grid-column: 1 / -1; }
-.dashboard-overview .dashboard-card--frequency { grid-column: 1; }
-.dashboard-overview .dashboard-card--next { grid-column: 1; }
+.dashboard-overview .dashboard-metrics-row { grid-column: 1 / -1; }
 .dashboard-overview .dashboard-two-col .dashboard-card--frequency { grid-column: 1 / -1; }
 .dashboard-overview .dashboard-two-col .dashboard-card--next { display: none; }
-.dashboard-overview .dashboard-overview-actions { grid-column: 1 / -1; }
 .dashboard-overview .dashboard-last-update { grid-column: 1 / -1; }
-.dashboard-overview .dashboard-card--stats { grid-column: 1 / -1; }
-.dashboard-overview .dashboard-card--stats-charts { grid-column: 1 / -1; }
 
-/* Oculta o card "Rotina de hoje" (ex.: Sistemas de Informação) */
+.dashboard-metric-card--taxa .dashboard-stat-chart-box-content,
+.dashboard-metric-card--week .dashboard-stat-chart-box-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+.dashboard-metric-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 14px 12px;
+    min-height: 0;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
+}
+
+.dashboard-metric-card:hover {
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+}
+
+.dashboard-metric-card-title {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin: 0 0 10px;
+    color: #111827;
+    width: 100%;
+}
+
+.dashboard-metric-card-icon {
+    width: 0.95rem;
+    height: 0.95rem;
+    flex-shrink: 0;
+}
+
+.dashboard-metric-card-footer {
+    margin: 8px 0 0;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #6b7280;
+    line-height: 1.35;
+}
+
+.dashboard-card--frequency {
+    position: relative;
+}
+
+.dashboard-card--frequency .dashboard-frequency-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    margin: 0 0 8px;
+}
+
+.dashboard-frequency-controls {
+    display: inline-flex;
+    margin: 0;
+}
+
+.dashboard-metrics-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    width: 100%;
+}
+
+@media (min-width: 600px) {
+    .dashboard-metrics-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 900px) {
+    .dashboard-metrics-row {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+/* Oculta o card "Rotina de hoje" (ex.: Sistemas de Informa??o) */
 #dashboardTodayCard {
     display: none;
 }
 
-
-/* Compacto: tudo numa tela sem scroll */
+/* Fallback compacto legado (overview sem body class ? raro) */
 .dashboard-overview .dashboard-card {
     padding: 10px 12px;
     border-radius: 10px;
 }
+
 .dashboard-overview .dashboard-card--main {
     min-height: 0;
     padding: 10px 12px;
 }
-.dashboard-overview .dashboard-card-label {
-    margin: 0 0 2px;
-    font-size: 0.75rem;
-}
-.dashboard-overview .dashboard-card-desc {
-    font-size: 0.7rem;
-    margin: 0 0 6px;
-}
-.dashboard-overview .dashboard-today-name { font-size: 1rem; margin-bottom: 2px; }
-.dashboard-overview .dashboard-today-time { font-size: 0.8rem; margin-bottom: 4px; }
-.dashboard-overview .dashboard-today-badge { font-size: 0.7rem; padding: 2px 6px; }
-.dashboard-overview .dashboard-today-empty { font-size: 0.95rem; }
-.dashboard-overview .dashboard-today-empty-hint { font-size: 0.8rem; }
-.dashboard-overview .dashboard-progress-text { font-size: 1.9rem; margin: 6px 0 10px; }
-.dashboard-overview .dashboard-progress-bar { height: 14px; }
-.dashboard-overview .dashboard-pending-tasks-title { font-size: 1.55rem; }
-.dashboard-overview .dashboard-pending-tasks-value { font-size: 2.4rem; margin-top: 10px; }
-.dashboard-overview .dashboard-metrics-intro { font-size: 0.7rem; margin: 0 0 8px; }
-.dashboard-overview .dashboard-metrics-grid { gap: 8px; }
-.dashboard-overview .dashboard-metric-card { padding: 8px 10px; }
-.dashboard-overview .dashboard-metric-title { font-size: 0.75rem; margin: 0 0 2px; }
-.dashboard-overview .dashboard-metric-desc { font-size: 0.65rem; margin: 0 0 6px; }
-.dashboard-overview .dashboard-metric-chart { min-height: 36px; }
-.dashboard-overview .dashboard-chart-row { font-size: 0.75rem; }
-.dashboard-overview .dashboard-chart-bar-wrap { height: 14px; }
-.dashboard-overview .dashboard-card--frequency .dashboard-frequency-content { min-height: 200px; }
-.dashboard-overview .dashboard-frequency-chart-svg { max-height: 220px; }
-.dashboard-overview .dashboard-stats-grid { gap: 6px 10px; }
-.dashboard-overview .dashboard-stat-item { padding: 6px 8px; }
-.dashboard-overview .dashboard-stat-value { font-size: 1.1rem; }
-.dashboard-overview .dashboard-stat-label { font-size: 0.65rem; margin-top: 0; }
-.dashboard-overview .dashboard-next-content { max-height: 72px; overflow: hidden; }
-.dashboard-overview .dashboard-next-item { padding: 4px 0; font-size: 0.85rem; }
-.dashboard-overview .dashboard-overview-actions { padding: 4px 12px 0; }
-.dashboard-overview .btn-ver-todas { min-height: 36px; padding: 8px 20px; font-size: 0.9rem; }
-/* Overview compacto: grelha 3 colunas (ícone | texto | chevron) */
-.dashboard-overview .btn-ver-cards {
-    min-height: 52px;
-    min-width: 44px;
-    padding: 14px 10px;
-    box-sizing: border-box;
+
+.dashboard-overview .dashboard-next-content {
+    max-height: 72px;
+    overflow: hidden;
 }
 
-/* 2 colunas em telas maiores */
+.dashboard-overview .dashboard-next-item {
+    padding: 4px 0;
+    font-size: 0.85rem;
+}
+
+/* Layout overview em telas maiores */
 @media (min-width: 720px) {
-    .dashboard-overview {
-        grid-template-columns: 1fr 1fr;
+    .dashboard-overview:not(.hidden) {
+        grid-template-columns: 1fr;
         grid-auto-rows: auto;
-        gap: 8px;
+        gap: 10px;
     }
-    .dashboard-overview .dashboard-day-summary { grid-row: 2; }
-    .dashboard-overview .dashboard-two-col { grid-row: 3; grid-column: 1 / -1; }
-    .dashboard-overview .dashboard-card--main { display: none; }
-    .dashboard-overview .dashboard-card--progress { grid-column: 1 / -1; grid-row: 4; }
-    .dashboard-overview .dashboard-card--metrics { grid-column: 1 / -1; grid-row: 5; }
-    .dashboard-overview .dashboard-card--stats-charts { grid-column: 1 / -1; grid-row: 6; }
-    .dashboard-overview .dashboard-card--stats { grid-column: 1 / -1; grid-row: 7; }
-    .dashboard-overview .dashboard-overview-actions { grid-column: 1 / -1; grid-row: 8; }
-    .dashboard-overview .dashboard-last-update { grid-column: 1 / -1; grid-row: 9; }
+
+    body:not(.dashboard-overview-visible) .dashboard-overview .dashboard-day-summary {
+        grid-row: auto;
+    }
+
+    body:not(.dashboard-overview-visible) .dashboard-overview .dashboard-two-col {
+        grid-row: auto;
+        grid-column: 1 / -1;
+    }
+
+    body:not(.dashboard-overview-visible) .dashboard-overview .dashboard-card--main {
+        display: none;
+    }
+
+    body:not(.dashboard-overview-visible) .dashboard-overview .dashboard-metrics-row {
+        grid-column: 1 / -1;
+    }
+
+    body:not(.dashboard-overview-visible) .dashboard-overview .dashboard-last-update {
+        grid-column: 1 / -1;
+    }
 }
 
 .dashboard-last-update {
@@ -1514,6 +2226,23 @@ body.dashboard-overview-visible {
     color: var(--ec-hero);
     margin: 0 0 8px;
     letter-spacing: 0.02em;
+}
+
+.dashboard-card.dashboard-metric-card {
+    border-width: 1px;
+    border-color: #e5e7eb;
+    padding: 14px 12px;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
+}
+
+.dashboard-card.dashboard-metric-card:hover {
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+    border-color: #d1d5db;
+}
+
+.dashboard-card.dashboard-metric-card:focus-within {
+    border-color: #000000;
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.12);
 }
 
 .dashboard-card {
@@ -1543,11 +2272,15 @@ body.dashboard-overview-visible {
     text-align: center;
 }
 
+.dashboard-card--progress .dashboard-metric-card-title {
+    justify-content: center;
+}
+
 .dashboard-card--progress .dashboard-card-label {
     justify-content: center;
 }
 
-/* Ícone vazio do progresso empurrava o título para a esquerda */
+/* ?cone vazio do progresso empurrava o t?tulo para a esquerda */
 .dashboard-card--progress .dashboard-card-icon--progress {
     display: none;
 }
@@ -1563,10 +2296,12 @@ body.dashboard-overview-visible {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     width: 100%;
+    flex: 1 1 auto;
 }
 
-/* align-items: center no content fazia a barra encolher ao conteúdo (fill 0% = “linha” fina) */
+/* align-items: center no content fazia a barra encolher ao conte?do (fill 0% = ?linha? fina) */
 .dashboard-card--progress .dashboard-progress-bar {
     width: 100%;
     max-width: 520px;
@@ -1615,25 +2350,31 @@ body.dashboard-overview-visible {
 }
 
 .dashboard-pending-tasks-title {
-    margin: 0;
-    font-size: 2.8rem;
-    line-height: 1.05;
-    letter-spacing: 0.02em;
-    font-weight: 900;
-    color: #000000;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin: 0 0 8px;
+    font-size: 0.72rem;
+    line-height: 1.2;
+    letter-spacing: 0.04em;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #111827;
     text-align: center;
     width: 100%;
     box-sizing: border-box;
 }
 
 .dashboard-pending-tasks-value {
-    margin: 18px 0 0;
-    font-size: 4rem;
+    margin: 4px 0 0;
+    font-size: 2.4rem;
     font-weight: 900;
     color: #000000;
     text-align: center;
     width: 100%;
     box-sizing: border-box;
+    line-height: 1;
 }
 
 .dashboard-stat-chart-box--pending {
@@ -1739,10 +2480,10 @@ body.dashboard-overview-visible {
 }
 
 .dashboard-card-icon--progress::before { content: ""; }
-.dashboard-card-icon--chart::before { content: "📊"; }
-.dashboard-card-icon--calendar::before { content: "📅"; }
-.dashboard-card-icon--stats::before { content: "📈"; }
-.dashboard-card-icon--next::before { content: "🔔"; }
+.dashboard-card-icon--chart::before { content: "??"; }
+.dashboard-card-icon--calendar::before { content: "??"; }
+.dashboard-card-icon--stats::before { content: "??"; }
+.dashboard-card-icon--next::before { content: "??"; }
 
 .dashboard-card-desc {
     font-size: 0.8rem;
@@ -1783,7 +2524,7 @@ body.dashboard-overview-visible {
     min-width: 0;
 }
 
-/* Barra sólida, sem brilho diagonal animado */
+/* Barra s?lida, sem brilho diagonal animado */
 .dashboard-progress-fill::after {
     display: none;
 }
@@ -1857,7 +2598,7 @@ body.dashboard-overview-visible {
     margin: 0;
 }
 
-/* Seção Resumo / Métricas */
+/* Se??o Resumo / M?tricas */
 .dashboard-card--metrics {
     padding: 20px;
 }
@@ -1913,7 +2654,7 @@ body.dashboard-overview-visible {
     min-height: 60px;
 }
 
-/* Gráficos estatísticos (área e linhas) – explicativo e profissional */
+/* Gr?ficos estat?sticos (?rea e linhas) ? explicativo e profissional */
 .dashboard-stat-chart-wrap {
     min-height: 100px;
     background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
@@ -2025,7 +2766,7 @@ body.dashboard-overview-visible {
 .dashboard-overview .dashboard-stat-chart-wrap--area .dashboard-stat-chart-svg { height: 150px; }
 .dashboard-overview .dashboard-stat-chart-wrap--line .dashboard-stat-chart-svg { height: 136px; }
 
-/* Gráficos: barras horizontais */
+/* Gr?ficos: barras horizontais */
 .dashboard-chart-bars {
     display: flex;
     flex-direction: column;
@@ -2113,7 +2854,7 @@ body.dashboard-overview-visible {
     border-radius: 50%;
 }
 
-/* Card Atrasadas: número grande */
+/* Card Atrasadas: n?mero grande */
 .dashboard-overdue-value {
     font-size: 2rem;
     font-weight: 700;
@@ -2135,7 +2876,7 @@ body.dashboard-overview-visible {
     margin: 0;
 }
 
-/* Gráficos estatísticos */
+/* Gr?ficos estat?sticos */
 .dashboard-card--stats-charts .dashboard-card-desc {
     margin-bottom: 12px;
 }
@@ -2237,6 +2978,445 @@ body.dashboard-overview-visible {
 
 .dashboard-donut-empty {
     color: #9ca3af;
+}
+
+.dashboard-metric-card--clickable {
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.dashboard-metric-card--clickable:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.1);
+    border-color: rgba(0, 0, 0, 0.14);
+}
+
+.dashboard-metric-card--clickable:focus-visible {
+    outline: 2px solid rgba(24, 24, 27, 0.35);
+    outline-offset: 2px;
+}
+
+/* Modal Últimos 30 dias — centro da tela (estilo perfil) */
+.dashboard-week-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 12000;
+    pointer-events: none;
+    visibility: hidden;
+}
+
+.dashboard-week-modal:not(.hidden) {
+    pointer-events: auto;
+    visibility: visible;
+}
+
+.dashboard-week-modal.hidden {
+    display: block;
+    pointer-events: none;
+    visibility: hidden;
+}
+
+.dashboard-week-modal__overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 15, 15, 0.42);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    will-change: opacity;
+}
+
+.dashboard-week-modal.is-open .dashboard-week-modal__overlay {
+    opacity: 1;
+}
+
+.dashboard-week-modal.is-closing .dashboard-week-modal__overlay {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.dashboard-week-modal__panel {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    z-index: 1;
+    width: min(520px, calc(100vw - 28px));
+    max-height: calc(100dvh - 36px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.22);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    padding: 22px 20px 20px;
+    box-sizing: border-box;
+    contain: layout paint;
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+}
+
+.dashboard-week-modal.is-open:not(.is-closing):not(.is-settled) .dashboard-week-modal__panel {
+    animation: calendar-day-detail-grow 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.dashboard-week-modal.is-open.is-settled .dashboard-week-modal__panel {
+    transform: translate(-50%, -50%);
+    opacity: 1;
+}
+
+.dashboard-week-modal.is-closing .dashboard-week-modal__panel {
+    animation: calendar-day-detail-shrink 0.22s cubic-bezier(0.4, 0, 0.22, 1) forwards;
+}
+
+.dashboard-week-modal__close {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    width: 34px;
+    height: 34px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: rgba(0, 0, 0, 0.45);
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.dashboard-week-modal__close:hover {
+    color: #18181b;
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.dashboard-week-modal__head {
+    padding-right: 36px;
+    margin-bottom: 16px;
+    text-align: left;
+}
+
+.dashboard-week-modal__eyebrow {
+    margin: 0 0 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgba(0, 0, 0, 0.45);
+}
+
+.dashboard-week-modal__title {
+    margin: 0 0 6px;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #18181b;
+    letter-spacing: -0.02em;
+}
+
+.dashboard-week-modal__summary {
+    margin: 0;
+    font-size: 0.88rem;
+    color: rgba(24, 24, 27, 0.58);
+    line-height: 1.4;
+}
+
+.dashboard-week-modal__body .dashboard-week-heatmap {
+    max-width: none;
+    margin: 0;
+}
+
+.dashboard-week-modal__body .dashboard-week-heatmap-grid .heatmap-square {
+    min-height: 40px;
+}
+
+.dashboard-week-modal__body .dashboard-week-heatmap .heatmap-day-number {
+    font-size: 0.82rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dashboard-week-modal.is-open:not(.is-closing):not(.is-settled) .dashboard-week-modal__panel,
+    .dashboard-week-modal.is-closing .dashboard-week-modal__panel {
+        animation: none !important;
+    }
+
+    .dashboard-week-modal.is-open:not(.is-closing) .dashboard-week-modal__panel,
+    .dashboard-week-modal.is-open.is-settled .dashboard-week-modal__panel {
+        transform: translate(-50%, -50%);
+        opacity: 1;
+    }
+
+    .dashboard-week-modal.is-closing .dashboard-week-modal__panel {
+        opacity: 0;
+    }
+
+    .dashboard-week-modal__overlay {
+        transition: none !important;
+    }
+
+    .dashboard-metric-card--clickable {
+        transition: none;
+    }
+}
+
+html[data-theme="dark"] .dashboard-week-modal__panel {
+    background: #161616;
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55);
+}
+
+html[data-theme="dark"] .dashboard-week-modal__overlay {
+    background: rgba(0, 0, 0, 0.72);
+}
+
+html[data-theme="dark"] .dashboard-week-modal__title {
+    color: #fafafa;
+}
+
+html[data-theme="dark"] .dashboard-week-modal__eyebrow,
+html[data-theme="dark"] .dashboard-week-modal__summary {
+    color: rgba(255, 255, 255, 0.55);
+}
+
+html[data-theme="dark"] .dashboard-week-modal__close {
+    color: rgba(255, 255, 255, 0.55);
+}
+
+html[data-theme="dark"] .dashboard-week-modal__close:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.dashboard-pending-modal__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.dashboard-pending-modal__item {
+    margin: 0;
+}
+
+.dashboard-pending-modal__link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: #f9fafb;
+    color: #18181b;
+    text-decoration: none;
+    box-sizing: border-box;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.dashboard-pending-modal__link:hover {
+    background: #f3f4f6;
+    border-color: rgba(0, 0, 0, 0.14);
+    transform: translateY(-1px);
+}
+
+.dashboard-pending-modal__name {
+    font-size: 0.95rem;
+    font-weight: 650;
+    line-height: 1.3;
+    min-width: 0;
+}
+
+.dashboard-pending-modal__time {
+    flex-shrink: 0;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: rgba(24, 24, 27, 0.55);
+}
+
+.dashboard-pending-modal__empty {
+    margin: 0;
+    padding: 18px 8px;
+    text-align: center;
+    font-size: 0.92rem;
+    color: rgba(24, 24, 27, 0.55);
+    line-height: 1.4;
+}
+
+html[data-theme="dark"] .dashboard-pending-modal__link {
+    background: #1c1c1c;
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #fafafa;
+}
+
+html[data-theme="dark"] .dashboard-pending-modal__link:hover {
+    background: #222;
+    border-color: rgba(255, 255, 255, 0.16);
+}
+
+html[data-theme="dark"] .dashboard-pending-modal__time,
+html[data-theme="dark"] .dashboard-pending-modal__empty {
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.dashboard-week-heatmap {
+    width: 100%;
+    max-width: 240px;
+    margin: 0 auto;
+}
+
+.dashboard-week-heatmap--30d {
+    max-width: 100%;
+}
+
+.dashboard-week-heatmap-inner {
+    width: 100%;
+}
+
+.dashboard-week-heatmap-weekdays {
+    gap: 3px;
+    margin-bottom: 4px;
+}
+
+.dashboard-week-heatmap-weekdays .calendar-weekday {
+    font-size: 0.58rem;
+    padding: 0;
+    color: #6b7280;
+    font-weight: 700;
+}
+
+.dashboard-week-heatmap-grid {
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+}
+
+.dashboard-week-heatmap .heatmap-square {
+    position: relative;
+    min-width: 0;
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 2px;
+    border: 1px solid transparent;
+    background: transparent;
+    cursor: default;
+}
+
+.dashboard-week-heatmap .heatmap-day-number {
+    display: flex;
+    position: absolute;
+    inset: 0;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.58rem;
+    font-weight: 700;
+    font-family: 'Rajdhani', sans-serif;
+    line-height: 1;
+    color: #374151;
+}
+
+.dashboard-week-heatmap .dashboard-week-day--empty,
+.dashboard-week-heatmap .dashboard-week-day--pad {
+    background: transparent;
+    border-color: rgba(0, 0, 0, 0.08);
+}
+
+.dashboard-week-heatmap .dashboard-week-day--pad {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.dashboard-week-heatmap .dashboard-week-day--empty .heatmap-day-number {
+    color: #9ca3af;
+}
+
+.dashboard-week-heatmap .dashboard-week-day.routine-day {
+    background: #111827;
+    border-color: #111827;
+}
+
+.dashboard-week-heatmap .dashboard-week-day.routine-day .heatmap-day-number {
+    color: #ffffff;
+}
+
+.dashboard-week-heatmap .dashboard-week-day.routine-day.heat-level-1 {
+    background: #bbf7d0;
+    border-color: #86efac;
+}
+
+.dashboard-week-heatmap .dashboard-week-day.routine-day.heat-level-1 .heatmap-day-number {
+    color: #14532d;
+}
+
+.dashboard-week-heatmap .dashboard-week-day.routine-day.heat-level-2 {
+    background: #4ade80;
+    border-color: #22c55e;
+}
+
+.dashboard-week-heatmap .dashboard-week-day.routine-day.heat-level-2 .heatmap-day-number {
+    color: #052e16;
+}
+
+.dashboard-week-heatmap .dashboard-week-day.routine-day.heat-level-3 {
+    background: #16a34a;
+    border-color: #15803d;
+}
+
+.dashboard-week-heatmap .dashboard-week-day.routine-day.heat-level-3 .heatmap-day-number {
+    color: #ecfdf5;
+}
+
+.dashboard-week-heatmap .dashboard-week-day.routine-day.checked {
+    background: #22c55e;
+    border-color: #16a34a;
+    box-shadow: 0 0 6px rgba(34, 197, 94, 0.45);
+}
+
+.dashboard-week-heatmap .dashboard-week-day.routine-day.checked .heatmap-day-number {
+    color: #052e16;
+}
+
+.dashboard-week-heatmap-legend {
+    width: 100%;
+    margin-top: 8px;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    color: #6b7280;
+    font-size: 0.58rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+.dashboard-week-heatmap-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.dashboard-week-heatmap-legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    flex-shrink: 0;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.dashboard-week-heatmap-legend-dot--done {
+    background: #22c55e;
+    border-color: #16a34a;
+}
+
+.dashboard-week-heatmap-legend-dot--pending {
+    background: #111827;
+    border-color: #111827;
+}
+
+.dashboard-week-heatmap-legend-dot--empty {
+    background: transparent;
 }
 
 .dashboard-bar-week-wrap {
@@ -2575,7 +3755,7 @@ body.dashboard-overview-visible {
     display: none;
 }
 
-/* Animação das barras (width/height ao renderizar) */
+/* Anima??o das barras (width/height ao renderizar) */
 .chart-animate-width {
     transition: width 0.4s ease;
 }
@@ -2584,9 +3764,9 @@ body.dashboard-overview-visible {
     transition: height 0.4s ease;
 }
 
-/* Frequência geral – barras verticais 30 dias */
+/* Frequ?ncia geral ? barras verticais 30 dias */
 .dashboard-card--frequency .dashboard-frequency-content {
-    min-height: 220px;
+    min-height: 0;
     border: 1px solid rgba(15, 23, 42, 0.1);
     border-radius: 12px;
     padding: 10px 10px 8px;
@@ -2631,76 +3811,148 @@ body.dashboard-overview-visible {
 }
 
 .dashboard-frequency-chart-wrap {
+    --dashboard-frequency-series-color: #18181b;
     width: 100%;
-    min-height: 220px;
+    min-height: 0;
     position: relative;
 }
 
-.dashboard-frequency-controls {
-    display: inline-flex;
-    gap: 8px;
-    margin: 2px 0 10px;
-}
-
-.dashboard-frequency-toggle {
-    border: 1px solid #000000;
-    background: #ffffff;
-    color: #000000;
-    font-family: 'Rajdhani', sans-serif;
-    font-weight: 700;
-    font-size: 0.82rem;
-    line-height: 1;
-    padding: 5px 10px;
-    border-radius: 999px;
+.dashboard-frequency-period-switch {
+    position: relative;
+    flex-shrink: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
     cursor: pointer;
-    transition: all 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
 }
 
-.dashboard-frequency-toggle:hover {
-    border-color: #000000;
-    transform: translateY(-1px);
+.dashboard-frequency-period-switch:focus {
+    outline: none;
 }
 
-.dashboard-frequency-toggle.is-active {
-    background: #000000;
+.dashboard-frequency-period-switch:focus-visible {
+    outline: 2px solid var(--ec-focus-ring);
+    outline-offset: 3px;
+    border-radius: 999px;
+}
+
+.dashboard-frequency-period-switch__track {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    width: 92px;
+    height: 34px;
+    padding: 3px;
+    border-radius: 999px;
+    background: #18181b;
+    border: 1px solid #27272a;
+    box-shadow:
+        inset 0 1px 3px rgba(0, 0, 0, 0.35),
+        0 1px 2px rgba(0, 0, 0, 0.12);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dashboard-frequency-period-switch:hover .dashboard-frequency-period-switch__track {
+    border-color: #3f3f46;
+    box-shadow:
+        inset 0 1px 3px rgba(0, 0, 0, 0.35),
+        0 2px 6px rgba(0, 0, 0, 0.18);
+}
+
+.dashboard-frequency-period-switch__option {
+    position: relative;
+    z-index: 2;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    text-align: center;
     color: #ffffff;
-    border-color: #000000;
+    transition: color 0.22s ease;
+    user-select: none;
+    pointer-events: none;
+}
+
+.dashboard-frequency-period-switch[aria-checked='false'] .dashboard-frequency-period-switch__option:first-child,
+.dashboard-frequency-period-switch[aria-checked='true'] .dashboard-frequency-period-switch__option:last-child {
+    color: #000000;
+}
+
+.dashboard-frequency-period-switch__thumb {
+    position: absolute;
+    top: 3px;
+    bottom: 3px;
+    left: 3px;
+    width: calc(50% - 3px);
+    border-radius: 999px;
+    background: var(--ec-surface, #ffffff);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.1),
+        0 2px 4px rgba(0, 0, 0, 0.06);
+    transition: left 0.24s cubic-bezier(0.4, 0, 0.2, 1), transform 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1;
+    pointer-events: none;
+}
+
+.dashboard-frequency-period-switch[aria-checked='true'] .dashboard-frequency-period-switch__thumb {
+    left: calc(50%);
 }
 
 .dashboard-frequency-chart-svg {
     width: 100%;
     height: auto;
+    max-height: 200px;
+    aspect-ratio: 960 / 200;
     display: block;
 }
 
 .dashboard-frequency-grid-line {
-    stroke: rgba(148, 163, 184, 0.35);
-    stroke-width: 1;
-    stroke-dasharray: 1 5;
+    stroke: rgba(100, 116, 139, 0.45);
+    stroke-width: 1.25;
+    stroke-dasharray: 2 6;
 }
 
 .dashboard-frequency-series-line {
     fill: none;
-    stroke: var(--series-color, #60a5fa);
-    stroke-width: var(--freq-line-width, 2px);
+    stroke: var(--dashboard-frequency-series-color, #18181b);
+    stroke-width: var(--freq-line-width, 2.25px);
     stroke-linecap: round;
     stroke-linejoin: round;
-    transition: opacity 0.25s ease, stroke-width 0.25s ease, transform 0.25s ease;
-    animation: frequencyDrawLine 1s cubic-bezier(0.22, 1, 0.36, 1);
+    transition:
+        opacity 0.75s ease,
+        stroke-width 0.75s ease,
+        filter 0.75s ease;
     transform-origin: left center;
+    opacity: 0.82;
     filter: none;
-    opacity: 0.94;
-    animation: dashboardFrequencyLinePulse 4.8s ease-in-out infinite;
+    cursor: pointer;
+}
+
+.dashboard-frequency-series-dot-hit {
+    fill: transparent;
+    stroke: none;
+    pointer-events: all;
+    cursor: pointer;
 }
 
 .dashboard-frequency-series-dot {
-    fill: #ef4444;
+    fill: #9ca3af;
     stroke: #ffffff;
-    stroke-width: 1;
-    transition: transform 0.2s ease, opacity 0.2s ease, r 0.2s ease, filter 0.2s ease;
-    cursor: pointer;
-    filter: drop-shadow(0 0 2px rgba(15, 23, 42, 0.18));
-    opacity: 0.92;
+    stroke-width: 1.5;
+    transform-box: fill-box;
+    transform-origin: center;
+    transition:
+        opacity 0.75s ease,
+        filter 0.75s ease,
+        transform 0.75s ease,
+        fill 0.75s ease;
+    pointer-events: none;
+    filter: none;
+    opacity: 0.88;
 }
 
 .dashboard-frequency-series-dot[data-state="done"] {
@@ -2708,42 +3960,58 @@ body.dashboard-overview-visible {
 }
 
 .dashboard-frequency-series-dot[data-state="pending"] {
+    fill: #9ca3af;
+}
+
+.dashboard-frequency-series-dot[data-state="missed"] {
     fill: #ef4444;
 }
 
 .dashboard-frequency-series-line.is-muted,
 .dashboard-frequency-series-dot.is-muted {
-    opacity: 0.2;
+    opacity: 0.14;
 }
 
 .dashboard-frequency-series-line.is-focused {
-    stroke-width: 2.6;
+    opacity: 1;
+    stroke-width: 2.75px;
+    filter: drop-shadow(0 0 3px rgba(24, 24, 27, 0.22)) drop-shadow(0 0 10px rgba(24, 24, 27, 0.12));
 }
 
 .dashboard-frequency-series-dot.is-focused {
-    r: 4.2;
-    filter: drop-shadow(0 0 9px color-mix(in srgb, var(--series-color) 82%, #000 18%));
+    opacity: 1;
+    filter: drop-shadow(0 0 4px rgba(24, 24, 27, 0.28));
+}
+
+.dashboard-frequency-series-dot.is-focused:not(.is-hovered) {
+    transform: scale(1.04);
+}
+
+.dashboard-frequency-series-dot.is-hovered {
+    transform: scale(1.08);
+    filter: drop-shadow(0 0 5px rgba(24, 24, 27, 0.32)) drop-shadow(0 0 12px rgba(24, 24, 27, 0.14));
 }
 
 .dashboard-frequency-end-label {
     font-family: 'Rajdhani', sans-serif;
-    font-size: var(--freq-label-size, 10px);
+    font-size: var(--freq-label-size, 11px);
     font-weight: 700;
     letter-spacing: 0.2px;
-    fill: var(--series-color, #000000);
-    paint-order: stroke;
-    stroke: rgba(255, 255, 255, 0.92);
-    stroke-width: 2px;
+    fill: var(--dashboard-frequency-series-color, #18181b);
+    paint-order: stroke fill;
+    stroke: rgba(255, 255, 255, 0.95);
+    stroke-width: 3px;
     stroke-linejoin: round;
-    transition: opacity 0.2s ease, transform 0.2s ease;
+    transition: opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1), filter 0.5s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .dashboard-frequency-end-label.is-muted {
-    opacity: 0.22;
+    opacity: 0.14;
 }
 
 .dashboard-frequency-end-label.is-focused {
     opacity: 1;
+    filter: drop-shadow(0 0 6px rgba(24, 24, 27, 0.35));
 }
 
 .dashboard-frequency-final-focus {
@@ -2757,19 +4025,13 @@ body.dashboard-overview-visible {
 
 .dashboard-frequency-final-focus.is-active {
     opacity: 1;
-    animation: dashboardFrequencyFinalPulse 2.2s ease-in-out infinite;
-}
-
-@keyframes dashboardFrequencyFinalPulse {
-    0% { r: 4.4; opacity: 0.9; }
-    50% { r: 6.6; opacity: 1; }
-    100% { r: 4.4; opacity: 0.9; }
+    animation: none;
 }
 
 .dashboard-frequency-chart-label,
 .dashboard-frequency-chart-axis {
-    font-size: 12px;
-    fill: #64748b;
+    font-size: 13px;
+    fill: #475569;
     font-family: 'Rajdhani', sans-serif;
     font-weight: 700;
 }
@@ -2778,6 +4040,29 @@ body.dashboard-overview-visible {
     font-size: 0.82rem;
     color: #64748b;
     margin: 8px 0 0;
+}
+
+.dashboard-frequency-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 88px;
+    margin: 0;
+    text-align: center;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: #64748b;
+}
+
+.dashboard-metric-card--taxa .dashboard-metric-empty {
+    flex: 1 1 auto;
+    min-height: 120px;
+}
+
+.dashboard-card--progress .dashboard-metric-empty {
+    flex: 1 1 auto;
+    min-height: 120px;
 }
 
 .dashboard-frequency-legend {
@@ -2795,7 +4080,7 @@ body.dashboard-overview-visible {
 }
 
 .dashboard-frequency-legend-item {
-    border: 1px solid rgba(15, 23, 42, 0.12);
+    border: none;
     background: rgba(255, 255, 255, 0.88);
     padding: 4px 8px;
     margin: 0;
@@ -2807,38 +4092,216 @@ body.dashboard-overview-visible {
     align-items: center;
     gap: 7px;
     cursor: pointer;
-    opacity: 0.85;
-    transition: opacity 0.2s ease, transform 0.2s ease;
+    opacity: 0.78;
+    transition:
+        opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+        transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+        box-shadow 0.45s ease,
+        background 0.45s ease;
 }
 
-.dashboard-frequency-legend-item:hover {
+.dashboard-frequency-legend-item:hover,
+.dashboard-frequency-legend-item.is-active {
     opacity: 1;
-    transform: translateY(-1px) scale(1.01);
-    border-color: rgba(15, 23, 42, 0.22);
+    transform: translateY(-1px);
+}
+
+.dashboard-frequency-legend-item.is-selected {
+    box-shadow: none;
 }
 
 .dashboard-frequency-legend-dot {
-    width: 8px;
-    height: 8px;
+    width: 10px;
+    height: 10px;
     border-radius: 999px;
-    box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.08);
+    flex-shrink: 0;
+    background: var(--dashboard-frequency-series-color, #18181b);
+    box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.12);
 }
 
 .dashboard-frequency-chart-tooltip {
     position: absolute;
     z-index: 3;
-    max-width: 180px;
-    transform: translate(-50%, -100%);
-    background: rgba(2, 6, 23, 0.96);
-    color: #ffffff;
-    border: 1px solid rgba(148, 163, 184, 0.32);
-    border-radius: 10px;
-    padding: 8px 10px;
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 0.76rem;
-    line-height: 1.25;
+    min-width: 156px;
+    max-width: 220px;
+    transform: translate(-50%, calc(-100% - 4px)) scale(0.97);
+    transform-origin: center bottom;
+    background: rgba(8, 8, 10, 0.97);
+    color: #fafafa;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 0;
+    font-family: Inter, system-ui, sans-serif;
+    font-size: 0.72rem;
+    line-height: 1.3;
+    letter-spacing: 0.02em;
     pointer-events: none;
-    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
+    box-shadow:
+        0 16px 40px rgba(0, 0, 0, 0.42),
+        0 0 0 1px rgba(0, 0, 0, 0.35);
+    opacity: 0;
+    transition:
+        opacity 0.16s ease,
+        transform 0.16s cubic-bezier(0.22, 1, 0.36, 1);
+    -webkit-font-smoothing: antialiased;
+}
+
+.dashboard-frequency-chart-tooltip.is-visible {
+    opacity: 1;
+    animation: dashboard-frequency-tooltip-bounce-in 0.44s cubic-bezier(0.34, 1.32, 0.64, 1) both;
+}
+
+@keyframes dashboard-frequency-tooltip-bounce-in {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, calc(-100% - 1px)) scale(0.86);
+    }
+    50% {
+        opacity: 1;
+        transform: translate(-50%, calc(-100% - 7px)) scale(1.04);
+    }
+    72% {
+        transform: translate(-50%, calc(-100% - 4px)) scale(0.98);
+    }
+    100% {
+        opacity: 1;
+        transform: translate(-50%, calc(-100% - 4px)) scale(1);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dashboard-frequency-series-dot.is-hovered {
+        transform: scale(1.12);
+        transition: none;
+    }
+
+    .dashboard-frequency-chart-tooltip.is-visible {
+        animation: none;
+        transform: translate(-50%, calc(-100% - 4px)) scale(1);
+    }
+}
+
+.dashboard-frequency-chart-tooltip::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: -3px;
+    width: 10px;
+    height: 10px;
+    transform: translateX(-50%) rotate(45deg);
+    background: rgba(8, 8, 10, 0.97);
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.18);
+}
+
+.dashboard-frequency-tooltip__inner {
+    padding: 10px 12px 11px;
+}
+
+.dashboard-frequency-tooltip__title {
+    margin: 0 0 4px;
+    font-family: Inter, system-ui, sans-serif;
+    font-size: 0.74rem;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    line-height: 1.2;
+    color: #ffffff;
+}
+
+.dashboard-frequency-tooltip__date {
+    margin: 0 0 9px;
+    font-size: 0.68rem;
+    font-weight: 400;
+    letter-spacing: 0.03em;
+    color: rgba(250, 250, 250, 0.52);
+    text-transform: capitalize;
+}
+
+.dashboard-frequency-tooltip__rows {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.dashboard-frequency-tooltip__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.dashboard-frequency-tooltip__label {
+    font-size: 0.66rem;
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    color: rgba(250, 250, 250, 0.48);
+}
+
+.dashboard-frequency-tooltip__value {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: #f4f4f5;
+    font-variant-numeric: tabular-nums;
+}
+
+.dashboard-frequency-tooltip__status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    min-height: 1.1em;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    line-height: 1;
+    color: #f4f4f5;
+}
+
+.dashboard-frequency-tooltip__status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    flex-shrink: 0;
+    align-self: center;
+    margin: 0;
+    background: currentColor;
+    box-shadow: 0 0 7px currentColor;
+}
+
+.dashboard-frequency-tooltip__status.is-done {
+    color: #f4f4f5;
+}
+
+.dashboard-frequency-tooltip__status.is-done .dashboard-frequency-tooltip__status-dot {
+    background: #22c55e;
+    box-shadow:
+        0 0 0 1px rgba(34, 197, 94, 0.35),
+        0 0 8px rgba(74, 222, 128, 0.85);
+}
+
+.dashboard-frequency-tooltip__status.is-pending {
+    color: #f4f4f5;
+}
+
+.dashboard-frequency-tooltip__status.is-pending .dashboard-frequency-tooltip__status-dot {
+    background: #9ca3af;
+    box-shadow:
+        0 0 0 1px rgba(156, 163, 175, 0.35),
+        0 0 8px rgba(156, 163, 175, 0.55);
+}
+
+.dashboard-frequency-tooltip__status.is-missed {
+    color: #f4f4f5;
+}
+
+.dashboard-frequency-tooltip__status.is-missed .dashboard-frequency-tooltip__status-dot {
+    background: #ef4444;
+    box-shadow:
+        0 0 0 1px rgba(239, 68, 68, 0.35),
+        0 0 8px rgba(248, 113, 113, 0.75);
 }
 
 @keyframes frequencyDrawLine {
@@ -2871,6 +4334,10 @@ body.dashboard-overview-visible {
     .dashboard-frequency-series-line {
         animation: none;
     }
+
+    .dashboard-frequency-final-focus.is-active {
+        animation: none;
+    }
 }
 
 .dashboard-frequency-bars {
@@ -2896,7 +4363,7 @@ body.dashboard-overview-visible {
     background: #22c55e;
 }
 
-/* Estatísticas – grid de KPIs */
+/* Estat?sticas ? grid de KPIs */
 .dashboard-stats-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -2940,7 +4407,7 @@ body.dashboard-overview-visible {
     box-sizing: border-box;
 }
 
-/* Título acima do CTA: flex + span compensa letter-spacing (evita “puxar” para a esquerda) */
+/* T?tulo acima do CTA: flex + span compensa letter-spacing (evita ?puxar? para a esquerda) */
 .dashboard-ver-cards-kicker {
     display: flex;
     justify-content: center;
@@ -2963,7 +4430,7 @@ body.dashboard-overview-visible {
     -webkit-background-clip: border-box;
     background-clip: border-box;
     text-transform: uppercase;
-    /* Simétrico para não “puxar” para um lado */
+    /* Sim?trico para n?o ?puxar? para um lado */
     padding-left: 0.32em;
     padding-right: 0.32em;
 }
@@ -2999,7 +4466,7 @@ body.dashboard-overview-visible {
     transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.25s ease, color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
-/* CTA: grelha 3 colunas iguais → texto geometricamente centrado entre ícones */
+/* CTA: grelha 3 colunas iguais ? texto geometricamente centrado entre ?cones */
 .btn-ver-cards {
     position: relative;
     display: grid;
@@ -3079,13 +4546,13 @@ body.dashboard-overview-visible {
     height: 100%;
 }
 
-/* Dia completo: sem aura/borda verde (visual neutro como o botão base) */
+/* Dia completo: sem aura/borda verde (visual neutro como o bot?o base) */
 .btn-ver-cards--complete {
     border-color: #262626;
     box-shadow: none;
 }
 
-/* Mesmo visual do botão base — sem aura vermelha (progresso já é verde noutros blocos) */
+/* Mesmo visual do bot?o base ? sem aura vermelha (progresso j? ? verde noutros blocos) */
 .btn-ver-cards--pending {
     border-color: #262626;
     box-shadow: none;
@@ -3096,7 +4563,7 @@ body.dashboard-overview-visible {
     box-shadow: none;
 }
 
-/* Hover “top”: elevação suave, sombra em camadas, label e chevron com micro-movimento */
+/* Hover ?top?: eleva??o suave, sombra em camadas, label e chevron com micro-movimento */
 .btn-ver-cards:hover {
     transform: translate3d(0, -5px, 0) scale(1.02);
     background: #141414;
@@ -3181,7 +4648,7 @@ body.dashboard-overview-visible {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-/* Garantir que o hover genérico de .btn-ver-todas não sobrescreve o CTA cápsula */
+/* Garantir que o hover gen?rico de .btn-ver-todas n?o sobrescreve o CTA c?psula */
 .btn-ver-todas.btn-ver-cards:hover {
     transform: translate3d(0, -5px, 0) scale(1.02);
     border-width: 1px;
@@ -3258,6 +4725,21 @@ body.dashboard-overview-visible {
     .btn-ver-cards:active .btn-ver-cards-chevron {
         transform: none;
     }
+
+    .dashboard-nav-cta.btn-ver-cards::before {
+        display: none;
+    }
+
+    .dashboard-nav-cta.btn-ver-cards:hover,
+    .btn-ver-todas.dashboard-nav-cta.btn-ver-cards:hover {
+        transform: none;
+        box-shadow: none;
+    }
+
+    .dashboard-nav-cta.btn-ver-cards:hover .btn-ver-cards-chevron,
+    .dashboard-nav-cta.btn-ver-cards:focus-visible .btn-ver-cards-chevron {
+        transform: none;
+    }
 }
 
 .rotinas-view {
@@ -3267,14 +4749,11 @@ body.dashboard-overview-visible {
     min-width: 0;
 }
 
-/* Overview ↔ Cards: View Transitions API (navegadores compatíveis) */
+/* Overview ? Cards: View Transitions API (navegadores compat?veis) */
 @supports (view-transition-name: none) {
-    #dashboardOverview {
-        view-transition-name: ec-dashboard-overview;
-    }
-
+    #dashboardOverview,
     #rotinasView {
-        view-transition-name: ec-rotinas-view;
+        view-transition-name: none;
     }
 }
 
@@ -3316,7 +4795,7 @@ body.dashboard-overview-visible {
     animation: ecDashboardOverviewEnter 0.28s ease-out forwards;
 }
 
-/* Vista Cards / rotinas: coluna única + heatmap utilizável em tablet e telemóvel */
+/* Vista Cards / rotinas: coluna ?nica + heatmap utiliz?vel em tablet e telem?vel */
 @media (max-width: 1024px) {
     #rotinasView .dashboard-controls {
         flex-direction: row;
@@ -3337,15 +4816,17 @@ body.dashboard-overview-visible {
     }
 
     /* Uma fila horizontal de vistas; desliza no ecrã se não couber */
-    #rotinasView .view-toggle__views {
+    #dashboardMainNav .view-toggle__views,
+#rotinasView .view-toggle__views {
         width: 100%;
         justify-content: flex-start;
         flex-direction: row;
         flex-wrap: nowrap;
         align-items: center;
-        gap: 6px;
-        padding: 0;
+        gap: 4px;
+        padding: 4px;
         overflow-x: auto;
+        overflow-y: hidden;
         -webkit-overflow-scrolling: touch;
         overscroll-behavior-x: contain;
         min-width: 0;
@@ -3362,7 +4843,8 @@ body.dashboard-overview-visible {
         text-align: center;
     }
 
-    #rotinasView .view-toggle > .filters {
+    #dashboardMainNav .view-toggle > .filters,
+#rotinasView .view-toggle > .filters {
         gap: 6px;
         margin: 6px 0 0;
         padding: 6px 0 0;
@@ -3370,6 +4852,7 @@ body.dashboard-overview-visible {
         border-top: 1px solid #dcdcdc;
     }
 
+    #dashboardMainNav .filter-btn,
     #rotinasView .filter-btn {
         padding: 8px 10px;
         font-size: 0.78rem;
@@ -3401,7 +4884,7 @@ body.dashboard-overview-visible {
         flex: 2 1 0;
     }
 
-    /* Calendário largo: permite deslizar em vez de cortar */
+    /* Calend?rio largo: permite deslizar em vez de cortar */
     #rotinasView .routine-card-heatmap .large-heatmap-block {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
@@ -3409,7 +4892,7 @@ body.dashboard-overview-visible {
         min-height: 150px;
     }
 
-    /* Carrossel de 3 meses: arrasto por transform, não scroll nativo */
+    /* Carrossel de 3 meses: arrasto por transform, n?o scroll nativo */
     #rotinasView .routine-card-heatmap--carousel .large-heatmap-block {
         overflow-x: hidden !important;
         -webkit-overflow-scrolling: auto;
@@ -3439,7 +4922,7 @@ body.dashboard-overview-visible {
 
 .calendar-grid {
     display: grid;
-    /* minmax(0,1fr): evita overflow horizontal quando o conteúdo das células força min-width:auto */
+    /* minmax(0,1fr): evita overflow horizontal quando o conte?do das c?lulas for?a min-width:auto */
     grid-template-columns: repeat(7, minmax(0, 1fr));
     gap: clamp(4px, 1.2vw, 8px);
     width: 100%;
@@ -3460,7 +4943,7 @@ body.dashboard-overview-visible {
 }
 
 .calendar-day {
-    /* Sem aspect-ratio: com tarefas, 1:1 empurrava a linha e estourava as 7 colunas */
+    /* Sem aspect-ratio na base: mobile e conteúdo variável usam min-height */
     min-height: 4.75rem;
     min-width: 0;
     border: 1px solid var(--ec-border-2);
@@ -3471,9 +4954,32 @@ body.dashboard-overview-visible {
     align-items: stretch;
     justify-content: flex-start;
     cursor: pointer;
-    transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+    transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, transform 0.28s cubic-bezier(0.34, 1.24, 0.64, 1);
     position: relative;
     box-sizing: border-box;
+    overflow: visible;
+}
+
+/* PC: células do mês mais quadradas (1:1), tarefas com scroll interno */
+@media (min-width: 769px) {
+    .calendar-grid.calendar-grid--desktop .calendar-day {
+        aspect-ratio: 1 / 1;
+        min-height: 0;
+        height: auto;
+        overflow: hidden;
+    }
+
+    .calendar-grid.calendar-grid--desktop .calendar-day.has-routines {
+        overflow: hidden;
+    }
+
+    .calendar-grid.calendar-grid--desktop .calendar-day-tasks {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-x: hidden;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
 }
 
 .calendar-day .day-number {
@@ -3497,11 +5003,29 @@ body.dashboard-overview-visible {
     background: var(--ec-surface-2);
 }
 
-/* Calendário mensal: dia com rotinas todas concluídas = verde */
+/* Calend?rio mensal: dia com rotinas todas conclu?das = verde suave no quadrado inteiro */
 .calendar-day.calendar-day--all-done {
-    border-color: #16a34a;
+    border-color: rgba(22, 163, 74, 0.55);
+    background: #ecfdf3;
+    box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.28);
+}
+
+.calendar-day.calendar-day--all-done .day-number {
+    color: #15803d;
+    font-weight: 800;
+}
+
+.calendar-day.calendar-day--all-done:hover:not(.empty) {
+    border-color: rgba(22, 163, 74, 0.65);
     background: #dcfce7;
-    box-shadow: 0 0 0 1px rgba(22, 163, 74, 0.2);
+}
+
+.calendar-day.calendar-day--all-done.calendar-day--selected {
+    border-color: rgba(22, 163, 74, 0.75);
+    background: #dcfce7;
+    box-shadow:
+        inset 0 0 0 1px rgba(34, 197, 94, 0.32),
+        0 6px 20px rgba(22, 163, 74, 0.18);
 }
 
 .calendar-day.calendar-day--partial-done {
@@ -3526,10 +5050,20 @@ body.dashboard-overview-visible {
     border-color: #15803d !important;
 }
 
-.calendar-day-task-row--done .routine-card-bullet--important {
-    background: #22c55e !important;
-    box-shadow: 0 0 4px rgba(34, 197, 94, 0.5);
+.calendar-day .routine-card-bullet--important {
     animation: none;
+    box-shadow:
+        0 0 2px rgba(232, 106, 118, 0.28),
+        0 0 5px rgba(232, 106, 118, 0.12);
+}
+
+.calendar-day .calendar-day-task-row--done .routine-card-bullet--important {
+    background: #22c55e !important;
+    animation: none;
+    box-shadow:
+        0 0 2px rgba(34, 197, 94, 0.55),
+        0 0 6px rgba(34, 197, 94, 0.35),
+        0 0 10px rgba(34, 197, 94, 0.18);
 }
 
 .calendar-day-tasks {
@@ -3539,7 +5073,11 @@ body.dashboard-overview-visible {
     margin-top: 6px;
     flex: 1;
     min-width: 0;
-    overflow: hidden;
+    overflow: visible;
+}
+
+.calendar-day.has-routines {
+    overflow: visible;
 }
 
 .calendar-day-task-row {
@@ -3547,10 +5085,14 @@ body.dashboard-overview-visible {
     align-items: center;
     gap: 6px;
     min-height: 0;
+    position: relative;
+    z-index: 2;
 }
 
 .calendar-day-task-row .routine-card-bullet {
     flex-shrink: 0;
+    position: relative;
+    z-index: 3;
 }
 
 .calendar-day-task-row .routine-card-bullet--reminder {
@@ -3565,9 +5107,294 @@ body.dashboard-overview-visible {
     height: 8px;
 }
 
-.calendar-day .routine-card-bullet--important {
-    box-shadow: 0 0 3px 0 rgba(229, 57, 53, 0.4);
+.calendar-day.calendar-day--selected {
+    z-index: 3;
+    transform: scale(1.06);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.14);
+    border-color: var(--ec-heading);
+}
+
+.calendar-day-detail {
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    pointer-events: none;
+    visibility: hidden;
+}
+
+.calendar-day-detail:not([hidden]) {
+    pointer-events: auto;
+    visibility: visible;
+}
+
+.calendar-day-detail__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.52);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+.calendar-day-detail.is-open .calendar-day-detail__backdrop {
+    opacity: 1;
+}
+
+.calendar-day-detail__panel {
+    position: fixed;
+    left: var(--cal-detail-x, 50%);
+    top: var(--cal-detail-y, 50%);
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    width: min(560px, calc(100vw - 40px));
+    height: auto;
+    max-height: calc(100dvh - 40px);
+    overflow: visible;
+    display: flex;
+    flex-direction: column;
+    background: var(--ec-surface);
+    color: var(--ec-body-text);
+    border: 1px solid var(--ec-border-2);
+    border-radius: 16px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.22);
+    z-index: 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+.calendar-day-detail.is-open:not(.is-closing):not(.is-settled) .calendar-day-detail__panel {
+    animation: calendar-day-detail-grow 0.38s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.calendar-day-detail.is-open.is-settled .calendar-day-detail__panel {
+    transform: translate(-50%, -50%);
+    opacity: 1;
+}
+
+.calendar-day-detail.is-closing .calendar-day-detail__panel {
+    animation: calendar-day-detail-shrink 0.3s cubic-bezier(0.4, 0, 0.22, 1) forwards;
+}
+
+.calendar-day-detail.is-closing .calendar-day-detail__backdrop {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+@keyframes calendar-day-detail-grow {
+    0% {
+        transform: translate(-50%, calc(-50% + 14px));
+        opacity: 0;
+    }
+    62% {
+        transform: translate(-50%, calc(-50% - 3px));
+        opacity: 1;
+    }
+    100% {
+        transform: translate(-50%, -50%);
+        opacity: 1;
+    }
+}
+
+@keyframes calendar-day-detail-shrink {
+    0% {
+        transform: translate(-50%, -50%);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(-50%, calc(-50% + 10px));
+        opacity: 0;
+    }
+}
+
+.calendar-day-detail__close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 34px;
+    height: 34px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--ec-day-info-close, #000);
+    font-size: 1.6rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 600;
+    transition: background 0.2s ease;
+}
+
+.calendar-day-detail__close:hover {
+    background: var(--ec-day-info-close-hover, #f0f0f0);
+}
+
+.calendar-day-detail__head {
+    padding: 22px 44px 12px 20px;
+    border-bottom: 1px solid var(--ec-border);
+    flex-shrink: 0;
+}
+
+.calendar-day-detail__title {
+    margin: 0;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--ec-heading);
+    text-transform: capitalize;
+    line-height: 1.3;
+    letter-spacing: 0.01em;
+}
+
+.calendar-day-detail__summary {
+    margin: 6px 0 0;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--ec-muted, #666);
+}
+
+.calendar-day-detail__list {
+    list-style: none;
+    margin: 0;
+    padding: 14px 18px 18px;
+    overflow: visible;
+    flex: 0 1 auto;
+    min-height: 0;
+}
+
+.calendar-day-detail__item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    border-radius: 10px;
+    background: var(--ec-surface-2, #f5f5f5);
+    border: 1px solid var(--ec-border);
+}
+
+.calendar-day-detail__item:last-child {
+    margin-bottom: 0;
+}
+
+.calendar-day-detail__item--done {
+    border-color: rgba(22, 163, 74, 0.35);
+    background: rgba(220, 252, 231, 0.55);
+}
+
+.calendar-day-detail__item-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.calendar-day-detail__item-title {
+    display: block;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--ec-heading);
+    line-height: 1.35;
+    word-break: break-word;
+}
+
+.calendar-day-detail__item-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    margin-top: 5px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--ec-muted, #666);
+}
+
+.calendar-day-detail__item-status {
+    font-weight: 600;
+}
+
+.calendar-day-detail__item-status--done {
+    color: #15803d;
+}
+
+.calendar-day-detail__item-status--pending {
+    color: var(--ec-muted, #666);
+}
+
+.calendar-day-detail__empty {
+    margin: 0;
+    padding: 24px 20px;
+    text-align: center;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.95rem;
+    color: var(--ec-muted, #666);
+}
+
+@media (max-width: 640px) {
+    .calendar-day-detail__panel {
+        left: 50% !important;
+        top: 50% !important;
+        width: min(520px, calc(100vw - 24px));
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .calendar-day-detail.is-open:not(.is-closing) .calendar-day-detail__panel,
+    .calendar-day-detail.is-closing .calendar-day-detail__panel {
+        animation: none;
+    }
+
+    .calendar-day-detail.is-open:not(.is-closing) .calendar-day-detail__panel,
+    .calendar-day-detail.is-open.is-settled .calendar-day-detail__panel {
+        transform: translate(-50%, -50%);
+        opacity: 1;
+    }
+
+    .calendar-day-detail.is-closing .calendar-day-detail__panel {
+        transform: translate(-50%, -50%);
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+
+    .user-profile-modal.is-open:not(.is-closing):not(.is-settled) .user-profile-panel,
+    .user-profile-modal.is-closing .user-profile-panel {
+        animation: none;
+    }
+
+    .user-profile-modal.is-open:not(.is-closing) .user-profile-panel,
+    .user-profile-modal.is-open.is-settled .user-profile-panel {
+        transform: translate(-50%, -50%);
+        opacity: 1;
+    }
+
+    .user-profile-modal.is-closing .user-profile-panel {
+        transform: translate(-50%, -50%);
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+}
+
+body.calendar-day-detail-open {
+    overflow: hidden;
+}
+
+.calendar-day-detail .routine-card-bullet--important {
     animation: none;
+    box-shadow:
+        0 0 2px rgba(232, 106, 118, 0.28),
+        0 0 5px rgba(232, 106, 118, 0.12);
+}
+
+.calendar-day-detail__item--done .routine-card-bullet--important {
+    animation: none;
+    box-shadow:
+        0 0 2px rgba(34, 197, 94, 0.55),
+        0 0 6px rgba(34, 197, 94, 0.35),
+        0 0 10px rgba(34, 197, 94, 0.18);
 }
 
 .calendar-day-task-name {
@@ -3580,29 +5407,218 @@ body.dashboard-overview-visible {
     min-width: 0;
 }
 
-/* Agenda view: separação por dias + cards dedicados (sem heatmap) */
+/* Calend?rio no telem?vel: 2 colunas, texto das tarefas vis?vel (scroll vertical na p?gina) */
+.calendar-mobile-grid {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .calendar-grid--desktop {
+        display: none !important;
+    }
+
+    .calendar-mobile-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .calendar-mobile-day {
+        min-width: 0;
+        min-height: min(42vw, 9.5rem);
+        aspect-ratio: 1;
+        border: 1px solid var(--ec-border-2);
+        border-radius: 10px;
+        padding: 10px 8px;
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        box-sizing: border-box;
+        background: var(--ec-surface-2);
+        cursor: default;
+        overflow: hidden;
+    }
+
+    .calendar-mobile-day-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 6px;
+        flex-shrink: 0;
+    }
+
+    .calendar-mobile-weekday {
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: var(--ec-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .calendar-mobile-day .day-number {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--ec-calendar-title);
+        flex-shrink: 0;
+    }
+
+    .calendar-mobile-day .calendar-day-tasks {
+        overflow-y: auto;
+        overflow-x: hidden;
+        margin-top: 0;
+        flex: 1 1 auto;
+        min-height: 0;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .calendar-mobile-day .calendar-day-task-row {
+        align-items: flex-start;
+    }
+
+    .calendar-mobile-day .calendar-day-task-name {
+        font-size: 0.78rem;
+        line-height: 1.35;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: unset;
+        display: block;
+        word-break: break-word;
+    }
+
+    .calendar-view {
+        min-height: 0;
+        overflow: visible;
+    }
+
+    #rotinasView .routines-container {
+        overflow: visible;
+    }
+}
+
+/* Agenda view: separa??o por dias + cards dedicados (sem heatmap) */
 .agenda-day-container {
     padding: 20px;
     max-width: 100%;
 }
+.agenda-day-container--annotate {
+    display: flex;
+    flex-direction: column;
+    min-height: min(62dvh, 520px);
+}
 .agenda-day-header {
     margin-bottom: 24px;
+}
+.agenda-day-header-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+}
+.agenda-day-header-copy {
+    min-width: 0;
+    flex: 1;
 }
 .agenda-day-title {
     font-size: 1.35rem;
     font-weight: 700;
     margin-bottom: 4px;
+    color: var(--ec-heading, #0a0a0a);
 }
 .agenda-day-date {
     font-size: 1rem;
-    color: #555;
+    color: var(--ec-muted, #555);
+}
+.agenda-annotate-hero {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    text-align: center;
+    padding: 28px 12px 40px;
+}
+.agenda-annotate-lead {
+    margin: 0;
+    max-width: 28ch;
+    font-size: 0.95rem;
+    line-height: 1.45;
+    color: var(--ec-muted, #6b7280);
+}
+.agenda-add-annotation-btn {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 999px;
+    background: var(--ec-btn-primary-bg, #1a1a1a);
+    color: #ffffff;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 650;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+.agenda-add-annotation-btn--hero {
+    min-height: 52px;
+    min-width: min(100%, 220px);
+    padding: 14px 28px;
+    font-size: 1rem;
+    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.14);
+}
+.agenda-add-annotation-btn svg,
+.agenda-add-annotation-btn i {
+    width: 18px;
+    height: 18px;
+    stroke-width: 2.5;
+}
+.agenda-add-annotation-btn--hero svg,
+.agenda-add-annotation-btn--hero i {
+    width: 20px;
+    height: 20px;
+}
+.agenda-add-annotation-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.16);
+}
+.agenda-add-annotation-btn:active {
+    transform: scale(0.98);
+}
+@media (max-width: 480px) {
+    .agenda-add-annotation-btn:not(.agenda-add-annotation-btn--hero) .agenda-add-annotation-btn__label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+    }
+    .agenda-add-annotation-btn:not(.agenda-add-annotation-btn--hero) {
+        position: relative;
+        width: 44px;
+        height: 44px;
+        min-height: 44px;
+        padding: 0;
+        border-radius: 50%;
+    }
 }
 .agenda-day-empty {
     color: #666;
     font-size: 1rem;
     padding: 20px 0;
 }
-/* Seção por dia (Hoje, Amanhã, 25 Fev...) */
+/* Se??o por dia (Hoje, Amanh?, 25 Fev...) */
 .agenda-day-section {
     margin-bottom: 28px;
 }
@@ -3655,7 +5671,7 @@ body.dashboard-overview-visible {
     margin: 0;
     padding: 0;
 }
-/* Card de Agenda (visual próximo ao card atual, sem heatmap) */
+/* Card de Agenda (visual pr?ximo ao card atual, sem heatmap) */
 .agenda-card {
     background: #fff;
     border: 2px solid var(--color-border-neutral);
@@ -3746,9 +5762,175 @@ body.dashboard-overview-visible {
     font-size: 0.85rem;
     color: #666;
 }
+.agenda-card-annotations--notes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 8px 0 4px 0;
+}
+.agenda-card-annotations--notes .agenda-card-annotation-item {
+    padding: 0 !important;
+    flex: 0 0 auto;
+}
 .agenda-card-annotations li {
     padding: 2px 0;
 }
+
+/* ---- Card de anotação (tema do usuário; sem acento colorido por tipo) ---- */
+.ec-note-card {
+    --ec-note-accent: var(--ec-muted, #71717a);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: 220px;
+    max-width: 100%;
+    margin: 0;
+    padding: 18px;
+    border-radius: 14px;
+    border: 1px solid var(--ec-border, rgba(0, 0, 0, 0.08));
+    background: var(--ec-surface-2, #18181b);
+    color: var(--ec-heading, #fafafa);
+    cursor: pointer;
+    overflow: hidden;
+    text-align: left;
+    font: inherit;
+    appearance: none;
+    -webkit-appearance: none;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+    box-sizing: border-box;
+}
+
+.ec-note-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--ec-note-accent);
+}
+
+.ec-note-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.28);
+    border-color: var(--ec-border-2, var(--ec-muted, #a1a1aa));
+}
+
+.ec-note-card:active {
+    transform: translateY(-1px);
+}
+
+.ec-note-card:focus-visible {
+    outline: 2px solid var(--ec-heading, #fafafa);
+    outline-offset: 2px;
+}
+
+.ec-note-card__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.ec-note-card__icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    flex-shrink: 0;
+    background: color-mix(in srgb, var(--ec-note-accent) 18%, var(--ec-surface-2, #18181b));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ec-note-accent);
+}
+
+.ec-note-card__icon svg,
+.ec-note-card__icon i {
+    width: 17px;
+    height: 17px;
+    stroke: currentColor;
+}
+
+.ec-note-card__type {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ec-note-accent);
+    background: color-mix(in srgb, var(--ec-note-accent) 16%, transparent);
+    padding: 3px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+}
+
+.ec-note-card__title {
+    display: block;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ec-heading, #fafafa);
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ec-note-card__meta {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: var(--ec-muted, #71717a);
+    min-width: 0;
+}
+
+.ec-note-card__meta svg,
+.ec-note-card__meta i {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    color: inherit;
+    stroke: currentColor;
+}
+
+.ec-note-card__meta-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+button.ec-note-card.biblioteca-item-open,
+button.ec-note-card.agenda-open-annotation {
+    border: 1px solid var(--ec-border, rgba(0, 0, 0, 0.08));
+    background: var(--ec-surface-2, #18181b);
+    color: var(--ec-heading, #fafafa);
+    padding: 18px;
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+button.ec-note-card.biblioteca-item-open:hover,
+button.ec-note-card.agenda-open-annotation:hover {
+    transform: translateY(-3px);
+    background: var(--ec-surface-2, #18181b);
+    border-color: var(--ec-border-2, var(--ec-muted, #a1a1aa));
+    color: var(--ec-heading, #fafafa);
+    box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.28);
+}
+
+button.ec-note-card.biblioteca-item-open:active,
+button.ec-note-card.agenda-open-annotation:active {
+    transform: translateY(-1px);
+}
+
+.biblioteca-item-row .ec-note-card {
+    width: 220px;
+}
+
 .agenda-annotation-sep {
     padding: 6px 0 !important;
     margin: 0;
@@ -3771,7 +5953,7 @@ body.dashboard-overview-visible {
     width: 100%;
 }
 
-/* Barra única: pasta + download + horário dentro da mesma moldura */
+/* Barra ?nica: pasta + download + hor?rio dentro da mesma moldura */
 .agenda-folder-bar {
     display: flex;
     align-items: center;
@@ -3813,7 +5995,7 @@ body.dashboard-overview-visible {
     font-variant-numeric: tabular-nums;
     min-width: 4.5em;
 }
-.agenda-open-annotation {
+.agenda-open-annotation:not(.ec-note-card) {
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -3829,20 +6011,20 @@ body.dashboard-overview-visible {
     text-align: left;
     transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.25s ease, background-color 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
 }
-.agenda-open-annotation:hover {
+.agenda-open-annotation:not(.ec-note-card):hover {
     background: #000000;
     border-color: #000000;
     color: #ffffff;
     transform: translateY(-3px) scale(1.02);
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25), 0 2px 6px rgba(0, 0, 0, 0.1);
 }
-.agenda-open-annotation:hover .agenda-folder-icon {
+.agenda-open-annotation:not(.ec-note-card):hover .agenda-folder-icon {
     color: #ffffff;
 }
-.agenda-open-annotation:hover .agenda-card-annotation-name {
+.agenda-open-annotation:not(.ec-note-card):hover .agenda-card-annotation-name {
     color: #ffffff;
 }
-.agenda-open-annotation:active {
+.agenda-open-annotation:not(.ec-note-card):active {
     background: #000000;
     border-color: #000000;
     color: #ffffff;
@@ -4055,7 +6237,7 @@ body.dashboard-overview-visible {
     transform: translateY(-1px) scale(1);
 }
 
-/* Modal Excluir anotações (seleção) */
+/* Modal Excluir anota??es (sele??o) */
 .agenda-delete-modal .agenda-history-content {
     max-height: 85vh;
 }
@@ -4100,7 +6282,7 @@ body.dashboard-overview-visible {
     gap: 10px;
     flex-wrap: wrap;
 }
-/* Botão excluir anotações: Uiverse trash (.uiverse-trash-btn--labeled) */
+/* Bot?o excluir anota??es: Uiverse trash (.uiverse-trash-btn--labeled) */
 .agenda-delete-btn-trash.uiverse-trash-btn {
     margin: 0;
 }
@@ -4163,7 +6345,7 @@ body.dashboard-overview-visible {
     color: #fff;
     border-color: #111;
 }
-/* Excluir na biblioteca: moldura igual a “Arquivos excluídos” (branco + borda #333) */
+/* Excluir na biblioteca: moldura igual a ?Arquivos exclu?dos? (branco + borda #333) */
 .biblioteca-btn-exclude.uiverse-trash-btn {
     margin: 0;
 }
@@ -4271,9 +6453,172 @@ body.dashboard-overview-visible {
 }
 .biblioteca-item-selectable {
     display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    flex-wrap: nowrap;
+}
+
+.biblioteca-item-selectable .biblioteca-item-wrap {
+    order: 1;
+    width: 100%;
+}
+
+.biblioteca-item-selectable .biblioteca-select {
+    order: 2;
+    align-self: flex-start;
+}
+
+.biblioteca-item-selectable .biblioteca-item-important {
+    order: 3;
+}
+
+.biblioteca-select {
+    --bib-select-border: var(--ec-border-2, #3f3f46);
+    --bib-select-bg: var(--ec-surface-2, #18181b);
+    --bib-select-text: var(--ec-heading, #fafafa);
+    --bib-select-muted: var(--ec-muted, #a1a1aa);
+    --bib-select-accent: #ef4444;
+    position: relative;
+    display: inline-flex;
     align-items: center;
     gap: 10px;
-    flex-wrap: wrap;
+    flex-shrink: 0;
+    margin: 0;
+    padding: 10px 14px 10px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--bib-select-border);
+    background: var(--bib-select-bg);
+    color: var(--bib-select-text);
+    cursor: pointer;
+    user-select: none;
+    box-sizing: border-box;
+    transition:
+        border-color 0.18s ease,
+        background 0.18s ease,
+        box-shadow 0.18s ease,
+        transform 0.18s ease;
+}
+
+.biblioteca-select:hover {
+    border-color: var(--ec-muted-2, #71717a);
+    box-shadow: 0 8px 20px -10px rgba(0, 0, 0, 0.45);
+    transform: translateY(-1px);
+}
+
+.biblioteca-select:focus-within {
+    outline: 2px solid color-mix(in srgb, var(--bib-select-accent) 45%, transparent);
+    outline-offset: 2px;
+}
+
+.biblioteca-select .biblioteca-exclude-checkbox {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    pointer-events: none;
+}
+
+.biblioteca-select__box {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    border: 1.5px solid var(--bib-select-border);
+    background: color-mix(in srgb, var(--bib-select-bg) 70%, #000 30%);
+    color: transparent;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.biblioteca-select__check {
+    width: 12px;
+    height: 12px;
+    opacity: 0;
+    transform: scale(0.7);
+    transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.biblioteca-select__label {
+    font-size: 0.82rem;
+    font-weight: 650;
+    letter-spacing: 0.01em;
+    color: var(--bib-select-muted);
+    line-height: 1;
+    white-space: nowrap;
+    transition: color 0.15s ease;
+}
+
+.biblioteca-select:hover .biblioteca-select__label {
+    color: var(--bib-select-text);
+}
+
+.biblioteca-select:has(.biblioteca-exclude-checkbox:checked) {
+    border-color: color-mix(in srgb, #ef4444 55%, var(--bib-select-border));
+    background: color-mix(in srgb, #ef4444 12%, var(--bib-select-bg));
+    box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.22);
+}
+
+.biblioteca-select:has(.biblioteca-exclude-checkbox:checked) .biblioteca-select__box {
+    border-color: #ef4444;
+    background: #ef4444;
+    color: #450a0a;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+}
+
+.biblioteca-select:has(.biblioteca-exclude-checkbox:checked) .biblioteca-select__check {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.biblioteca-select:has(.biblioteca-exclude-checkbox:checked) .biblioteca-select__label {
+    color: #fca5a5;
+}
+
+.biblioteca-select:has(.biblioteca-exclude-checkbox:checked) .biblioteca-select__label::after {
+    content: none;
+}
+
+html:not([data-theme="dark"]) .biblioteca-select {
+    --bib-select-border: rgba(0, 0, 0, 0.12);
+    --bib-select-bg: #ffffff;
+    --bib-select-text: #18181b;
+    --bib-select-muted: #71717a;
+    --bib-select-accent: #ef4444;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+html:not([data-theme="dark"]) .biblioteca-select:hover {
+    box-shadow: 0 8px 18px -10px rgba(0, 0, 0, 0.2);
+}
+
+html:not([data-theme="dark"]) .biblioteca-select__box {
+    background: #f4f4f5;
+}
+
+html:not([data-theme="dark"]) .biblioteca-select:has(.biblioteca-exclude-checkbox:checked) {
+    background: #fef2f2;
+    border-color: rgba(239, 68, 68, 0.45);
+}
+
+html:not([data-theme="dark"]) .biblioteca-select:has(.biblioteca-exclude-checkbox:checked) .biblioteca-select__label {
+    color: #b91c1c;
+}
+
+.biblioteca-item-selectable:has(.biblioteca-exclude-checkbox:checked) .ec-note-card {
+    border-color: color-mix(in srgb, #ef4444 50%, var(--ec-border, #3f3f46));
+    box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.22), 0 12px 24px -12px rgba(0, 0, 0, 0.45);
+}
+
+@media (max-width: 560px) {
+    .biblioteca-select {
+        width: 100%;
+        justify-content: flex-start;
+    }
 }
 .biblioteca-item-checkbox-wrap {
     display: inline-flex;
@@ -4520,7 +6865,7 @@ body.dashboard-overview-visible {
     min-width: 0;
 }
 
-/* Caixa clicável única: botão = cartão inteiro; data por baixo do nome */
+/* Caixa clic?vel ?nica: bot?o = cart?o inteiro; data por baixo do nome */
 .biblioteca-folder-bar {
     display: block;
     flex: 1;
@@ -4594,7 +6939,7 @@ body.dashboard-overview-visible {
     padding: 6px 0;
     font-size: 0.9rem;
 }
-.biblioteca-item-open {
+.biblioteca-item-open:not(.ec-note-card) {
     display: inline-flex;
     align-items: center;
     gap: 10px;
@@ -4614,30 +6959,30 @@ body.dashboard-overview-visible {
                 box-shadow 0.25s ease;
 }
 
-.biblioteca-folder-bar .biblioteca-item-open {
+.biblioteca-folder-bar .biblioteca-item-open:not(.ec-note-card) {
     margin-bottom: 0;
 }
-.biblioteca-item-open:hover {
+.biblioteca-item-open:not(.ec-note-card):hover {
     background: #000000;
     border-color: #000000;
     color: #ffffff;
     transform: translateY(-3px) scale(1.02);
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25), 0 2px 6px rgba(0, 0, 0, 0.1);
 }
-.biblioteca-item-open:hover .biblioteca-item-folder-icon {
+.biblioteca-item-open:not(.ec-note-card):hover .biblioteca-item-folder-icon {
     color: #ffffff;
 }
-.biblioteca-item-open:hover .biblioteca-item-name {
+.biblioteca-item-open:not(.ec-note-card):hover .biblioteca-item-name {
     color: #ffffff;
 }
-.biblioteca-item-open:active {
+.biblioteca-item-open:not(.ec-note-card):active {
     background: #000000;
     border-color: #000000;
     color: #ffffff;
     transform: translateY(-1px) scale(1);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
-.biblioteca-item-open:focus {
+.biblioteca-item-open:not(.ec-note-card):focus {
     outline: none;
     box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #000000;
 }
@@ -4772,14 +7117,14 @@ body.dashboard-overview-visible {
     display: inline-block;
 }
 
-/* Em modo só leitura: bloquear interação nos anexos (não mover/configurar), mas permitir arrastar tela e zoom */
+/* Em modo s? leitura: bloquear intera??o nos anexos (n?o mover/configurar), mas permitir arrastar tela e zoom */
 .annotation-modal--view-only #annotationMentalCanvas {
     pointer-events: none;
 }
 .annotation-modal--view-only #annotationMentalCanvas * {
     pointer-events: none !important;
 }
-/* Permitir só pan (arrastar tela) e controles de zoom no mapa mental */
+/* Permitir s? pan (arrastar tela) e controles de zoom no mapa mental */
 .annotation-modal--view-only #annotationMentalCanvas .annotation-mental-pan-layer,
 .annotation-modal--view-only #annotationMentalCanvas .annotation-mental-zoom-controls,
 .annotation-modal--view-only #annotationMentalCanvas .annotation-mental-zoom-controls * {
@@ -4904,7 +7249,7 @@ body.dashboard-overview-visible {
     gap: 15px;
 }
 
-/* Símbolo bullet journal e badge do plano na parte superior do card */
+/* S?mbolo bullet journal e badge do plano na parte superior do card */
 .routine-card-bullet-row {
     flex-shrink: 0;
     margin-bottom: 2px;
@@ -4943,22 +7288,25 @@ body.dashboard-overview-visible {
     width: 14px;
     height: 14px;
     border-radius: 50%;
-    background: #e53935;
-    box-shadow: 0 0 6px 1px rgba(229, 57, 53, 0.6),
-                0 0 12px 3px rgba(229, 57, 53, 0.35);
-    animation: routine-card-bullet-neon-pulse 1.5s ease-in-out infinite;
+    background: #e86a76;
+    box-shadow:
+        0 0 4px 1px rgba(232, 106, 118, 0.42),
+        0 0 10px 2px rgba(232, 106, 118, 0.18);
+    animation: routine-card-bullet-neon-pulse 2.8s ease-in-out infinite;
 }
 
 @keyframes routine-card-bullet-neon-pulse {
     0%, 100% {
-        box-shadow: 0 0 6px 1px rgba(229, 57, 53, 0.6),
-                    0 0 12px 3px rgba(229, 57, 53, 0.35);
+        box-shadow:
+            0 0 4px 1px rgba(232, 106, 118, 0.42),
+            0 0 10px 2px rgba(232, 106, 118, 0.18);
         transform: scale(1);
     }
     50% {
-        box-shadow: 0 0 10px 2px rgba(229, 57, 53, 0.8),
-                    0 0 18px 5px rgba(229, 57, 53, 0.45);
-        transform: scale(1.08);
+        box-shadow:
+            0 0 6px 2px rgba(232, 106, 118, 0.52),
+            0 0 14px 4px rgba(232, 106, 118, 0.22);
+        transform: scale(1.04);
     }
 }
 
@@ -5039,10 +7387,10 @@ body.dashboard-overview-visible {
     font-size: 0.78rem;
     font-weight: 600;
     line-height: 1.35;
-    color: #713f12;
-    background: rgba(254, 252, 232, 0.92);
+    color: #000000;
+    background: #ffffff;
     border-radius: 8px;
-    border: 1px solid rgba(234, 179, 8, 0.32);
+    border: 1px solid rgba(0, 0, 0, 0.14);
     margin-bottom: 6px;
 }
 
@@ -5052,7 +7400,7 @@ body.dashboard-overview-visible {
     align-items: center;
     justify-content: center;
     margin-top: 1px;
-    color: #b45309;
+    color: #000000;
 }
 
 .routine-card-no-time-awaiting__icon svg {
@@ -5110,7 +7458,7 @@ body.dashboard-overview-visible {
     color: #b91c1c;
 }
 
-/* Lixo no card: mesma moldura que ✎ (não círculo Uiverse) */
+/* Lixo no card: mesma moldura que ? (n?o c?rculo Uiverse) */
 .card-action-btn.uiverse-trash-btn--card {
     border: 1px solid #e5e7eb;
     border-radius: 4px;
@@ -5132,7 +7480,7 @@ body.dashboard-overview-visible {
     fill: #b91c1c;
 }
 
-/* Vista Cards: lápis (Lucide) e lixo com a mesma moldura, cor e escala visual */
+/* Vista Cards: l?pis (Lucide) e lixo com a mesma moldura, cor e escala visual */
 #rotinasView .routine-card-actions .card-action-btn {
     width: 24px;
     height: 24px;
@@ -5207,7 +7555,7 @@ body.dashboard-overview-visible {
     align-items: stretch;
 }
 
-/* Vista Cards: menos espaço entre texto e carrossel; heatmap preenche à direita */
+/* Vista Cards: menos espa?o entre texto e carrossel; heatmap preenche ? direita */
 #rotinasView .routine-card {
     gap: 8px;
     min-width: 0;
@@ -5218,7 +7566,7 @@ body.dashboard-overview-visible {
     min-width: 0;
     max-width: clamp(132px, 27vw, 220px);
     width: auto;
-    /* visible: overflow-x:hidden cortava o glow da bolinha “Importante” */
+    /* visible: overflow-x:hidden cortava o glow da bolinha ?Importante? */
     overflow-x: visible;
     overflow-y: visible;
     overflow-wrap: anywhere;
@@ -5248,7 +7596,7 @@ body.dashboard-overview-visible {
     line-height: 1.25;
 }
 
-/* Vista Cards: carrossel ocupa o espaço horizontal restante do card + arrastar */
+/* Vista Cards: carrossel ocupa o espa?o horizontal restante do card + arrastar */
 #rotinasView .routine-card-heatmap {
     flex: 2 1 0;
     min-width: 0;
@@ -5277,7 +7625,7 @@ body.dashboard-overview-visible {
     border: 1px solid var(--ec-border-2, #e5e7eb);
     background: var(--ec-surface, #ffffff);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-    /* Última linha do mês (ex.: dia 31) não encosta à borda inferior da caixa */
+    /* ?ltima linha do m?s (ex.: dia 31) n?o encosta ? borda inferior da caixa */
     padding: 10px 12px 18px;
 }
 
@@ -5291,7 +7639,12 @@ body.dashboard-overview-visible {
     cursor: grabbing;
 }
 
-/* Faixa de 13 meses: herda .routine-card-heatmap .calendar-months-container; só ajusta altura */
+#rotinasView .routine-card-heatmap--carousel .large-heatmap-block.dragging .calendar-months-container,
+#rotinasView .routine-card-heatmap--carousel .large-heatmap-block.dragging .calendar-month {
+    transition: none !important;
+}
+
+/* Faixa de 13 meses: herda .routine-card-heatmap .calendar-months-container; s? ajusta altura */
 #rotinasView .routine-card-heatmap--carousel .calendar-months-container {
     height: auto;
     align-items: flex-start;
@@ -5300,6 +7653,23 @@ body.dashboard-overview-visible {
 
 #rotinasView .routine-card-heatmap--carousel .calendar-month[data-month-index] {
     cursor: grab;
+}
+
+#rotinasView .routine-card-heatmap--carousel .calendar-months-container {
+    transition: transform 0.48s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+#rotinasView .routine-card-heatmap--carousel .calendar-month {
+    transition:
+        transform 0.48s cubic-bezier(0.22, 1, 0.36, 1),
+        filter 0.48s cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 0.48s cubic-bezier(0.22, 1, 0.36, 1),
+        box-shadow 0.48s cubic-bezier(0.22, 1, 0.36, 1),
+        border-color 0.48s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+#rotinasView .routine-card-heatmap--carousel .calendar-month-header {
+    transition: font-size 0.48s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 #rotinasView .routine-card-heatmap--carousel .calendar-month:not(.calendar-month--current) .calendar-month-header {
@@ -5324,7 +7694,7 @@ body.dashboard-overview-visible {
     font-size: 0.62rem;
 }
 
-/* Calendário compacto — um mês, células pequenas */
+/* Calend?rio compacto ? um m?s, c?lulas pequenas */
 .routine-compact-cal {
     width: 100%;
     max-width: 228px;
@@ -5473,6 +7843,14 @@ body.dashboard-overview-visible {
     cursor: grabbing;
 }
 
+.routine-card-heatmap .large-heatmap-block.dragging .calendar-months-container {
+    transition: none !important;
+}
+
+.routine-card-heatmap .large-heatmap-block.dragging .calendar-month {
+    transition: none !important;
+}
+
 .routine-card-heatmap .calendar-months-container {
     flex: 0 0 auto;
     gap: 12px;
@@ -5504,8 +7882,8 @@ body.dashboard-overview-visible {
     padding: 2px 0;
 }
 
-/* Cards: dias da rotina = preto/branco; concluídos = verde neon; outros = branco + preto */
-/* Raio fixo e subtil (2px): igual no mobile; evitar valores grandes para não parecer círculo */
+/* Cards: dias da rotina = preto/branco; conclu?dos = verde neon; outros = branco + preto */
+/* Raio fixo e subtil (2px): igual no mobile; evitar valores grandes para n?o parecer c?rculo */
 .routine-card-heatmap .heatmap-square {
     position: relative;
     min-width: 10px;
@@ -5517,7 +7895,7 @@ body.dashboard-overview-visible {
     border-radius: 2px;
 }
 
-/* Dias fora da rotina: fundo do mês visível; só o número (evita “pastilhas” cinzentas/brancas) */
+/* Dias fora da rotina: fundo do m?s vis?vel; s? o n?mero (evita ?pastilhas? cinzentas/brancas) */
 .routine-card-heatmap .heatmap-square:not(.routine-day):not(.empty):not(.checked) {
     background: transparent;
     border-color: transparent;
@@ -5531,7 +7909,7 @@ body.dashboard-overview-visible {
     text-shadow: none;
 }
 
-/* Dias selecionados na criação (ainda não concluídos): fundo preto, texto branco */
+/* Dias selecionados na cria??o (ainda n?o conclu?dos): fundo preto, texto branco */
 .routine-card-heatmap .heatmap-square.routine-day {
     background: #000;
     border-color: #000;
@@ -5545,7 +7923,7 @@ body.dashboard-overview-visible {
     text-shadow: none;
 }
 
-/* Dia da rotina concluído: verde neon */
+/* Dia da rotina conclu?do: verde neon */
 .routine-card-heatmap .heatmap-square.routine-day.checked {
     background: #22c55e;
     border-color: #22c55e;
@@ -5601,7 +7979,7 @@ body.dashboard-overview-visible {
     gap: 1px;
 }
 
-/* Classe legada: já não aplicada em JS — mantida por compat. com HTML em cache */
+/* Classe legada: j? n?o aplicada em JS ? mantida por compat. com HTML em cache */
 .routine-card-heatmap--mobile-compact .heatmap-day-number {
     display: flex;
 }
@@ -5693,10 +8071,9 @@ body.dashboard-overview-visible {
     font-size: 1.2rem;
     font-weight: 700;
     color: #000000;
-    font-family: 'Rajdhani', sans-serif;
     text-align: center;
     margin-bottom: 10px;
-    letter-spacing: 1px;
+    letter-spacing: 0.02em;
 }
 
 .calendar-weekdays {
@@ -5763,7 +8140,7 @@ body.dashboard-overview-visible {
     background: #4ade80;
 }
 
-/* Modal de Informações do Dia */
+/* Modal de Informa??es do Dia */
 .day-info-modal {
     display: none;
     position: fixed;
@@ -5841,7 +8218,7 @@ body.dashboard-overview-visible {
     background: var(--ec-day-info-close-hover);
 }
 
-/* Modal de Anotação – tela cheia */
+/* Modal de Anota??o ? tela cheia */
 .annotation-modal {
     display: none;
     position: fixed;
@@ -5861,7 +8238,7 @@ body.annotation-modal-open {
     overflow: hidden;
 }
 
-/* Evita barra de scroll na página quando o modal cobre o ecrã (só body não basta em alguns browsers) */
+/* Evita barra de scroll na p?gina quando o modal cobre o ecr? (s? body n?o basta em alguns browsers) */
 html:has(body.annotation-modal-open) {
     overflow: hidden;
 }
@@ -5905,39 +8282,22 @@ html:has(body.annotation-modal-open) {
     animation: modalSlideIn 0.25s ease;
 }
 
-/* Escolha do tipo de anotação: mesmo fundo que o login (fundologin + overlay) */
+/* Escolha do tipo de anota??o: fundo = cor padr?o do tema */
 #annotationModal:not(.hidden):has(#annotationEditorStep.hidden) .annotation-modal-overlay {
-    background: rgba(0, 0, 0, 0.22);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: var(--ec-body-bg, #ffffff);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
 }
 
 #annotationModal:not(.hidden):has(#annotationEditorStep.hidden) .annotation-modal-content {
-    background: transparent;
+    background: var(--ec-body-bg, #ffffff);
     padding: 0;
     overflow: hidden;
     min-height: 0;
 }
 
 #annotationModal:not(.hidden):has(#annotationEditorStep.hidden) .annotation-modal-content::before {
-    content: "";
-    position: absolute;
-    /* Margem extra para o blur não cortar bordas duras */
-    top: -32px;
-    right: -32px;
-    bottom: -32px;
-    left: -32px;
-    z-index: 0;
-    pointer-events: none;
-    background-color: #1a1a1a;
-    background-image:
-        linear-gradient(145deg, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0.82) 100%),
-        url('fundologin.png');
-    background-position: center, center;
-    background-size: cover, cover;
-    background-repeat: no-repeat, no-repeat;
-    filter: blur(14px);
-    -webkit-filter: blur(14px);
+    content: none;
 }
 
 #annotationModal:not(.hidden):has(#annotationEditorStep.hidden) .annotation-modal-content > * {
@@ -5946,32 +8306,61 @@ html:has(body.annotation-modal-open) {
 }
 
 #annotationModal:not(.hidden):has(#annotationEditorStep.hidden) .annotation-modal-preview .annotation-preview-task-name {
-    color: #ffffff;
-    text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+    color: var(--ec-heading, #0a0a0a);
+    text-shadow: none;
 }
 
 #annotationModal:not(.hidden):has(#annotationEditorStep.hidden) .annotation-modal-preview .annotation-modal-title {
-    color: #ffffff;
-    text-shadow: 0 2px 24px rgba(0, 0, 0, 0.45);
+    color: var(--ec-heading, #0a0a0a);
+    text-shadow: none;
+    font-weight: 650;
+    letter-spacing: -0.02em;
 }
 
 #annotationModal:not(.hidden):has(#annotationEditorStep.hidden) .annotation-modal-preview .annotation-preview-desc {
-    color: rgba(255, 255, 255, 0.92);
-    text-shadow: 0 1px 12px rgba(0, 0, 0, 0.4);
+    color: var(--ec-muted, #64748b);
+    text-shadow: none;
+}
+
+#annotationModal:not(.hidden):has(#annotationEditorStep.hidden) .annotation-preview-back {
+    color: var(--ec-heading, #0a0a0a);
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 999px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+}
+
+#annotationModal:not(.hidden):has(#annotationEditorStep.hidden) .annotation-preview-back:hover {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: rgba(0, 0, 0, 0.16);
+}
+
+#annotationModal:not(.hidden):has(#annotationEditorStep.hidden) .annotation-preview-back:focus-visible {
+    outline-color: rgba(0, 0, 0, 0.35);
 }
 
 #annotationModal:not(.hidden):has(#annotationEditorStep.hidden) .annotation-preview-card {
-    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
-    border-color: rgba(255, 255, 255, 0.16);
+    background: var(--ec-surface, #ffffff);
+    border: 1px solid var(--ec-border, rgba(0, 0, 0, 0.08));
+    border-radius: 18px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.05);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
 }
 
 #annotationModal:not(.hidden):has(#annotationEditorStep.hidden) .annotation-preview-card:hover {
-    border-color: rgba(255, 255, 255, 0.32);
-    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.42);
+    background: var(--ec-surface, #ffffff);
+    border-color: var(--ec-border-2, rgba(0, 0, 0, 0.12));
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.07);
+    transform: translateY(-1px);
 }
 
 #annotationModal:not(.hidden):has(#annotationEditorStep.hidden) .annotation-preview-card:focus-visible {
-    outline-color: rgba(255, 255, 255, 0.75);
+    outline-color: rgba(0, 0, 0, 0.35);
+}
+
+#annotationModal:not(.hidden):has(#annotationEditorStep.hidden) .annotation-preview-card .annotation-preview-label {
+    color: var(--ec-heading, #0a0a0a);
 }
 
 /* Fundo pontilhado cobrindo a tela por completo (Mental = escuro, Caderno = branco) */
@@ -6000,6 +8389,38 @@ html:has(body.annotation-modal-open) {
     border-radius: 0;
     pointer-events: none;
 }
+/* XYFlow: liberar cliques no host (sem * nos portals ? sen?o o ?? n?o recebe clique) */
+.annotation-modal--mental #annotationEditorMental.is-xyflow #annotationMentalCanvas,
+.annotation-modal--mental #annotationEditorMental.is-xyflow #annotationMentalXyflowHost,
+.annotation-modal--mental #annotationEditorMental.is-xyflow .react-flow,
+.annotation-modal--mental #annotationEditorMental.is-xyflow .react-flow__panel,
+.annotation-modal--mental #annotationEditorMental.is-xyflow .react-flow__panel *,
+.annotation-modal--mental #annotationEditorMental.is-xyflow .react-flow__controls,
+.annotation-modal--mental #annotationEditorMental.is-xyflow .react-flow__controls *,
+.annotation-modal--mental #annotationEditorMental.is-xyflow .ec-xy-panel__btn,
+.annotation-modal--mental #annotationEditorMental.is-xyflow .ec-xy-bg-control,
+.annotation-modal--mental #annotationEditorMental.is-xyflow .ec-xy-bg-input-hit {
+    pointer-events: auto !important;
+}
+.annotation-modal--mental #annotationEditorMental.is-xyflow #annotationMentalXyflowHost .react-flow__viewport-portal,
+.annotation-modal--mental #annotationEditorMental.is-xyflow #annotationMentalXyflowHost .react-flow__edgelabel-renderer {
+    pointer-events: none !important;
+}
+.annotation-modal--mental #annotationEditorMental.is-xyflow #annotationMentalXyflowHost .react-flow__viewport-portal > *,
+.annotation-modal--mental #annotationEditorMental.is-xyflow #annotationMentalXyflowHost .react-flow__edgelabel-renderer > *,
+.annotation-modal--mental #annotationEditorMental.is-xyflow #annotationMentalXyflowHost .react-flow__node-toolbar,
+.annotation-modal--mental #annotationEditorMental.is-xyflow #annotationMentalXyflowHost .react-flow__edge-toolbar {
+    pointer-events: auto !important;
+}
+.annotation-modal--mental #annotationEditorMental.is-xyflow .annotation-mental-toolbar {
+    display: none !important;
+}
+/* T?tulo ?Diagrama - ?? s? atrapalha no modo XYFlow */
+.annotation-modal--mental #annotationEditorTitleWrap,
+.annotation-modal--mental #annotationEditorTitle {
+    display: none !important;
+    pointer-events: none !important;
+}
 .annotation-modal--mental #annotationMentalCanvas .annotation-mental-pan-layer {
     position: absolute;
     top: 0;
@@ -6011,7 +8432,7 @@ html:has(body.annotation-modal-open) {
     cursor: grab;
     touch-action: none;
     background-color: #3a404a;
-    /* Fundo cinza com grade de pontos mais visível */
+    /* Fundo cinza com grade de pontos mais vis?vel */
     background-image: radial-gradient(rgba(255, 255, 255, 0.26) 1.25px, transparent 1.25px);
     background-size: 20px 20px;
     background-position: 0 0;
@@ -6031,7 +8452,7 @@ html:has(body.annotation-modal-open) {
     pointer-events: none;
 }
 
-/* Quando o pan afasta os anexos do ecrã — acima da barra Cancelar/Salvar */
+/* Quando o pan afasta os anexos do ecr? ? acima da barra Cancelar/Salvar */
 .annotation-modal--mental #annotationMentalCanvas .annotation-mental-recenter-btn {
     position: absolute;
     left: 50%;
@@ -6301,7 +8722,7 @@ html:has(body.annotation-modal-open) {
     margin-bottom: 0;
 }
 
-/* Painel profissional de espaçamento (0..100) */
+/* Painel profissional de espa?amento (0..100) */
 .annotation-mental-text-spacing-panel {
     position: fixed;
     z-index: 9999;
@@ -6456,6 +8877,264 @@ html:has(body.annotation-modal-open) {
     box-sizing: border-box;
 }
 
+.annotation-modal-step.annotation-modal-task-pick {
+    position: relative;
+    justify-content: center;
+    align-items: center;
+    width: min(100%, 560px);
+    max-width: 100%;
+    margin: 0 auto;
+    padding: max(64px, calc(env(safe-area-inset-top, 0px) + 52px)) 16px max(28px, env(safe-area-inset-bottom, 0px));
+    box-sizing: border-box;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.annotation-modal-task-pick .annotation-modal-title,
+.annotation-modal-task-pick .annotation-preview-desc,
+.annotation-modal-task-pick .annotation-task-pick-days,
+.annotation-modal-task-pick .annotation-task-pick-list,
+.annotation-modal-task-pick .annotation-task-pick-empty,
+.annotation-modal-task-pick .annotation-task-pick-actions {
+    width: 100%;
+}
+
+.annotation-modal-step.is-step-enter {
+    animation: annotationStepEnter 0.28s ease;
+}
+
+@keyframes annotationStepEnter {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .annotation-modal-step.is-step-enter {
+        animation: none;
+    }
+}
+
+.annotation-modal-task-pick .annotation-modal-title {
+    margin: 0 0 8px;
+    text-align: center;
+    font-size: clamp(1.2rem, 4.2vw, 1.45rem);
+    font-weight: 650;
+    letter-spacing: -0.02em;
+    color: var(--ec-heading, #0a0a0a);
+}
+
+.annotation-modal-task-pick .annotation-preview-desc {
+    margin: 0 0 16px;
+    text-align: center;
+    color: var(--ec-muted, #64748b);
+    font-size: 0.92rem;
+    line-height: 1.4;
+}
+
+.annotation-task-pick-days {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+    justify-content: safe center;
+    overflow-x: auto;
+    padding: 2px 2px 12px;
+    margin-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+.annotation-task-pick-days::-webkit-scrollbar {
+    display: none;
+}
+
+.annotation-task-pick-day {
+    flex: 0 0 auto;
+    min-height: 36px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--ec-border, rgba(0, 0, 0, 0.1));
+    background: var(--ec-surface, #ffffff);
+    color: var(--ec-muted, #64748b);
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.annotation-task-pick-day:hover {
+    border-color: rgba(0, 0, 0, 0.18);
+    color: var(--ec-heading, #0a0a0a);
+}
+
+.annotation-task-pick-day.is-selected {
+    background: var(--ec-btn-primary-bg, #1a1a1a);
+    border-color: var(--ec-btn-primary-bg, #1a1a1a);
+    color: #ffffff;
+}
+
+.annotation-task-pick-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 0;
+    flex: 0 1 auto;
+    max-height: min(42vh, 380px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.annotation-task-pick-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    text-align: left;
+    padding: 14px 14px;
+    border-radius: 16px;
+    border: 1px solid var(--ec-border, rgba(0, 0, 0, 0.08));
+    background: var(--ec-surface, #ffffff);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+    color: var(--ec-heading, #0a0a0a);
+    font-family: inherit;
+    cursor: pointer;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.annotation-task-pick-item:hover {
+    transform: translateY(-1px);
+    border-color: rgba(0, 0, 0, 0.14);
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.07);
+}
+
+.annotation-task-pick-item.is-selected {
+    border-color: rgba(0, 0, 0, 0.28);
+    background: var(--ec-surface-2, #f9fafb);
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.08), 0 8px 22px rgba(0, 0, 0, 0.06);
+}
+
+.annotation-task-pick-item__icon {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--ec-heading, #0a0a0a);
+}
+
+.annotation-task-pick-item__icon svg,
+.annotation-task-pick-item__icon i {
+    width: 20px;
+    height: 20px;
+}
+
+.annotation-task-pick-item__copy {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.annotation-task-pick-item__task {
+    font-size: 0.98rem;
+    font-weight: 650;
+    line-height: 1.25;
+    word-break: break-word;
+}
+
+.annotation-task-pick-item__meta {
+    font-size: 0.8rem;
+    color: var(--ec-muted, #64748b);
+    line-height: 1.3;
+}
+
+.annotation-task-pick-item__check {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid rgba(0, 0, 0, 0.18);
+    position: relative;
+}
+
+.annotation-task-pick-item.is-selected .annotation-task-pick-item__check {
+    border-color: #0a0a0a;
+    background: #0a0a0a;
+}
+
+.annotation-task-pick-item.is-selected .annotation-task-pick-item__check::after {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 2px;
+    width: 5px;
+    height: 9px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.annotation-task-pick-empty {
+    margin: 18px 0 0;
+    text-align: center;
+    color: var(--ec-muted, #64748b);
+    font-size: 0.92rem;
+}
+
+.annotation-task-pick-actions {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    padding-bottom: 0;
+    flex-shrink: 0;
+}
+
+.annotation-task-pick-continue {
+    min-height: 48px;
+    min-width: min(100%, 220px);
+    padding: 12px 28px;
+    border: none;
+    border-radius: 999px;
+    background: var(--ec-btn-primary-bg, #1a1a1a);
+    color: #ffffff;
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.14);
+    transition: transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+}
+
+.annotation-task-pick-continue:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.18);
+}
+
+.annotation-task-pick-continue:disabled {
+    opacity: 0.42;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+#annotationModal:not(.hidden):has(#annotationEditorStep.hidden) .annotation-modal-task-pick .annotation-modal-title {
+    color: var(--ec-heading, #0a0a0a);
+}
+
+#annotationModal:not(.hidden):has(#annotationEditorStep.hidden) .annotation-modal-task-pick .annotation-preview-desc {
+    color: var(--ec-muted, #64748b);
+}
+
 .annotation-preview-back {
     position: absolute;
     top: max(14px, env(safe-area-inset-top, 0px));
@@ -6517,7 +9196,7 @@ html:has(body.annotation-modal-open) {
 .annotation-modal-step.annotation-modal-editor:not(.hidden) {
     display: flex;
 }
-/* Prévia: 3 opções em fila — cartões e imagens maiores */
+/* Pr?via: 3 op??es ? s? t?tulo centralizado */
 .annotation-preview-cards {
     display: flex;
     flex-direction: row;
@@ -6533,24 +9212,26 @@ html:has(body.annotation-modal-open) {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     text-align: center;
-    gap: 14px;
-    padding: clamp(16px, 2.2vw, 22px) clamp(14px, 2vw, 20px) clamp(18px, 2.2vw, 24px);
+    gap: 0;
+    padding: clamp(28px, 4vw, 40px) clamp(18px, 3vw, 28px);
+    min-height: clamp(120px, 18vw, 160px);
     background: #fafafa;
-    border: 2px solid var(--color-border-neutral);
-    border-radius: 14px;
+    border: 1px solid var(--color-border-neutral);
+    border-radius: 18px;
     cursor: pointer;
-    transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s, background 0.2s;
+    transition: border-color 0.22s ease, box-shadow 0.22s ease, transform 0.22s ease, background 0.22s ease;
     font-family: inherit;
-    flex: 1 1 260px;
-    min-width: min(100%, 220px);
-    max-width: min(100%, 380px);
+    flex: 1 1 200px;
+    min-width: min(100%, 180px);
+    max-width: min(100%, 320px);
 }
 .annotation-preview-card:hover {
     border-color: #d4d4d4;
     background: #fff;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+    transform: translateY(-1px);
 }
 
 .annotation-preview-card:focus {
@@ -6561,64 +9242,39 @@ html:has(body.annotation-modal-open) {
     outline: 2px solid #a3a3a3;
     outline-offset: 3px;
 }
-/* Prévia: imagens nos três cartões */
-.annotation-preview-card .annotation-preview-thumb {
-    width: 100%;
-    max-width: 100%;
-    height: clamp(120px, 22vw, 168px);
-    min-height: clamp(120px, 22vw, 168px);
-    flex-shrink: 0;
-    display: block;
-    object-fit: cover;
-    object-position: center;
-    border-radius: 12px;
-    border: 1px solid #e5e7eb;
-    background: #ffffff;
-    pointer-events: none;
-}
-.annotation-preview-card-stack {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 8px;
-    flex: 1 1 auto;
-    min-width: 0;
-    width: 100%;
-}
 
-.annotation-preview-card .annotation-preview-label {
-    font-size: clamp(1rem, 2.2vw, 1.12rem);
-    font-weight: 700;
-}
-.annotation-preview-card .annotation-preview-hint {
-    font-size: clamp(0.85rem, 1.8vw, 0.95rem);
-    line-height: 1.4;
-}
-
+.annotation-preview-card .annotation-preview-thumb,
+.annotation-preview-card-stack,
+.annotation-preview-card .annotation-preview-hint,
 .annotation-preview-dev-note {
-    display: block;
-    font-size: clamp(0.72rem, 1.5vw, 0.8rem);
-    font-weight: 600;
-    line-height: 1.35;
-    color: #b45309;
-    margin-top: 2px;
-    padding: 6px 8px;
-    border-radius: 8px;
-    background: rgba(254, 243, 199, 0.55);
-    border: 1px solid rgba(245, 158, 11, 0.35);
-    max-width: 100%;
-    box-sizing: border-box;
+    display: none !important;
 }
+
+.annotation-preview-card .annotation-preview-label,
+.annotation-preview-card h2.annotation-preview-label {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    text-align: center;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: clamp(1.35rem, 3.2vw, 1.85rem);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    line-height: 1.15;
+    color: var(--ec-heading, #0a0a0a);
+    text-transform: none;
+}
+
 @media (max-width: 620px) {
     .annotation-preview-cards {
         flex-wrap: wrap;
         justify-content: center;
-        gap: 16px;
+        gap: 14px;
     }
     .annotation-preview-card {
-        flex: 1 1 min(100%, 280px);
+        flex: 1 1 min(100%, 260px);
         max-width: min(100%, 400px);
+        min-height: 100px;
     }
 }
 @media (max-width: 480px) {
@@ -6631,35 +9287,12 @@ html:has(body.annotation-modal-open) {
         flex: none;
         width: 100%;
         max-width: min(100%, 400px);
-        flex-direction: row;
-        text-align: left;
-        gap: 16px;
-        padding: 16px 18px;
+        min-height: 88px;
+        padding: 22px 18px;
     }
-    .annotation-preview-card .annotation-preview-thumb {
-        width: clamp(100px, 28vw, 130px);
-        min-width: clamp(100px, 28vw, 130px);
-        height: clamp(100px, 28vw, 130px);
-        min-height: clamp(100px, 28vw, 130px);
-        object-fit: contain;
-        object-position: center;
-    }
-    .annotation-preview-card-stack {
-        align-items: flex-start;
-        text-align: left;
-        flex: 1;
-        min-width: 0;
-        justify-content: center;
-    }
-    .annotation-preview-card .annotation-preview-label {
-        font-size: 1.02rem;
-    }
-    .annotation-preview-card .annotation-preview-hint {
-        font-size: 0.92rem;
-    }
-    .annotation-preview-dev-note {
-        font-size: 0.78rem;
-        padding: 5px 8px;
+    .annotation-preview-card .annotation-preview-label,
+    .annotation-preview-card h2.annotation-preview-label {
+        font-size: clamp(1.25rem, 5.5vw, 1.55rem);
     }
 }
 .annotation-preview-desc {
@@ -6668,9 +9301,10 @@ html:has(body.annotation-modal-open) {
     margin-bottom: 16px;
 }
 .annotation-preview-label {
+    font-family: 'Rajdhani', sans-serif;
     font-size: 0.9rem;
-    font-weight: 600;
-    color: #374151;
+    font-weight: 700;
+    color: var(--ec-heading, #0a0a0a);
 }
 .annotation-preview-hint {
     display: block;
@@ -6786,7 +9420,7 @@ html:has(body.annotation-modal-open) {
     border-radius: 4px;
     cursor: pointer;
 }
-/* Fundo Caderno Digital: padrão branco com pontos (Uiverse Juanes200122) */
+/* Fundo Caderno Digital: padr?o branco com pontos (Uiverse Juanes200122) */
 .annotation-caderno-bg {
     width: 100%;
     min-height: 300px;
@@ -7024,7 +9658,7 @@ html:has(body.annotation-modal-open) {
     background: rgba(255, 255, 255, 0.2);
     color: #fff;
 }
-/* No modal mental: prévia centralizada, preta com branco, título grande */
+/* No modal mental: pr?via centralizada, preta com branco, t?tulo grande */
 .annotation-modal--mental .annotation-mental-add-preview {
     position: fixed;
     left: 50%;
@@ -7173,7 +9807,7 @@ html:has(body.annotation-modal-open) {
     flex-direction: column;
     gap: 8px;
 }
-/* Ramos como anexos flutuantes: cinza escuro com contraste confortável */
+/* Ramos como anexos flutuantes: cinza escuro com contraste confort?vel */
 .annotation-mental-canvas--draggable .annotation-mental-branch {
     position: absolute;
     display: flex;
@@ -7215,7 +9849,7 @@ html:has(body.annotation-modal-open) {
     user-select: none;
     -webkit-user-select: none;
 }
-/* Animação ao criar anexo: só fade-in (sem escala / “respiração”) */
+/* Anima??o ao criar anexo: s? fade-in (sem escala / ?respira??o?) */
 @keyframes annotation-mental-branch-spawn {
     from {
         opacity: 0;
@@ -7228,7 +9862,7 @@ html:has(body.annotation-modal-open) {
     transform-origin: center center;
     animation: annotation-mental-branch-spawn 0.2s ease-out forwards;
 }
-/* Bolinhas só aparecem após clicar em "Dimensionar" nos 3 pontinhos */
+/* Bolinhas s? aparecem ap?s clicar em "Dimensionar" nos 3 pontinhos */
 .annotation-mental-canvas--draggable .annotation-mental-branch .annotation-mental-resize-handles {
     position: absolute;
     inset: auto;
@@ -7340,7 +9974,7 @@ html:has(body.annotation-modal-open) {
     background: rgba(255, 255, 255, 0.2);
     color: #f8fafc;
 }
-/* Título e descrição centralizados no anexo inteiro (ignoram a área dos 3 pontinhos) */
+/* T?tulo e descri??o centralizados no anexo inteiro (ignoram a ?rea dos 3 pontinhos) */
 .annotation-mental-canvas--draggable .annotation-mental-branch .annotation-mental-branch-header {
     position: relative;
     display: flex;
@@ -7388,7 +10022,7 @@ html:has(body.annotation-modal-open) {
     background: rgba(255, 255, 255, 0.2);
     color: #f8fafc;
 }
-/* Com Descrição: título no topo, área de descrição do topo ao fim, descrição no centro */
+/* Com Descri??o: t?tulo no topo, ?rea de descri??o do topo ao fim, descri??o no centro */
 .annotation-mental-canvas--draggable .annotation-mental-branch.has-description {
     justify-content: flex-start;
 }
@@ -7452,7 +10086,7 @@ html:has(body.annotation-modal-open) {
     text-shadow: 0 0 1px rgba(0, 0, 0, 0.5);
 }
 
-/* Posicionamento dos ⋮ separados por parte */
+/* Posicionamento dos ? separados por parte */
 .annotation-mental-canvas--draggable .annotation-mental-branch .annotation-mental-branch-header {
     position: relative;
 }
@@ -7472,33 +10106,33 @@ html:has(body.annotation-modal-open) {
     z-index: 4;
 }
 
-/* Anexo (menu principal): mostra no hover da área do ramo */
+/* Anexo (menu principal): mostra no hover da ?rea do ramo */
 .annotation-mental-canvas--draggable .annotation-mental-branch:hover .annotation-mental-menu-trigger--anexo,
 .annotation-mental-canvas--draggable .annotation-mental-branch .annotation-mental-branch-actions:has(.annotation-mental-dropdown.is-open) .annotation-mental-menu-trigger--anexo {
     opacity: 1;
 }
 
-/* Se estiver passando o mouse no TÍTULO, esconde o ⋮ do ANEXO */
+/* Se estiver passando o mouse no T?TULO, esconde o ? do ANEXO */
 .annotation-mental-canvas--draggable .annotation-mental-branch:has(.annotation-mental-branch-label:hover) .annotation-mental-menu-trigger--anexo {
     opacity: 0;
 }
 
-/* Se estiver passando o mouse na DESCRIÇÃO, esconde o ⋮ do ANEXO */
+/* Se estiver passando o mouse na DESCRI??O, esconde o ? do ANEXO */
 .annotation-mental-canvas--draggable .annotation-mental-branch:has(.annotation-mental-branch-description-editor:hover) .annotation-mental-menu-trigger--anexo {
     opacity: 0;
 }
 
-/* Título: mostra ao passar o mouse no título */
+/* T?tulo: mostra ao passar o mouse no t?tulo */
 .annotation-mental-canvas--draggable .annotation-mental-branch .annotation-mental-branch-header:hover .annotation-mental-menu-trigger--titulo {
     opacity: 1;
 }
 
-/* Descrição: mostra ao passar o mouse na descrição */
+/* Descri??o: mostra ao passar o mouse na descri??o */
 .annotation-mental-canvas--draggable .annotation-mental-branch.has-description .annotation-mental-branch-description-editor:hover .annotation-mental-menu-trigger--descricao {
     opacity: 1;
 }
 
-/* Mostrar ⋮ por parte ao passar o mouse */
+/* Mostrar ? por parte ao passar o mouse */
 .annotation-mental-canvas--draggable .annotation-mental-branch:hover .annotation-mental-menu-trigger--anexo,
 .annotation-mental-canvas--draggable .annotation-mental-branch .annotation-mental-branch-actions:has(.annotation-mental-dropdown.is-open) .annotation-mental-menu-trigger--anexo {
     opacity: 1;
@@ -7589,7 +10223,7 @@ html:has(body.annotation-modal-open) {
 .annotation-mental-canvas--draggable .annotation-mental-branch .annotation-mental-dropdown .annotation-mental-remover:hover {
     background: rgba(255, 255, 255, 0.1);
 }
-/* Botão Dimensionar: selecionado quando modo redimensionar está ativo; X vermelho para parar */
+/* Bot?o Dimensionar: selecionado quando modo redimensionar est? ativo; X vermelho para parar */
 .annotation-mental-canvas--draggable .annotation-mental-branch.annotation-mental-branch--resize-mode .annotation-mental-dimensionar-btn {
     background: rgba(255, 255, 255, 0.2);
     color: #f8fafc;
@@ -7606,7 +10240,7 @@ html:has(body.annotation-modal-open) {
     color: #ef4444;
     margin-left: 4px;
 }
-/* Área de descrição: oculta por padrão; com Descrição ativo fica abaixo do título e preenche o resto */
+/* ?rea de descri??o: oculta por padr?o; com Descri??o ativo fica abaixo do t?tulo e preenche o resto */
 .annotation-mental-canvas--draggable .annotation-mental-branch .annotation-mental-branch-image {
     flex: 0 0 auto;
     width: 100%;
@@ -7615,10 +10249,74 @@ html:has(body.annotation-modal-open) {
     margin-top: 6px;
     border-radius: 6px;
     overflow: hidden;
-    background: rgba(0, 0, 0, 0.2);
+    background: transparent;
 }
-.annotation-mental-canvas--draggable .annotation-mental-branch .annotation-mental-branch-image:empty {
+.annotation-mental-canvas--draggable .annotation-mental-branch .annotation-mental-branch-image:not(.has-image) {
     display: none;
+}
+.annotation-mental-branch-image-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    margin: 0;
+    padding: 0 8px;
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.75);
+    font: inherit;
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-sizing: border-box;
+    pointer-events: none;
+    transition:
+        opacity 0.16s ease,
+        max-height 0.16s ease,
+        padding 0.16s ease,
+        border-color 0.16s ease,
+        background 0.16s ease,
+        color 0.16s ease;
+}
+.annotation-mental-branch:hover .annotation-mental-branch-image-toggle,
+.annotation-mental-branch.selected .annotation-mental-branch-image-toggle,
+.annotation-mental-branch-image-toggle:focus-visible {
+    max-height: 40px;
+    opacity: 1;
+    padding: 6px 8px;
+    border-color: rgba(255, 255, 255, 0.14);
+    pointer-events: auto;
+}
+.annotation-mental-branch--balloon .annotation-mental-branch-image-toggle {
+    background: rgba(0, 0, 0, 0.04);
+    color: rgba(24, 24, 27, 0.65);
+}
+.annotation-mental-branch--balloon:hover .annotation-mental-branch-image-toggle,
+.annotation-mental-branch--balloon.selected .annotation-mental-branch-image-toggle,
+.annotation-mental-branch--balloon .annotation-mental-branch-image-toggle:focus-visible {
+    border-color: rgba(0, 0, 0, 0.12);
+}
+.annotation-mental-branch-image-toggle:hover {
+    color: rgba(255, 255, 255, 0.95);
+    border-color: rgba(255, 255, 255, 0.28);
+}
+.annotation-mental-branch--balloon .annotation-mental-branch-image-toggle:hover {
+    color: rgba(24, 24, 27, 0.9);
+    border-color: rgba(0, 0, 0, 0.2);
+}
+.annotation-mental-branch-image-toggle__chevron {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+}
+.annotation-mental-branch-image.is-open .annotation-mental-branch-image-toggle__chevron {
+    transform: rotate(180deg);
 }
 .annotation-mental-canvas--draggable .annotation-mental-branch .annotation-mental-branch-image-img {
     display: block;
@@ -7626,8 +10324,9 @@ html:has(body.annotation-modal-open) {
     max-height: 180px;
     width: auto;
     height: auto;
+    margin-top: 6px;
     object-fit: contain;
-    /* vertical-align not needed for block-level images */
+    border-radius: 6px;
 }
 .annotation-mental-canvas--draggable .annotation-mental-branch .annotation-mental-branch-description {
     display: none;
@@ -7638,7 +10337,7 @@ html:has(body.annotation-modal-open) {
     max-width: 100%;
     min-width: 0;
     text-align: center;
-    position: relative; /* ancora os ⋮ da descrição */
+    position: relative; /* ancora os ? da descri??o */
 }
 
 .annotation-mental-branch .annotation-mental-menu-trigger--titulo,
@@ -7702,7 +10401,7 @@ html:has(body.annotation-modal-open) {
     filter: none;
 }
 
-/* Ligações do diagrama: sem animações herdadas (evita “pulso” / brilho a oscilar no fim da linha) */
+/* Liga??es do diagrama: sem anima??es herdadas (evita ?pulso? / brilho a oscilar no fim da linha) */
 .annotation-mental-connections,
 .annotation-mental-connections * {
     animation: none !important;
@@ -7715,7 +10414,7 @@ html:has(body.annotation-modal-open) {
     animation: none !important;
 }
 
-/* Bolinhas início / meio / fim ao editar linha (menu Linha) */
+/* Bolinhas in?cio / meio / fim ao editar linha (menu Linha) */
 .annotation-mental-linha-handle {
     fill: rgba(255, 255, 255, 0.9);
     stroke: rgba(255, 255, 255, 0.6);
@@ -7738,7 +10437,7 @@ html:has(body.annotation-modal-open) {
     fill: #fff;
     stroke: #fff;
 }
-/* Paleta de cores ao clicar em Alterar cor: fundo preto, detalhes brancos, animação suave */
+/* Paleta de cores ao clicar em Alterar cor: fundo preto, detalhes brancos, anima??o suave */
 .annotation-mental-color-palette-wrap {
     position: fixed;
     z-index: 9999;
@@ -7973,7 +10672,7 @@ html:has(body.annotation-modal-open) {
 .annotation-attachment-download-wrap--modal-svg-only .uiverse-download-btn {
     margin: 0;
 }
-/* Ícone branco por dentro (seta + base), no estado normal e no hover */
+/* ?cone branco por dentro (seta + base), no estado normal e no hover */
 .annotation-attachment-download-wrap--modal-svg-only .uiverse-download-btn .svgIcon {
     fill: #ffffff;
 }
@@ -8012,6 +10711,338 @@ html:has(body.annotation-modal-open) {
     transform: scale(0.98);
 }
 
+/* Modal de confirmação genérico (tema do usuário) */
+.ec-confirm-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 12000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    box-sizing: border-box;
+}
+.ec-confirm-modal.is-open {
+    display: flex;
+}
+.ec-confirm-modal[hidden] {
+    display: none !important;
+}
+.ec-confirm-modal__overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.72);
+    backdrop-filter: blur(4px);
+}
+.ec-confirm-modal__panel {
+    position: relative;
+    z-index: 1;
+    width: min(400px, 100%);
+    padding: 24px 22px 18px;
+    border-radius: 16px;
+    border: 1px solid var(--ec-border, rgba(255, 255, 255, 0.1));
+    background: var(--ec-surface, #141414);
+    color: var(--ec-heading, #fafafa);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+    text-align: center;
+}
+.ec-confirm-modal__icon {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 10px;
+    color: #fbbf24;
+}
+.ec-confirm-modal__icon svg {
+    width: 40px;
+    height: 40px;
+}
+.ec-confirm-modal__title {
+    margin: 0 0 8px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1.22rem;
+    font-weight: 700;
+}
+.ec-confirm-modal__message {
+    margin: 0 0 20px;
+    font-size: 0.9rem;
+    line-height: 1.45;
+    color: var(--ec-muted, rgba(255, 255, 255, 0.55));
+}
+.ec-confirm-modal__actions {
+    display: flex;
+    gap: 10px;
+}
+.ec-confirm-modal__btn {
+    flex: 1;
+    min-height: 42px;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid var(--ec-border, rgba(255, 255, 255, 0.12));
+    font-family: inherit;
+}
+.ec-confirm-modal__btn--ghost {
+    background: transparent;
+    color: var(--ec-muted, rgba(255, 255, 255, 0.7));
+}
+.ec-confirm-modal__btn--ghost:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--ec-heading, #fff);
+}
+.ec-confirm-modal__btn--danger {
+    background: #ef4444;
+    border-color: #ef4444;
+    color: #fff;
+}
+.ec-confirm-modal__btn--danger:hover {
+    background: #f87171;
+    border-color: #f87171;
+}
+html:not([data-theme="dark"]) .ec-confirm-modal__panel {
+    background: #ffffff;
+    border-color: rgba(0, 0, 0, 0.1);
+    color: #18181b;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.14);
+}
+html:not([data-theme="dark"]) .ec-confirm-modal__overlay {
+    background: rgba(15, 23, 42, 0.45);
+}
+html:not([data-theme="dark"]) .ec-confirm-modal__message {
+    color: rgba(24, 24, 27, 0.55);
+}
+html:not([data-theme="dark"]) .ec-confirm-modal__btn--ghost {
+    color: rgba(24, 24, 27, 0.65);
+    border-color: rgba(0, 0, 0, 0.12);
+}
+
+/* Modal escolha visão do calendário (Simplificada / Detalhada) */
+.ec-cal-view-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 12010;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    box-sizing: border-box;
+}
+.ec-cal-view-modal.is-open {
+    display: flex;
+}
+.ec-cal-view-modal[hidden] {
+    display: none !important;
+}
+.ec-cal-view-modal__overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.72);
+    backdrop-filter: blur(4px);
+}
+.ec-cal-view-modal__panel {
+    position: relative;
+    z-index: 1;
+    width: min(720px, 100%);
+    padding: 22px 22px 20px;
+    border-radius: 18px;
+    border: 1px solid var(--ec-border, rgba(255, 255, 255, 0.1));
+    background: var(--ec-surface, #141414);
+    color: var(--ec-heading, #fafafa);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+    box-sizing: border-box;
+}
+.ec-cal-view-modal__head {
+    margin-bottom: 18px;
+}
+.ec-cal-view-modal__title-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 10px;
+}
+.ec-cal-view-modal__title-icon {
+    display: flex;
+    color: var(--ec-heading, #fafafa);
+}
+.ec-cal-view-modal__title-icon svg {
+    width: 22px;
+    height: 22px;
+}
+.ec-cal-view-modal__title {
+    margin: 0;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+.ec-cal-view-modal__close {
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--ec-muted, rgba(255, 255, 255, 0.55));
+    font-size: 1.35rem;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.ec-cal-view-modal__close:hover {
+    background: var(--ec-close-hover, rgba(255, 255, 255, 0.08));
+    color: var(--ec-heading, #fff);
+}
+.ec-cal-view-modal__subtitle {
+    margin: 8px 0 0;
+    padding-left: 32px;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    color: var(--ec-muted, rgba(255, 255, 255, 0.55));
+}
+.ec-cal-view-modal__options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    align-items: stretch;
+}
+.ec-cal-view-modal__card {
+    display: grid;
+    grid-template-rows: auto auto 1fr auto;
+    gap: 10px;
+    min-height: 0;
+    padding: 14px;
+    border-radius: 14px;
+    border: 1px solid var(--ec-border, rgba(255, 255, 255, 0.1));
+    background: var(--ec-surface-2, #1a1a1a);
+    box-sizing: border-box;
+}
+.ec-cal-view-modal__preview {
+    border-radius: 10px;
+    overflow: hidden;
+}
+.ec-cal-view-preview {
+    padding: 10px;
+    border-radius: 10px;
+    background: var(--ec-surface-3, #111);
+    border: 1px solid var(--ec-border-subtle, rgba(255, 255, 255, 0.06));
+}
+.ec-cal-view-preview__weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    margin-bottom: 6px;
+}
+.ec-cal-view-preview__weekdays span {
+    text-align: center;
+    font-size: 0.62rem;
+    font-weight: 600;
+    color: var(--ec-muted-2, rgba(255, 255, 255, 0.4));
+}
+.ec-cal-view-preview__grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+}
+.ec-cal-view-preview__cell {
+    aspect-ratio: 1;
+    border-radius: 4px;
+    background: var(--ec-surface-4, #2a2a2a);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.58rem;
+    font-weight: 600;
+    color: var(--ec-heading, #fafafa);
+    line-height: 1;
+    min-width: 0;
+}
+.ec-cal-view-preview__cell--empty {
+    background: transparent;
+    visibility: hidden;
+}
+.ec-cal-view-preview__cell--accent {
+    background: var(--ec-heatmap-checked-bg, #22c55e) !important;
+    color: #fff !important;
+}
+.ec-cal-view-modal__card-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--ec-heading, #fafafa);
+    font-family: 'Rajdhani', sans-serif;
+}
+.ec-cal-view-modal__card-desc {
+    margin: 0;
+    font-size: 0.82rem;
+    line-height: 1.4;
+    color: var(--ec-muted, rgba(255, 255, 255, 0.55));
+    min-height: 2.8em;
+}
+.ec-cal-view-modal__select {
+    width: 100%;
+    min-height: 40px;
+    margin-top: auto;
+    border-radius: 10px;
+    border: 1px solid var(--ec-border, rgba(255, 255, 255, 0.22));
+    background: transparent;
+    color: var(--ec-heading, #fafafa);
+    font-size: 0.88rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+}
+.ec-cal-view-modal__select:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+html:not([data-theme="dark"]) .ec-cal-view-modal__overlay {
+    background: rgba(15, 23, 42, 0.45);
+}
+html:not([data-theme="dark"]) .ec-cal-view-modal__panel {
+    background: #ffffff;
+    border-color: rgba(0, 0, 0, 0.1);
+    color: #18181b;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.14);
+}
+html:not([data-theme="dark"]) .ec-cal-view-modal__subtitle,
+html:not([data-theme="dark"]) .ec-cal-view-modal__card-desc {
+    color: rgba(24, 24, 27, 0.55);
+}
+html:not([data-theme="dark"]) .ec-cal-view-modal__card {
+    background: #f9fafb;
+    border-color: rgba(0, 0, 0, 0.08);
+}
+html:not([data-theme="dark"]) .ec-cal-view-preview {
+    background: #f3f4f6;
+    border-color: rgba(0, 0, 0, 0.06);
+}
+html:not([data-theme="dark"]) .ec-cal-view-preview__cell {
+    background: #e5e7eb;
+    color: #18181b;
+}
+html:not([data-theme="dark"]) .ec-cal-view-modal__select {
+    border-color: rgba(0, 0, 0, 0.18);
+    color: #18181b;
+}
+html:not([data-theme="dark"]) .ec-cal-view-modal__select:hover {
+    background: rgba(0, 0, 0, 0.04);
+}
+html:not([data-theme="dark"]) .ec-cal-view-modal__close {
+    color: rgba(24, 24, 27, 0.45);
+}
+html:not([data-theme="dark"]) .ec-cal-view-modal__close:hover {
+    background: #f3f4f6;
+    color: #18181b;
+}
+@media (max-width: 640px) {
+    .ec-cal-view-modal__options {
+        grid-template-columns: 1fr;
+    }
+    .ec-cal-view-modal__subtitle {
+        padding-left: 0;
+    }
+}
+
 .day-info-date {
     font-size: 1.5rem;
     font-weight: 700;
@@ -8021,7 +11052,7 @@ html:has(body.annotation-modal-open) {
     text-align: center;
 }
 
-/* Mês ampliado */
+/* M?s ampliado */
 .month-amplified-grid {
     display: flex;
     flex-direction: column;
@@ -8156,6 +11187,19 @@ html:has(body.annotation-modal-open) {
     outline-offset: 3px;
 }
 
+.add-routine-card.is-navigating {
+    transform: scale(0.97);
+    opacity: 0.72;
+    border-color: #52525b;
+    background: #f4f4f5;
+    pointer-events: none;
+    transition:
+        transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+        opacity 0.22s ease,
+        border-color 0.22s ease,
+        background 0.22s ease;
+}
+
 .add-routine-content {
     display: flex;
     flex-direction: column;
@@ -8178,7 +11222,7 @@ html:has(body.annotation-modal-open) {
     font-family: 'Rajdhani', sans-serif;
 }
 
-/* Lista de rotinas (cards): vazio — mensagem e "+" dentro do mesmo cartão tracejado */
+/* Lista de rotinas (cards): vazio ? mensagem e "+" dentro do mesmo cart?o tracejado */
 .routines-empty-state {
     display: flex;
     flex-direction: column;
@@ -8256,7 +11300,7 @@ html:has(body.annotation-modal-open) {
     animation: slideOutRight 0.3s ease-out forwards;
 }
 
-/* Tela de "salvando..." no modal de anotação */
+/* Tela de "salvando..." no modal de anota??o */
 .annotation-saving-overlay {
     position: absolute;
     top: 0;
@@ -8302,58 +11346,7 @@ html:has(body.annotation-modal-open) {
     to { transform: rotate(360deg); }
 }
 
-.dashboard-boot-loader {
-    position: fixed;
-    inset: 0;
-    z-index: 5000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background:
-        linear-gradient(rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.42)),
-        url("EC ROUTINE.png") center center / cover no-repeat;
-    color: #0f172a;
-    opacity: 1;
-    visibility: visible;
-    transition:
-        opacity 0.92s cubic-bezier(0.19, 1, 0.22, 1),
-        visibility 0s linear 0.92s;
-}
-
-.dashboard-boot-loader.is-hidden {
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-}
-
-.dashboard-boot-loader__brand {
-    margin: 0;
-    font-family: 'Rajdhani', sans-serif;
-    font-size: clamp(2rem, 4.4vw, 3.2rem);
-    font-weight: 900;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: #ffffff;
-    text-shadow: 0 3px 20px rgba(0, 0, 0, 0.5);
-    animation: dashboardBootBrandPulse 1.7s ease-in-out infinite alternate;
-}
-
-@keyframes dashboardBootBrandPulse {
-    from { opacity: 0.82; transform: translateY(1px); }
-    to { opacity: 1; transform: translateY(-1px); }
-}
-
-[data-theme="dark"] .dashboard-boot-loader {
-    background:
-        linear-gradient(rgba(0, 0, 0, 0.52), rgba(0, 0, 0, 0.52)),
-        url("EC ROUTINE.png") center center / cover no-repeat;
-}
-
-[data-theme="dark"] .dashboard-boot-loader__brand {
-    color: #f8fafc;
-}
-
-/* Apresentação do app (1x por dia) — display:flex fixo para permitir fade-out suave */
+/* Apresenta??o do app (1x por dia) ? display:flex fixo para permitir fade-out suave */
 .daily-onboarding-overlay {
     position: fixed;
     inset: 0;
@@ -8372,24 +11365,43 @@ html:has(body.annotation-modal-open) {
         visibility 0s linear 1s;
 }
 
+.daily-onboarding-overlay[hidden] {
+    display: none !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+}
+
 .daily-onboarding-overlay.is-visible {
     visibility: visible;
     opacity: 1;
     pointer-events: auto;
+    touch-action: manipulation;
     transition:
         opacity 0.9s cubic-bezier(0.19, 1, 0.22, 1),
         visibility 0s;
 }
 
+.daily-onboarding-overlay.is-visible .daily-onboarding-card,
+.daily-onboarding-overlay.is-visible .daily-onboarding-step.is-active {
+    touch-action: manipulation;
+    cursor: pointer;
+}
+
 .daily-onboarding-card {
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     background: var(--ec-onboarding-card);
     border-radius: 0;
     padding: 28px 22px 0;
     box-shadow: 0 30px 90px rgba(0,0,0,0.35);
     border: none;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -8401,8 +11413,21 @@ html:has(body.annotation-modal-open) {
     flex: 1;
     min-height: 0;
     display: flex;
-    align-items: center;
+    align-items: stretch;
     justify-content: center;
+    overflow: visible;
+}
+
+.daily-onboarding-step:not(.is-active) {
+    visibility: hidden;
+}
+
+.daily-onboarding-step.is-active {
+    visibility: visible;
+}
+
+#dailyOnboardingOverlay .daily-onboarding-step--1 {
+    display: none !important;
 }
 
 .daily-onboarding-step {
@@ -8420,12 +11445,45 @@ html:has(body.annotation-modal-open) {
         transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
     pointer-events: none;
     will-change: opacity, transform;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
 }
 
 .daily-onboarding-step.is-active {
     opacity: 1;
     transform: translateY(0) scale(1);
     pointer-events: auto;
+}
+
+.daily-onboarding-continue-btn {
+    margin-top: 18px;
+    padding: 12px 28px;
+    border: 1px solid rgba(0, 0, 0, 0.14);
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--ec-onboarding-heading, #0a0a0a);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition:
+        background 0.2s ease,
+        border-color 0.2s ease,
+        transform 0.2s ease;
+}
+
+.daily-onboarding-continue-btn:hover {
+    background: rgba(0, 0, 0, 0.1);
+    border-color: rgba(0, 0, 0, 0.22);
+}
+
+.daily-onboarding-continue-btn:active {
+    transform: scale(0.98);
 }
 
 .daily-onboarding-image {
@@ -8444,6 +11502,108 @@ html:has(body.annotation-modal-open) {
     margin: 0;
     line-height: 1.05;
     text-align: center;
+}
+
+.daily-onboarding-step--welcome {
+    justify-content: center;
+    align-items: center;
+    padding: clamp(20px, 5vh, 40px) 16px;
+    text-align: center;
+    overflow: hidden;
+}
+
+.daily-onboarding-welcome-heading {
+    margin: 0;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: clamp(2rem, 5.5vw, 3.4rem);
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    line-height: 1.1;
+    color: var(--ec-onboarding-text);
+}
+
+.daily-onboarding-step--first-create .daily-onboarding-welcome-heading {
+    max-width: 16ch;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.daily-onboarding-step--tasks {
+    justify-content: flex-start;
+    padding: clamp(14px, 3.5vh, 28px) 10px 12px;
+    gap: 8px;
+    overflow-x: hidden;
+    overflow-y: hidden;
+    min-height: 0;
+}
+
+.daily-onboarding-step--tasks .daily-onboarding-step2-heading {
+    font-size: clamp(1.2rem, 3.2vw, 1.6rem);
+    flex-shrink: 0;
+}
+
+.daily-onboarding-step--tasks .daily-onboarding-step2-desc {
+    margin: 2px 0 0;
+    font-size: clamp(0.8rem, 2.1vw, 0.92rem);
+    line-height: 1.35;
+    flex-shrink: 0;
+}
+
+.daily-onboarding-step--tasks .daily-onboarding-tasks-list {
+    margin-top: 6px;
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    overflow-x: hidden;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+}
+
+.daily-onboarding-step--tasks .daily-onboarding-tasks-list.is-scrollable {
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    padding-right: 4px;
+}
+
+.daily-onboarding-step--2 {
+    justify-content: flex-start;
+    padding: clamp(14px, 3.5vh, 28px) 10px 12px;
+    gap: 8px;
+    overflow-x: hidden;
+    overflow-y: hidden;
+    min-height: 0;
+}
+
+.daily-onboarding-step--2 .daily-onboarding-step2-heading {
+    font-size: clamp(1.2rem, 3.2vw, 1.6rem);
+    flex-shrink: 0;
+}
+
+.daily-onboarding-step--2 .daily-onboarding-step2-desc {
+    margin: 2px 0 0;
+    font-size: clamp(0.8rem, 2.1vw, 0.92rem);
+    line-height: 1.35;
+    flex-shrink: 0;
+}
+
+.daily-onboarding-step--2 .daily-onboarding-tasks-list {
+    margin-top: 6px;
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    overflow-x: hidden;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+}
+
+.daily-onboarding-step--2 .daily-onboarding-tasks-list.is-scrollable {
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    padding-right: 4px;
 }
 
 .daily-onboarding-step--3 {
@@ -8519,23 +11679,33 @@ html:has(body.annotation-modal-open) {
     max-width: 720px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 0.5em;
     padding: 0 12px;
     margin-top: 6px;
-    max-height: 52vh;
-    overflow: auto;
-    scrollbar-width: thin;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    font-size: 15px;
+}
+
+body.daily-onboarding-overlay-open {
+    overflow: hidden;
+}
+
+html:has(body.daily-onboarding-overlay-open) {
+    overflow: hidden;
+    height: 100%;
 }
 
 .daily-onboarding-task-row {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 12px;
-    padding: 14px 14px;
+    gap: 0.65em;
+    padding: 0.65em 0.75em;
     background: rgba(0, 0, 0, 0.04);
     border: 1px solid rgba(0, 0, 0, 0.1);
-    border-radius: 14px;
+    border-radius: 12px;
 }
 
 .daily-onboarding-task-left {
@@ -8545,16 +11715,17 @@ html:has(body.annotation-modal-open) {
 
 .daily-onboarding-task-title {
     font-family: 'Rajdhani', sans-serif;
-    font-size: 1.15rem;
+    font-size: 1.1em;
     font-weight: 800;
     color: #000000;
     word-break: break-word;
+    line-height: 1.2;
 }
 
 .daily-onboarding-task-time {
-    margin-top: 6px;
+    margin-top: 0.25em;
     font-family: 'Rajdhani', sans-serif;
-    font-size: 0.95rem;
+    font-size: 0.82em;
     font-weight: 700;
     color: rgba(15, 23, 42, 0.68);
 }
@@ -8562,32 +11733,61 @@ html:has(body.annotation-modal-open) {
 .daily-onboarding-badges {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 0.4em;
     justify-content: flex-end;
+    align-items: center;
+    flex-shrink: 0;
 }
 
 .daily-onboarding-badge {
+    position: relative;
+    z-index: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     font-family: 'Rajdhani', sans-serif;
-    font-size: 0.88rem;
+    font-size: 0.78em;
     font-weight: 900;
-    padding: 6px 10px;
+    padding: 0.35em 0.65em;
     border-radius: 999px;
     border: 1px solid rgba(0,0,0,0.08);
     background: rgba(255,255,255,0.8);
     color: #000000;
     white-space: nowrap;
+    line-height: 1.15;
+    isolation: isolate;
 }
 
 .daily-onboarding-badge--important {
-    background: #ff0844;
-    border-color: #ff3060;
-    color: #ffffff;
+    z-index: 2;
+    background: rgba(255, 23, 68, 0.06);
+    border: 1px solid rgba(255, 23, 68, 0.42);
+    color: #e84a66;
     font-weight: 900;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
     box-shadow:
-        0 0 8px rgba(255, 0, 85, 0.95),
-        0 0 18px rgba(255, 20, 100, 0.75),
-        0 0 28px rgba(255, 40, 120, 0.45);
-    text-shadow: 0 0 6px rgba(255, 255, 255, 0.35);
+        0 0 4px rgba(255, 23, 68, 0.18),
+        0 0 10px rgba(255, 48, 96, 0.1);
+    text-shadow: 0 0 6px rgba(255, 23, 68, 0.28);
+    animation: daily-onboarding-badge-neon-pulse 3.2s ease-in-out infinite;
+}
+
+@keyframes daily-onboarding-badge-neon-pulse {
+    0%, 100% {
+        border-color: rgba(255, 23, 68, 0.36);
+        box-shadow:
+            0 0 3px rgba(255, 23, 68, 0.14),
+            0 0 8px rgba(255, 48, 96, 0.08);
+        text-shadow: 0 0 5px rgba(255, 23, 68, 0.22);
+    }
+    50% {
+        border-color: rgba(255, 48, 96, 0.52);
+        box-shadow:
+            0 0 6px rgba(255, 23, 68, 0.24),
+            0 0 12px rgba(255, 48, 96, 0.14);
+        text-shadow: 0 0 8px rgba(255, 23, 68, 0.34);
+    }
 }
 
 .daily-onboarding-badge--done {
@@ -8667,7 +11867,224 @@ html:has(body.annotation-modal-open) {
     box-shadow: 0 0 0 5px rgba(0, 0, 0, 0.08);
 }
 
-/* Guias visuais do snap/centralização no mapa mental */
+/* Diário / boas-vindas — mesmo padrão do splash EC ROUTINE (claro ou escuro) */
+#dailyOnboardingOverlay.daily-onboarding-overlay--ec-entry {
+    background: var(--ec-entry-bg, #f4f4f5);
+    transition:
+        opacity 0.85s cubic-bezier(0.4, 0, 0.2, 1),
+        visibility 0s linear 0.85s;
+}
+
+#dailyOnboardingOverlay.daily-onboarding-overlay--ec-entry.is-visible {
+    transition:
+        opacity 0.85s cubic-bezier(0.4, 0, 0.2, 1),
+        visibility 0s;
+}
+
+#dailyOnboardingOverlay.daily-onboarding-overlay--ec-entry .daily-onboarding-card {
+    background: transparent;
+    box-shadow: none;
+    border: none;
+    padding: 24px;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+#dailyOnboardingOverlay.daily-onboarding-overlay--ec-entry .daily-onboarding-steps {
+    overflow: hidden;
+}
+
+#dailyOnboardingOverlay.daily-onboarding-overlay--ec-entry .daily-onboarding-step--welcome {
+    justify-content: center;
+    align-items: center;
+    padding: clamp(24px, 6vh, 48px) 16px;
+    overflow: hidden;
+}
+
+#dailyOnboardingOverlay.daily-onboarding-overlay--ec-entry .daily-onboarding-welcome-heading {
+    /* Mesma tipografia do header-subtitle (Rajdhani suave), em escala de destaque */
+    font-family: 'Rajdhani', sans-serif;
+    font-size: clamp(1.25rem, 3.2vw, 1.95rem);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    line-height: 1.25;
+    color: var(--ec-entry-fg, #0a0a0a);
+    text-transform: none;
+}
+
+#dailyOnboardingOverlay.daily-onboarding-overlay--ec-entry .daily-onboarding-step--first-create .daily-onboarding-welcome-heading {
+    max-width: 18ch;
+}
+
+#dailyOnboardingOverlay.daily-onboarding-overlay--ec-entry .daily-onboarding-step--tasks {
+    justify-content: flex-start;
+    padding: clamp(12px, 3vh, 24px) 8px 16px;
+    gap: 10px;
+    max-width: 720px;
+    margin: 0 auto;
+    width: 100%;
+    overflow: hidden;
+    min-height: 0;
+}
+
+#dailyOnboardingOverlay.daily-onboarding-overlay--ec-entry .daily-onboarding-step--2 {
+    justify-content: flex-start;
+    padding: clamp(12px, 3vh, 24px) 8px 16px;
+    gap: 10px;
+    max-width: 720px;
+    margin: 0 auto;
+    width: 100%;
+    overflow: hidden;
+    min-height: 0;
+}
+
+#dailyOnboardingOverlay.daily-onboarding-overlay--ec-entry .daily-onboarding-step2-heading {
+    font-family: Inter, system-ui, sans-serif;
+    font-size: clamp(1.35rem, 4.5vw, 2rem);
+    font-weight: 900;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--ec-entry-fg, #0a0a0a);
+}
+
+#dailyOnboardingOverlay.daily-onboarding-overlay--ec-entry .daily-onboarding-step2-desc {
+    margin: 8px 0 0;
+    font-family: Inter, system-ui, sans-serif;
+    font-size: clamp(0.82rem, 2.2vw, 0.95rem);
+    font-weight: 500;
+    color: color-mix(in srgb, var(--ec-entry-fg, #0a0a0a) 62%, transparent);
+    line-height: 1.45;
+}
+
+#dailyOnboardingOverlay.daily-onboarding-overlay--ec-entry .daily-onboarding-step {
+    transform: none;
+    transition: none;
+}
+
+#dailyOnboardingOverlay.daily-onboarding-overlay--ec-entry .daily-onboarding-step.is-active {
+    transform: none;
+}
+
+#dailyOnboardingOverlay.daily-onboarding-overlay--ec-entry .daily-onboarding-step.is-seq-hidden {
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+}
+
+#dailyOnboardingOverlay.daily-onboarding-overlay--ec-entry .daily-onboarding-step.is-seq-enter {
+    visibility: visible;
+    pointer-events: auto;
+    animation: dailyOnboardingSeqEnter 0.75s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+#dailyOnboardingOverlay.daily-onboarding-overlay--ec-entry .daily-onboarding-step.is-seq-exit {
+    visibility: visible;
+    pointer-events: none;
+    animation: dailyOnboardingSeqExit 0.55s cubic-bezier(0.4, 0, 0.22, 1) forwards;
+}
+
+#dailyOnboardingOverlay.daily-onboarding-overlay--ec-entry.is-seq-overlay-exit {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.85s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes dailyOnboardingSeqEnter {
+    from {
+        opacity: 0;
+        transform: translateY(28px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes dailyOnboardingSeqExit {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-12px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #dailyOnboardingOverlay.daily-onboarding-overlay--ec-entry .daily-onboarding-step.is-seq-enter,
+    #dailyOnboardingOverlay.daily-onboarding-overlay--ec-entry .daily-onboarding-step.is-seq-exit {
+        animation: none;
+    }
+
+    #dailyOnboardingOverlay.daily-onboarding-overlay--ec-entry .daily-onboarding-step.is-seq-enter {
+        opacity: 1;
+        transform: none;
+    }
+
+    #dailyOnboardingOverlay.daily-onboarding-overlay--ec-entry .daily-onboarding-step.is-seq-exit,
+    #dailyOnboardingOverlay.daily-onboarding-overlay--ec-entry .daily-onboarding-step.is-seq-hidden {
+        opacity: 0;
+        transform: none;
+    }
+
+    #dailyOnboardingOverlay.daily-onboarding-overlay--ec-entry.is-seq-overlay-exit {
+        transition: opacity 0.2s ease;
+    }
+}
+
+#dailyOnboardingOverlay.daily-onboarding-overlay--ec-entry .daily-onboarding-tasks-list {
+    margin-top: 10px;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+#dailyOnboardingOverlay.daily-onboarding-overlay--ec-entry .daily-onboarding-tasks-list.is-scrollable {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    scrollbar-gutter: stable;
+}
+
+#dailyOnboardingOverlay.daily-onboarding-overlay--ec-entry .daily-onboarding-tasks-list.is-scrollable::-webkit-scrollbar {
+    width: 6px;
+}
+
+#dailyOnboardingOverlay.daily-onboarding-overlay--ec-entry .daily-onboarding-tasks-list.is-scrollable::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.22);
+    border-radius: 999px;
+}
+
+#dailyOnboardingOverlay.daily-onboarding-overlay--ec-entry .daily-onboarding-tasks-list.is-scrollable::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#dailyOnboardingOverlay.daily-onboarding-overlay--ec-entry .daily-onboarding-task-row {
+    background: color-mix(in srgb, var(--ec-entry-fg, #0a0a0a) 6%, transparent);
+    border-color: color-mix(in srgb, var(--ec-entry-fg, #0a0a0a) 12%, transparent);
+}
+
+#dailyOnboardingOverlay.daily-onboarding-overlay--ec-entry .daily-onboarding-task-title {
+    color: var(--ec-entry-fg, #0a0a0a);
+}
+
+#dailyOnboardingOverlay.daily-onboarding-overlay--ec-entry .daily-onboarding-task-time {
+    color: color-mix(in srgb, var(--ec-entry-fg, #0a0a0a) 58%, transparent);
+}
+
+#dailyOnboardingOverlay.daily-onboarding-overlay--ec-entry .daily-onboarding-empty {
+    color: color-mix(in srgb, var(--ec-entry-fg, #0a0a0a) 55%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #dailyOnboardingOverlay.daily-onboarding-overlay--ec-entry,
+    #dailyOnboardingOverlay.daily-onboarding-overlay--ec-entry .daily-onboarding-step {
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Guias visuais do snap/centraliza??o no mapa mental */
 .annotation-mental-snap-guide {
     position: absolute;
     background: transparent;
@@ -8675,7 +12092,7 @@ html:has(body.annotation-modal-open) {
     box-shadow: none;
 }
 
-/* Linha vertical: faixa de 2px com traço (border em width:0 falha em alguns casos) */
+/* Linha vertical: faixa de 2px com tra?o (border em width:0 falha em alguns casos) */
 .annotation-mental-snap-guide--v {
     width: 1px;
     height: 100vh;
@@ -8689,7 +12106,7 @@ html:has(body.annotation-modal-open) {
     );
 }
 
-/* Linha horizontal: height:0 + border-top muitas vezes não aparece; gradiente é fiável */
+/* Linha horizontal: height:0 + border-top muitas vezes n?o aparece; gradiente ? fi?vel */
 .annotation-mental-snap-guide--h {
     left: 0;
     width: 100vw;
@@ -8828,9 +12245,9 @@ html:has(body.annotation-modal-open) {
 }
 
 /*
- * Rotinas / Cards carrossel (≤900px): largura da faixa = 13× o bloco (cada mês ≈ 100% do heatmap).
- * O desktop usa calc(1300%/3) (~3 meses na faixa); no telemóvel isso deixava cada mês ~⅓ da largura
- * e a grelha de 7 dias ilegível. overflow-x:hidden no .large-heatmap-block já mostra ~1 mês.
+ * Rotinas / Cards carrossel (?900px): largura da faixa = 13? o bloco (cada m?s ? 100% do heatmap).
+ * O desktop usa calc(1300%/3) (~3 meses na faixa); no telem?vel isso deixava cada m?s ~? da largura
+ * e a grelha de 7 dias ileg?vel. overflow-x:hidden no .large-heatmap-block j? mostra ~1 m?s.
  */
 @media (max-width: 900px) {
     #rotinasView .routine-card-heatmap--carousel .large-heatmap-block .calendar-months-container,
@@ -8863,6 +12280,28 @@ html:has(body.annotation-modal-open) {
         font-size: 0.8rem;
     }
 
+    /* Mobile: perfil s? com avatar (sem nome longo no header) */
+    .header-profile-trigger {
+        padding: 4px;
+        gap: 0;
+        border-radius: 12px;
+        min-width: 40px;
+        min-height: 40px;
+        justify-content: center;
+    }
+
+    .header-profile-trigger .username {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+    }
+
     .dashboard-controls {
         flex-direction: column;
         align-items: stretch;
@@ -8874,7 +12313,7 @@ html:has(body.annotation-modal-open) {
         justify-content: center;
     }
 
-    /* Barra de vistas: quebra em 2 colunas e texto legível (evita overflow horizontal) */
+    /* Barra de vistas: quebra em 2 colunas e texto leg?vel (evita overflow horizontal) */
     .view-toggle {
         flex-wrap: wrap;
         gap: 8px;
@@ -8902,13 +12341,16 @@ html:has(body.annotation-modal-open) {
         overflow-x: visible;
     }
 
-    #rotinasView .view-toggle__views {
+    #dashboardMainNav .view-toggle__views,
+#rotinasView .view-toggle__views {
         flex-direction: row;
         flex-wrap: nowrap;
         align-items: center;
         justify-content: flex-start;
-        gap: 5px;
+        gap: 4px;
+        padding: 4px;
         overflow-x: auto;
+        overflow-y: hidden;
         -webkit-overflow-scrolling: touch;
         overscroll-behavior-x: contain;
         min-width: 0;
@@ -8922,7 +12364,41 @@ html:has(body.annotation-modal-open) {
         font-size: 0.72rem;
     }
 
-    #rotinasView .view-toggle > .filters {
+    /* Celular: barra de vistas s? com ?cones (r?tulo fica para leitores de ecr?) */
+    #dashboardMainNav .view-toggle__views .view-btn,
+    #rotinasView .view-toggle__views .view-btn {
+        flex: 0 0 auto;
+        width: auto;
+        min-width: 44px;
+        min-height: 44px;
+        padding: 10px;
+        justify-content: center;
+        gap: 0;
+        position: relative;
+    }
+
+    #dashboardMainNav .view-toggle__views .view-btn-label,
+    #rotinasView .view-toggle__views .view-btn-label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        clip-path: inset(50%);
+        white-space: nowrap;
+        border: 0;
+    }
+
+    #dashboardMainNav .view-toggle__views .view-btn-icon,
+    #rotinasView .view-toggle__views .view-btn-icon {
+        width: 1.125rem;
+        height: 1.125rem;
+    }
+
+    #dashboardMainNav .view-toggle > .filters,
+#rotinasView .view-toggle > .filters {
         margin: 6px 0 0;
         padding: 6px 0 0;
         border-left: none;
@@ -8930,23 +12406,27 @@ html:has(body.annotation-modal-open) {
         gap: 4px;
     }
 
+    #dashboardMainNav .filter-btn,
     #rotinasView .filter-btn {
         padding: 8px 8px;
         font-size: 0.72rem;
     }
 
-    /* Celular: como no PC — info à esquerda, calendário à direita; 1 mês via clip ≤900px */
+    /* Celular: mant?m info ? esquerda + calend?rio ? direita (como no PC) */
     #rotinasView .routine-card {
         flex-direction: row;
         align-items: stretch;
-        gap: 8px;
+        gap: 6px;
+        padding: 10px;
+        min-height: 0;
     }
 
     #rotinasView .routine-card-content {
-        flex: 0 1 auto;
-        min-width: 0;
-        max-width: min(42%, clamp(112px, 32vw, 168px));
-        width: auto;
+        flex: 0 0 auto;
+        min-width: clamp(92px, 26vw, 128px);
+        max-width: clamp(92px, 26vw, 128px);
+        width: clamp(92px, 26vw, 128px);
+        gap: 8px;
         overflow-x: visible;
         overflow-y: visible;
         overflow-wrap: anywhere;
@@ -8954,12 +12434,78 @@ html:has(body.annotation-modal-open) {
         z-index: 2;
     }
 
+    #rotinasView .routine-card-header {
+        flex-direction: row;
+        align-items: flex-start;
+        gap: 4px;
+    }
+
+    #rotinasView .routine-card-icon svg,
+    #rotinasView .routine-card-icon .lucide {
+        width: 1rem;
+        height: 1rem;
+    }
+
+    #rotinasView .routine-card-title {
+        font-size: clamp(0.82rem, 3.2vw, 1rem);
+        line-height: 1.2;
+        -webkit-line-clamp: 3;
+        line-clamp: 3;
+    }
+
+    /* Celular: aviso sem hor?rio ? s? ?cone */
+    #rotinasView .routine-card-no-time-awaiting {
+        display: inline-flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 0;
+        width: auto;
+        padding: 0;
+        margin-bottom: 4px;
+        background: transparent;
+        border: none;
+        border-radius: 0;
+    }
+
+    #rotinasView .routine-card-no-time-awaiting__text {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        clip-path: inset(50%);
+        white-space: nowrap;
+        border: 0;
+    }
+
+    #rotinasView .routine-card-no-time-awaiting__icon {
+        margin-top: 0;
+        color: #000000;
+    }
+
+    #rotinasView .routine-card-streak {
+        min-height: 52px;
+        padding: 4px 0;
+    }
+
+    #rotinasView .routine-card-streak-label {
+        font-size: 0.62rem;
+        text-align: center;
+    }
+
+    #rotinasView .routine-card-streak-number {
+        font-size: clamp(1.35rem, 5.5vw, 1.75rem);
+        line-height: 1;
+    }
+
     #rotinasView .routine-card-heatmap {
         flex: 1 1 0;
         min-width: 0;
         width: auto;
         max-width: none;
-        min-height: 156px;
+        min-height: 0;
     }
 
     #rotinasView .routine-card-heatmap .heatmap-grid-month,
@@ -8968,17 +12514,32 @@ html:has(body.annotation-modal-open) {
     }
 
     #rotinasView .routine-card-heatmap .large-heatmap-block {
-        min-height: 176px;
-        padding: 10px 12px 18px;
+        min-height: 0;
+        padding: 6px 8px 12px;
     }
 
-    /* Carrossel 13 meses: em ≤900px a faixa usa width: 1300% no bloco ≤900px (sem clip em px). */
+    #rotinasView .routine-card-heatmap--carousel .calendar-month-header {
+        font-size: clamp(0.58rem, 2.4vw, 0.72rem);
+    }
+
+    #rotinasView .routine-card-heatmap--carousel .calendar-month--current .calendar-month-header {
+        font-size: clamp(0.72rem, 3vw, 0.88rem);
+    }
+
+    #rotinasView .routine-card-heatmap--carousel .calendar-weekday {
+        font-size: clamp(0.48rem, 2vw, 0.58rem);
+        padding: 2px 0;
+    }
 
     #rotinasView .routine-card-heatmap--carousel .calendar-days-grid {
-        gap: 5px;
+        gap: 2px;
     }
 
-    /* Meses laterais visíveis mas mais discretos; mês central legível (efeito carrossel) */
+    #rotinasView .routine-card-heatmap--carousel .heatmap-square:not(.empty) .heatmap-day-number {
+        font-size: clamp(0.46rem, 1.8vw, 0.54rem);
+    }
+
+    /* Meses laterais vis?veis mas mais discretos; m?s central leg?vel (efeito carrossel) */
     #rotinasView .routine-card-heatmap .calendar-month:not(.calendar-month--current) {
         transform: scale(0.88);
         filter: blur(1.5px);
@@ -8989,7 +12550,7 @@ html:has(body.annotation-modal-open) {
         transform: scale(1.02);
     }
 
-    /* Por cima: no carrossel mobile, sem blur/escala — o clip-path já esconde os lados */
+    /* Por cima: no carrossel mobile, sem blur/escala ? o clip-path j? esconde os lados */
     #rotinasView .routine-card-heatmap--carousel .calendar-month:not(.calendar-month--current),
     #rotinasView .routine-card-heatmap--carousel .calendar-month--current {
         transform: none;
@@ -9036,9 +12597,9 @@ html:has(body.annotation-modal-open) {
     }
 
     /*
-     * Não redefinir .calendar-months-container / .calendar-month aqui: no projeto só existem
+     * N?o redefinir .calendar-months-container / .calendar-month aqui: no projeto s? existem
      * dentro do heatmap dos cards (.routine-card-heatmap). Empilhar em coluna quebrava a
-     * faixa horizontal de 13 meses e a grelha de 7 dias (parecia “3 colunas” / células vazias).
+     * faixa horizontal de 13 meses e a grelha de 7 dias (parecia ?3 colunas? / c?lulas vazias).
      */
 
     .heatmap-grid-month {
@@ -9133,20 +12694,20 @@ html:has(body.annotation-modal-open) {
         padding-right: 0;
     }
 
-    /* Cards: linha (info | calendário) como no PC */
+    /* Cards: info ? esquerda + heatmap ? direita (compacto) */
     #rotinasView .routine-card {
-        padding: 12px;
+        padding: 8px;
         flex-direction: row;
         align-items: stretch;
-        gap: 8px;
+        gap: 5px;
     }
 
     #rotinasView .routine-card-content {
-        flex: 0 1 auto;
-        min-width: 0;
-        max-width: min(40%, clamp(104px, 34vw, 150px));
-        width: auto;
-        gap: 10px;
+        flex: 0 0 auto;
+        min-width: clamp(84px, 24vw, 108px);
+        max-width: clamp(84px, 24vw, 108px);
+        width: clamp(84px, 24vw, 108px);
+        gap: 6px;
         overflow-x: visible;
         overflow-y: visible;
         overflow-wrap: anywhere;
@@ -9159,34 +12720,44 @@ html:has(body.annotation-modal-open) {
         min-width: 0;
         width: auto;
         max-width: none;
-        min-height: 148px;
+        min-height: 0;
     }
 
     #rotinasView .routine-card-title {
-        font-size: 1.2rem;
-        line-height: 1.35;
+        font-size: clamp(0.78rem, 3.6vw, 0.92rem);
+        line-height: 1.2;
         -webkit-line-clamp: 3;
         line-clamp: 3;
     }
 
     #rotinasView .routine-card-plan-badge {
-        font-size: 0.78rem;
-        padding: 4px 10px;
+        font-size: 0.68rem;
+        padding: 3px 7px;
+    }
+
+    #rotinasView .routine-card-bullet-row {
+        flex-wrap: nowrap;
+        gap: 5px;
     }
 
     #rotinasView .routine-card-description {
-        font-size: 0.95rem;
-        line-height: 1.45;
-        -webkit-line-clamp: 4;
-        line-clamp: 4;
+        font-size: 0.82rem;
+        line-height: 1.35;
+        -webkit-line-clamp: 3;
+        line-clamp: 3;
+    }
+
+    #rotinasView .routine-card-streak {
+        min-height: 44px;
+        padding: 2px 0;
     }
 
     #rotinasView .routine-card-streak-number {
-        font-size: clamp(1.35rem, 6vw, 1.8rem);
-        line-height: 1.05;
+        font-size: clamp(1.15rem, 5vw, 1.45rem);
+        line-height: 1;
     }
 
-    /* Botões de ação compactos (área de toque ainda ~32px) */
+    /* Bot?es de a??o compactos (?rea de toque ainda ~32px) */
     #rotinasView .card-action-btn {
         width: 30px;
         height: 30px;
@@ -9218,14 +12789,42 @@ html:has(body.annotation-modal-open) {
         width: 12px;
     }
 
-    #rotinasView .view-toggle > .filters {
+    #dashboardMainNav .view-toggle > .filters,
+#rotinasView .view-toggle > .filters {
         gap: 6px;
     }
 
+    #dashboardMainNav .filter-btn,
     #rotinasView .filter-btn {
         padding: 8px 8px;
         font-size: 0.88rem;
         min-height: 0;
+    }
+
+    /* CTA “Ir para tarefas”: menor no mobile */
+    #dashboardMainNav .view-toggle__shell > .view-toggle__cta.dashboard-nav-cta,
+    #dashboardMainNav .dashboard-nav-cta.btn-ver-cards {
+        min-height: 30px;
+        padding: 5px 8px;
+        gap: 3px;
+        border-radius: 6px;
+        font-size: 0.72rem;
+        letter-spacing: 0;
+    }
+
+    #dashboardMainNav .dashboard-nav-cta .btn-ver-cards-label {
+        font-size: 0.72rem;
+        font-weight: 650;
+    }
+
+    #dashboardMainNav .dashboard-nav-cta .btn-ver-cards-chevron {
+        width: 12px;
+        height: 12px;
+    }
+
+    #dashboardMainNav .dashboard-nav-cta .btn-ver-cards-chevron svg {
+        width: 12px;
+        height: 12px;
     }
 
     #rotinasView .add-routine-card {
@@ -9239,18 +12838,39 @@ html:has(body.annotation-modal-open) {
         padding: 0 8px;
     }
 
-    #rotinasView .routine-card-heatmap .calendar-month-header {
-        font-size: 0.95rem;
+    #rotinasView .routine-card-heatmap .large-heatmap-block {
+        padding: 5px 6px 10px;
+    }
+
+    #rotinasView .routine-card-heatmap--carousel .calendar-month-header {
+        font-size: clamp(0.52rem, 2.2vw, 0.66rem);
+    }
+
+    #rotinasView .routine-card-heatmap--carousel .calendar-month--current .calendar-month-header {
+        font-size: clamp(0.66rem, 2.8vw, 0.8rem);
+    }
+
+    #rotinasView .routine-card-heatmap--carousel .calendar-weekday {
+        font-size: clamp(0.44rem, 1.8vw, 0.52rem);
+        padding: 1px 0;
+    }
+
+    #rotinasView .routine-card-heatmap--carousel .calendar-days-grid {
+        gap: 1px;
+    }
+
+    #rotinasView .routine-card-heatmap--carousel .heatmap-square:not(.empty) .heatmap-day-number {
+        font-size: clamp(0.42rem, 1.6vw, 0.5rem);
     }
 
     #rotinasView .routine-card-heatmap .heatmap-nav-btn {
-        width: 40px;
-        height: 32px;
-        font-size: 1.1rem;
+        width: 34px;
+        height: 28px;
+        font-size: 0.95rem;
     }
 }
 
-/* iPhone 8 / SE / telemóveis estreitos (~375px) */
+/* iPhone 8 / SE / telem?veis estreitos (~375px) */
 @media (max-width: 414px) {
     .header {
         grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
@@ -9287,10 +12907,12 @@ html:has(body.annotation-modal-open) {
     }
 
     .header-profile-trigger {
-        max-width: 100%;
-        min-width: 0;
-        padding: 4px 6px;
-        gap: 6px;
+        max-width: none;
+        min-width: 40px;
+        min-height: 40px;
+        padding: 4px;
+        gap: 0;
+        justify-content: center;
     }
 
     .header-admin-btn {
@@ -9304,19 +12926,20 @@ html:has(body.annotation-modal-open) {
     }
 
     .username {
-        max-width: min(92px, 28vw);
-        font-size: 0.72rem;
+        /* j? oculto no @media 768px; refor?o em telas estreitas */
+        max-width: 0;
+        font-size: 0;
     }
 
     .user-avatar-wrap {
-        width: 28px;
-        height: 28px;
+        width: 30px;
+        height: 30px;
     }
 
     .user-avatar-img,
     .user-avatar-fallback {
-        width: 28px;
-        height: 28px;
+        width: 30px;
+        height: 30px;
     }
 
     .main-content {
@@ -9329,28 +12952,8 @@ html:has(body.annotation-modal-open) {
     body.dashboard-overview-visible .main-content {
         padding-top: 8px;
         padding-right: max(8px, env(safe-area-inset-right, 0px));
-        padding-bottom: max(8px, calc(8px + env(safe-area-inset-bottom, 0px)));
+        padding-bottom: max(12px, calc(12px + env(safe-area-inset-bottom, 0px)));
         padding-left: max(8px, env(safe-area-inset-left, 0px));
-        height: calc(100vh - 68px);
-        min-height: calc(100vh - 68px);
-    }
-
-    .dashboard-overview {
-        padding: 6px 6px 8px;
-        min-height: calc(100vh - 68px);
-        max-height: calc(100vh - 68px);
-    }
-
-    @supports (height: 100dvh) {
-        body.dashboard-overview-visible .main-content {
-            height: calc(100dvh - 68px);
-            min-height: calc(100dvh - 68px);
-        }
-
-        .dashboard-overview {
-            min-height: calc(100dvh - 68px);
-            max-height: calc(100dvh - 68px);
-        }
     }
 
     .dashboard-overview .btn-ver-cards {
@@ -9383,18 +12986,140 @@ html:has(body.annotation-modal-open) {
         padding: 14px;
     }
 
+    #dashboardMainNav .view-btn,
     #rotinasView .view-btn,
+    #dashboardMainNav .filter-btn,
     #rotinasView .filter-btn {
         font-size: 0.68rem;
         padding: 8px 6px;
     }
 
     #rotinasView .routine-card-title {
-        font-size: 1.05rem;
+        font-size: clamp(0.72rem, 3.4vw, 0.88rem);
     }
 
     .back-btn {
         padding: 8px 10px;
         font-size: 0.82rem;
+    }
+
+    /* Calend?rio mensal: c?lulas mais altas, texto em 2 linhas */
+    .calendar-container {
+        padding: 12px 10px 16px;
+    }
+
+    .calendar-title {
+        font-size: 1.2rem;
+        margin-bottom: 12px;
+    }
+
+    .calendar-grid {
+        gap: 5px;
+    }
+
+    .calendar-day {
+        min-height: 5.25rem;
+        padding: 6px 4px;
+    }
+
+    .calendar-day-header {
+        font-size: 0.68rem;
+        padding: 6px 2px;
+    }
+
+    .calendar-day-task-name {
+        font-size: 0.62rem;
+        white-space: normal;
+        line-height: 1.25;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .calendar-day-tasks {
+        gap: 3px;
+        margin-top: 4px;
+    }
+
+    /* Gr?fico de produtividade: altura proporcional ao conte?do */
+    .dashboard-overview .dashboard-card--frequency .dashboard-frequency-content {
+        min-height: 0;
+        padding: 12px 10px 10px;
+    }
+
+    .dashboard-overview .dashboard-card--frequency .dashboard-frequency-chart-wrap {
+        min-height: 0;
+    }
+
+    .dashboard-overview .dashboard-frequency-chart-svg {
+        max-height: 180px;
+    }
+
+    .dashboard-frequency-legend {
+        gap: 6px;
+    }
+
+    .dashboard-frequency-legend-item {
+        font-size: 0.68rem;
+        padding: 4px 8px;
+    }
+
+    .dashboard-card--progress {
+        padding: 16px 14px;
+    }
+
+    .dashboard-card--progress .dashboard-progress-content {
+        gap: 12px;
+    }
+}
+
+/* iPhone 11 / telem?veis m?dios (?768px) ? dashboard e calend?rio */
+@media (max-width: 768px) {
+    .dashboard-overview {
+        max-height: none;
+        min-height: auto;
+        overflow-y: visible;
+        padding: 10px 10px 20px;
+        gap: 12px;
+    }
+
+    .dashboard-overview .dashboard-card {
+        padding: 16px 14px;
+    }
+
+    .dashboard-overview .dashboard-card--frequency .dashboard-frequency-content {
+        min-height: 0;
+    }
+
+    .dashboard-overview .dashboard-card--frequency .dashboard-frequency-chart-wrap {
+        min-height: 0;
+    }
+
+    .dashboard-overview .dashboard-frequency-chart-svg {
+        max-height: 160px;
+    }
+
+    .dashboard-day-summary {
+        padding: 12px 14px;
+        border-radius: 10px;
+    }
+
+    .dashboard-day-summary-date {
+        font-size: 1.05rem;
+    }
+
+    .calendar-container {
+        padding: 14px 12px 18px;
+    }
+
+    .calendar-day {
+        min-height: 4.5rem;
+    }
+
+    .view-btn {
+        min-height: 44px;
+        padding: 10px 12px;
     }
 }

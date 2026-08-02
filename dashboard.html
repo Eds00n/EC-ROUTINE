@@ -6,6 +6,16 @@
             try {
                 if (localStorage.getItem('ecRoutineTheme') === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
                 if (localStorage.getItem('ecRoutineShowDayNumbers') === '0') document.documentElement.setAttribute('data-ec-day-numbers', 'off');
+                if (sessionStorage.getItem('ec_nav_busy') === '1') {
+                    sessionStorage.removeItem('ec_nav_busy');
+                }
+                var skipEntrySplash = false;
+                try {
+                    skipEntrySplash = new URLSearchParams(window.location.search).get('view') === 'cards';
+                } catch (eSkip) {}
+                if (!skipEntrySplash) {
+                    document.documentElement.classList.add('ec-entry-pending', 'ec-entry-boot');
+                }
             } catch (e) {}
         })();
     </script>
@@ -21,6 +31,7 @@
     <!-- Se dashboard.css falhar (404 no servidor), o header não fica com o botão cinza por defeito do browser -->
     <style id="ec-dashboard-header-fallback">
         body { margin: 0; font-family: 'Rajdhani', system-ui, sans-serif; background: #fafafa; color: #111; }
+        html[data-theme="dark"] body { background: #000000; color: #fafafa; }
         .hidden { display: none !important; }
         .header {
             display: grid;
@@ -63,44 +74,38 @@
             background: linear-gradient(135deg, #1a1a2e 0%, #2563eb 100%);
         }
         .user-avatar-img { border-radius: 8px; object-fit: cover; vertical-align: middle; }
-        .dashboard-boot-loader {
-            position: fixed;
-            inset: 0;
-            z-index: 5000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #f8fafc;
-            color: #0f172a;
-            opacity: 1;
+        /* Splash EC ROUTINE — não mostrar header/dashboard antes do JS */
+        html.ec-entry-pending body > .header,
+        html.ec-entry-pending body > .main-content,
+        html.ec-entry-boot body > .header,
+        html.ec-entry-boot body > .main-content {
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+        .ec-entry-screen:not(.is-hidden) {
             visibility: visible;
-            transition: opacity 0.35s ease, visibility 0s linear 0.35s;
-        }
-        .dashboard-boot-loader.is-hidden {
-            opacity: 0;
-            visibility: hidden;
-            pointer-events: none;
-        }
-        .dashboard-boot-loader__brand {
-            margin: 0;
-            font-size: clamp(2rem, 4.4vw, 3.2rem);
-            font-weight: 900;
-            letter-spacing: 0.14em;
-            text-transform: uppercase;
-            color: #000000;
+            pointer-events: auto;
         }
     </style>
-    <link rel="stylesheet" href="dashboard.css?v=20260510heatmap-pad">
-    <link rel="stylesheet" href="dashboard-theme.css?v=20260510typewriter">
-    <link rel="stylesheet" href="uiverse-trash-bin.css?v=20260418styles">
+    <link rel="stylesheet" href="lib/ec-entry-transition.css?v=20260704cleanup">
+    <link rel="stylesheet" href="lib/ec-busy-overlay.css?v=20260614navbusy">
+    <link rel="stylesheet" href="dashboard.css?v=20260716imgToggleHover">
+    <link rel="stylesheet" href="dashboard-theme.css?v=20260715bibSelect">
+    <link rel="stylesheet" href="uiverse-trash-bin.css?v=20260704cleanup">
     <link rel="stylesheet" href="uiverse-download-btn.css?v=20260418styles">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Inter:wght@400;500;600;900&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div id="dashboardBootLoader" class="dashboard-boot-loader is-hidden" role="status" aria-live="polite" aria-hidden="true" aria-label="A carregar dashboard">
-        <h1 class="dashboard-boot-loader__brand" aria-label="EC ROUTINE"><span class="dashboard-boot-loader__brand-text"></span></h1>
+    <div id="ecEntryScreen" class="ec-entry-screen is-hidden" role="status" aria-live="polite" aria-hidden="true" aria-label="EC ROUTINE">
+        <div class="ec-entry-stage">
+            <h1 class="ec-entry-wordmark" aria-label="EC ROUTINE">
+                <span class="ec-entry-wordmark__ghost" aria-hidden="true">EC ROUTINE</span>
+                <span class="ec-entry-wordmark__text"></span>
+            </h1>
+        </div>
     </div>
     <header class="header">
         <div class="header-left">
@@ -110,7 +115,6 @@
             <p class="header-subtitle">Organize sua rotina. Meça sua produtividade.</p>
         </div>
         <div class="header-right">
-            <a href="financeiro/index.html" class="header-financeiro-btn" title="Orçamento e extrato (CSV Nubank)">FINANCEIRO</a>
             <button type="button" class="header-admin-btn hidden" id="headerAdminBtn" hidden aria-hidden="true" title="Painel de administrador">ADM</button>
             <button type="button" class="header-profile-trigger" id="headerProfileTrigger" aria-haspopup="dialog" aria-expanded="false" aria-controls="userProfileModal" title="Ver perfil">
                 <span class="username" id="username">Administrador</span>
@@ -123,8 +127,36 @@
     </header>
 
     <main class="main-content">
+        <div class="dashboard-header" id="dashboardMainNav">
+            <div class="dashboard-controls dashboard-nav-row">
+                <div class="view-toggle">
+                    <div class="view-toggle__shell" id="viewToggleShell">
+                        <div class="view-toggle__views" id="viewToggleViews">
+                            <div class="view-toggle__indicator" id="viewToggleIndicator" aria-hidden="true"></div>
+                            <button type="button" class="view-btn" data-view="dashboard" id="btnVoltarDashboard" onclick="window.showDashboardOverview && window.showDashboardOverview(); return false;"><i data-lucide="layout-grid" class="view-btn-icon" aria-hidden="true"></i><span class="view-btn-label">Dashboard</span></button>
+                            <button type="button" class="view-btn" data-view="cards" id="cardsViewBtn" onclick="window.switchRotinasView && window.switchRotinasView('cards'); return false;"><i data-lucide="columns-2" class="view-btn-icon" aria-hidden="true"></i><span class="view-btn-label">Tarefas</span></button>
+                            <button type="button" class="view-btn" data-view="calendar" id="calendarViewBtn" onclick="window.switchRotinasView && window.switchRotinasView('calendar'); return false;"><i data-lucide="calendar" class="view-btn-icon" aria-hidden="true"></i><span class="view-btn-label">Calendário</span></button>
+                            <button type="button" class="view-btn" data-view="agenda" id="agendaViewBtn" onclick="window.switchRotinasView && window.switchRotinasView('agenda'); return false;"><i data-lucide="list" class="view-btn-icon" aria-hidden="true"></i><span class="view-btn-label">Agenda</span></button>
+                            <button type="button" class="view-btn" data-view="biblioteca" id="bibliotecaViewBtn" onclick="window.switchRotinasView && window.switchRotinasView('biblioteca'); return false;"><i data-lucide="book-open" class="view-btn-icon" aria-hidden="true"></i><span class="view-btn-label">Biblioteca de Agendamentos</span></button>
+                        </div>
+                        <button type="button" class="btn-ver-todas btn-ver-cards btn-ver-cards--neutral dashboard-nav-cta view-toggle__cta hidden" id="btnVerRotinas" aria-label="Ir para tarefas">
+                            <span class="btn-ver-cards-label">Ir para tarefas</span>
+                            <i data-lucide="chevron-right" class="btn-ver-cards-chevron" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <div class="filters view-toggle__filters" id="viewToggleFilters">
+                        <button type="button" class="filter-btn filter-btn--create" id="btnNavCreateTask" aria-label="Criar nova tarefa" title="Nova tarefa"><span aria-hidden="true">+</span></button>
+                        <button type="button" class="filter-btn active" data-filter="all">Todas</button>
+                        <button type="button" class="filter-btn" data-filter="sequences">Sequências</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Páginas com transição deslizante (Dashboard / Tarefas / …) -->
+        <div class="ec-pages" id="ecPages">
         <!-- Dashboard: Hoje, resposta rápida -->
-        <div id="dashboardOverview" class="dashboard-overview hidden">
+        <div id="dashboardOverview" class="dashboard-overview ec-page hidden" data-ec-page="dashboard">
             <div class="dashboard-overview-bar" aria-label="Título do dashboard">
                 <h1 class="dashboard-hero-title">Dashboard</h1>
             </div>
@@ -133,7 +165,16 @@
 
             <div class="dashboard-two-col" aria-label="Produtividade e próximas">
                 <section class="dashboard-card dashboard-card--frequency" id="dashboardFrequency" aria-label="Produtividade">
-                    <h2 class="dashboard-card-label">GRAFICO DE PRODUTIVIDADE</h2>
+                    <h2 class="dashboard-card-label">GRÁFICO DE PRODUTIVIDADE</h2>
+                    <div class="dashboard-frequency-toolbar">
+                        <button type="button" class="dashboard-frequency-period-switch" id="dashboardFrequencyPeriodSwitch" role="switch" aria-checked="false" aria-label="Período: 7 dias. Clicar para 30 dias." title="Alternar 7d / 30d">
+                            <span class="dashboard-frequency-period-switch__track" aria-hidden="true">
+                                <span class="dashboard-frequency-period-switch__option">7d</span>
+                                <span class="dashboard-frequency-period-switch__option">30d</span>
+                                <span class="dashboard-frequency-period-switch__thumb"></span>
+                            </span>
+                        </button>
+                    </div>
                     <div class="dashboard-frequency-content" id="dashboardFrequencyContent"></div>
                 </section>
                 <section class="dashboard-card dashboard-card--next" id="dashboardNextDays" aria-label="Próximas">
@@ -147,95 +188,80 @@
                 <div class="dashboard-today-content" id="dashboardTodayContent"></div>
             </section>
 
-            <section class="dashboard-card dashboard-card--progress" id="dashboardProgress" aria-label="Progresso do dia">
-                <h2 class="dashboard-card-label"><span class="dashboard-card-icon dashboard-card-icon--progress" aria-hidden="true"></span>Progresso do dia</h2>
-                <p class="dashboard-card-desc">Rotinas de hoje concluídas em relação ao total agendado.</p>
-                <div class="dashboard-progress-content" id="dashboardProgressContent"></div>
-            </section>
-
-            <section class="dashboard-card dashboard-card--stats-charts" id="dashboardStatsCharts" aria-label="Gráficos estatísticos">
-                <h2 class="dashboard-card-label">Gráficos estatísticos</h2>
-                <p class="dashboard-card-desc">Evolução semanal e taxa de conclusão do dia.</p>
-                <div class="dashboard-stats-charts-grid">
-                    <div class="dashboard-stat-chart-box" id="dashboardCircleToday">
-                        <h3 class="dashboard-stat-chart-box-title">Taxa hoje</h3>
-                        <div class="dashboard-stat-chart-box-content" id="dashboardCircleTodayContent"></div>
-                    </div>
-                    <div class="dashboard-stat-chart-box dashboard-stat-chart-box--pending" id="dashboardPendingTasks">
-                        <div class="dashboard-pending-tasks-content" id="dashboardPendingTasksContent"></div>
-                    </div>
-                    <div class="dashboard-stat-chart-box" id="dashboardBarWeek">
-                        <h3 class="dashboard-stat-chart-box-title">Últimos 7 dias</h3>
-                        <div class="dashboard-stat-chart-box-content" id="dashboardBarWeekContent"></div>
-                    </div>
-                </div>
-            </section>
-
-            <div class="dashboard-overview-actions">
-                <p class="dashboard-ver-cards-kicker"><span class="dashboard-ver-cards-kicker-inner">EC ROUTINE</span></p>
-                <button type="button" class="btn-ver-todas btn-ver-cards btn-ver-cards--neutral" id="btnVerRotinas" aria-label="Ver rotinas em cards">
-                    <i data-lucide="layout-grid" class="btn-ver-cards-icon" aria-hidden="true"></i>
-                    <span class="btn-ver-cards-label">Ver cards</span>
-                    <i data-lucide="chevron-right" class="btn-ver-cards-chevron" aria-hidden="true"></i>
-                </button>
+            <div class="dashboard-metrics-row" aria-label="Métricas do dia">
+                <section class="dashboard-card dashboard-metric-card dashboard-card--progress" id="dashboardProgress" aria-label="Progresso do dia">
+                    <h2 class="dashboard-metric-card-title"><i data-lucide="check-circle" class="dashboard-metric-card-icon" aria-hidden="true"></i>Progresso do dia</h2>
+                    <div class="dashboard-progress-content" id="dashboardProgressContent"></div>
+                </section>
+                <section class="dashboard-card dashboard-metric-card dashboard-metric-card--taxa" id="dashboardCircleToday" aria-label="Taxa hoje">
+                    <h2 class="dashboard-metric-card-title">Taxa hoje</h2>
+                    <div class="dashboard-stat-chart-box-content" id="dashboardCircleTodayContent"></div>
+                </section>
+                <section class="dashboard-card dashboard-metric-card dashboard-metric-card--pending dashboard-metric-card--clickable" id="dashboardPendingTasks" role="button" tabindex="0" aria-label="Tarefas pendentes — abrir lista" aria-haspopup="dialog" aria-controls="dashboardPendingModal">
+                    <div class="dashboard-pending-tasks-content" id="dashboardPendingTasksContent"></div>
+                </section>
+                <section class="dashboard-card dashboard-metric-card dashboard-metric-card--week dashboard-metric-card--clickable" id="dashboardBarWeek" role="button" tabindex="0" aria-label="Últimos 30 dias — abrir detalhes" aria-haspopup="dialog" aria-controls="dashboardWeekModal">
+                    <h2 class="dashboard-metric-card-title"><i data-lucide="trending-up" class="dashboard-metric-card-icon" aria-hidden="true"></i>Últimos 30 dias</h2>
+                    <div class="dashboard-stat-chart-box-content" id="dashboardBarWeekContent"></div>
+                </section>
             </div>
             <p id="dashboardLastUpdate" class="dashboard-last-update" aria-live="polite"></p>
         </div>
 
         <!-- Tela de Cards/Calendário/Agenda (oculta por padrão) -->
         <div id="rotinasView" class="rotinas-view hidden">
-            <div class="dashboard-header">
-                <div class="dashboard-controls">
-                    <div class="view-toggle">
-                        <div class="view-toggle__views">
-                            <button type="button" class="view-btn" data-view="dashboard" id="btnVoltarDashboard" onclick="window.showDashboardOverview && window.showDashboardOverview(); return false;">Dashboard</button>
-                            <button type="button" class="view-btn active" data-view="cards" id="cardsViewBtn" onclick="window.switchRotinasView && window.switchRotinasView('cards'); return false;">Cards</button>
-                            <button type="button" class="view-btn" data-view="calendar" id="calendarViewBtn" onclick="window.switchRotinasView && window.switchRotinasView('calendar'); return false;">Calendário</button>
-                            <button type="button" class="view-btn" data-view="agenda" id="agendaViewBtn" onclick="window.switchRotinasView && window.switchRotinasView('agenda'); return false;">Agenda</button>
-                            <button type="button" class="view-btn" data-view="biblioteca" id="bibliotecaViewBtn" onclick="window.switchRotinasView && window.switchRotinasView('biblioteca'); return false;">Biblioteca de Agendamentos</button>
-                        </div>
-                        <div class="filters">
-                            <button type="button" class="filter-btn active" data-filter="all">Todas</button>
-                            <button type="button" class="filter-btn" data-filter="sequences">Sequências</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <div class="routines-container" id="routinesContainer">
-                <div class="dashboard-layout">
+                <div class="dashboard-layout ec-page hidden" id="cardsPage" data-ec-page="cards">
                     <div class="routines-column">
                         <div class="routines-list" id="routinesGrid">
                             <!-- Cards de rotinas serão inseridos aqui via JavaScript -->
                         </div>
                     </div>
                 </div>
-                <div class="calendar-view hidden" id="calendarView">
+                <div class="calendar-view ec-page hidden" id="calendarView" data-ec-page="calendar">
                     <!-- Visualização de calendário será inserida aqui -->
                 </div>
-                <div class="agenda-view hidden" id="agendaView">
+                <div id="calendarDayDetail" class="calendar-day-detail" hidden aria-hidden="true">
+                    <div class="calendar-day-detail__backdrop" data-cal-detail-close tabindex="-1"></div>
+                    <div class="calendar-day-detail__panel" role="dialog" aria-modal="true" aria-labelledby="calendarDayDetailTitle">
+                        <button type="button" class="calendar-day-detail__close" data-cal-detail-close aria-label="Fechar">&times;</button>
+                        <div class="calendar-day-detail__head">
+                            <h3 class="calendar-day-detail__title" id="calendarDayDetailTitle"></h3>
+                            <p class="calendar-day-detail__summary" id="calendarDayDetailSummary"></p>
+                        </div>
+                        <ul class="calendar-day-detail__list" id="calendarDayDetailList"></ul>
+                    </div>
+                </div>
+                <div class="agenda-view ec-page hidden" id="agendaView" data-ec-page="agenda">
                     <!-- Visualização de agenda será inserida aqui -->
                 </div>
-                <div class="biblioteca-view hidden" id="bibliotecaView">
+                <div class="biblioteca-view ec-page hidden" id="bibliotecaView" data-ec-page="biblioteca">
                     <!-- Biblioteca de agendamentos passados -->
                 </div>
             </div>
 
         </div>
+        </div><!-- /#ecPages -->
     </main>
 
     <!-- Container de Notificações -->
     <div class="notification-container" id="notificationContainer"></div>
 
     <!-- Tela de Apresentação (1x por dia) -->
-    <div id="dailyOnboardingOverlay" class="daily-onboarding-overlay" aria-hidden="true">
+    <div id="dailyOnboardingOverlay" class="daily-onboarding-overlay daily-onboarding-overlay--ec-entry" hidden aria-hidden="true">
         <div class="daily-onboarding-card" role="dialog" aria-label="Apresentação do app">
             <div class="daily-onboarding-steps">
-                <div class="daily-onboarding-step daily-onboarding-step--1 is-active" data-step="1">
+                <div class="daily-onboarding-step daily-onboarding-step--1" data-step="1" hidden aria-hidden="true">
                     <h1 class="daily-onboarding-main-title">EC ROUTINE</h1>
                 </div>
-                <div class="daily-onboarding-step daily-onboarding-step--2" data-step="2">
-                    <h2 class="daily-onboarding-step2-heading">Tarefas de hoje</h2>
+                <div class="daily-onboarding-step daily-onboarding-step--welcome" data-step="2">
+                    <h2 class="daily-onboarding-welcome-heading" id="dailyOnboardingWelcomeHeading">Seja bem-vindo</h2>
+                </div>
+                <div class="daily-onboarding-step daily-onboarding-step--welcome daily-onboarding-step--first-create" data-step="4">
+                    <h2 class="daily-onboarding-welcome-heading" id="dailyOnboardingFirstCreateHeading">Vamos criar sua primeira tarefa?</h2>
+                </div>
+                <div class="daily-onboarding-step daily-onboarding-step--tasks" data-step="3">
+                    <h2 class="daily-onboarding-step2-heading">Tarefas do dia</h2>
                     <p class="daily-onboarding-step2-desc">Importantes primeiro; depois pendentes e em andamento.</p>
                     <div id="dailyOnboardingTasksList" class="daily-onboarding-tasks-list" aria-live="polite"></div>
                 </div>
@@ -243,16 +269,19 @@
         </div>
     </div>
 
-    <!-- Boas-vindas pós-login (só se não houver rotinas) — mesmo visual da apresentação diária -->
-    <div id="postLoginWelcomeOverlay" class="daily-onboarding-overlay" aria-hidden="true">
+    <!-- Boas-vindas pós-login (só se não houver rotinas) — mesmas telas do onboarding diário -->
+    <div id="postLoginWelcomeOverlay" class="daily-onboarding-overlay" hidden aria-hidden="true">
         <div class="daily-onboarding-card" role="dialog" aria-label="Boas-vindas">
             <div class="daily-onboarding-steps">
                 <div class="daily-onboarding-step daily-onboarding-step--1 is-active" data-step="1">
                     <h1 class="daily-onboarding-main-title">EC ROUTINE</h1>
+                    <button type="button" class="daily-onboarding-continue-btn" data-onboarding-advance>Continuar</button>
                 </div>
-                <div class="daily-onboarding-step daily-onboarding-step--2" data-step="2">
-                    <h2 class="daily-onboarding-step2-heading">Seja bem-vindo</h2>
-                    <p class="daily-onboarding-step2-desc">Vamos criar sua primeira tarefa?</p>
+                <div class="daily-onboarding-step daily-onboarding-step--welcome" data-step="2">
+                    <h2 class="daily-onboarding-welcome-heading">Seja bem-vindo</h2>
+                </div>
+                <div class="daily-onboarding-step daily-onboarding-step--welcome daily-onboarding-step--first-create" data-step="3">
+                    <h2 class="daily-onboarding-welcome-heading">Vamos criar sua primeira tarefa?</h2>
                 </div>
             </div>
         </div>
@@ -268,34 +297,25 @@
             </div>
         </div>
         <div class="annotation-modal-content">
-            <div class="annotation-modal-step annotation-modal-preview" id="annotationPreviewStep">
+            <div class="annotation-modal-step annotation-modal-task-pick hidden" id="annotationTaskPickStep">
+                <button type="button" class="annotation-preview-back" id="annotationTaskPickBack" aria-label="Voltar">← Voltar</button>
+                <h3 class="annotation-modal-title" id="annotationTaskPickTitle">Qual tarefa deseja fazer?</h3>
+                <p class="annotation-preview-desc" id="annotationTaskPickDesc">Escolha a tarefa de hoje para continuar.</p>
+                <div class="annotation-task-pick-days" id="annotationTaskPickDays" role="tablist" aria-label="Dia"></div>
+                <div class="annotation-task-pick-list" id="annotationTaskPickList" role="listbox" aria-label="Tarefas disponíveis"></div>
+                <p class="annotation-task-pick-empty hidden" id="annotationTaskPickEmpty">Nenhuma tarefa neste dia.</p>
+                <div class="annotation-task-pick-actions">
+                    <button type="button" class="annotation-task-pick-continue" id="annotationTaskPickContinue" disabled>Continuar</button>
+                </div>
+            </div>
+            <div class="annotation-modal-step annotation-modal-preview hidden" id="annotationPreviewStep">
                 <button type="button" class="annotation-preview-back" id="annotationPreviewBack" aria-label="Voltar">← Voltar</button>
                 <p class="annotation-preview-task-name" id="annotationPreviewTaskName"></p>
                 <h3 class="annotation-modal-title" id="annotationPreviewTitle">Escolha como anotar</h3>
-                <p class="annotation-preview-desc">Selecione um tipo de anotação para esta tarefa no dia indicado.</p>
+                <p class="annotation-preview-desc">Selecione a forma de anotação: Diagrama.</p>
                 <div class="annotation-preview-cards">
-                    <button type="button" class="annotation-preview-card" data-type="caderno" aria-label="Caderno Digital — em desenvolvimento. Folha com pauta para desenho e escrita à mão.">
-                        <img class="annotation-preview-thumb" src="assets/annotation-preview-caderno.svg?v=20260419caderno-dark" width="200" height="120" alt="" aria-hidden="true" decoding="async" />
-                        <div class="annotation-preview-card-stack">
-                            <span class="annotation-preview-label">Caderno Digital</span>
-                            <span class="annotation-preview-hint">Folha com pauta para desenho e escrita à mão.</span>
-                            <span class="annotation-preview-dev-note" role="note">Em desenvolvimento — pode mudar ou ter limitações.</span>
-                        </div>
-                    </button>
-                    <button type="button" class="annotation-preview-card" data-type="digitalizando" aria-label="Digitalizando — em desenvolvimento. Destacar e sublinhar texto da tarefa.">
-                        <img class="annotation-preview-thumb" src="assets/annotation-preview-digitalizando.png?v=20260419" width="200" height="120" alt="" aria-hidden="true" decoding="async" />
-                        <div class="annotation-preview-card-stack">
-                            <span class="annotation-preview-label">Digitalizando</span>
-                            <span class="annotation-preview-hint">Destacar e sublinhar texto da tarefa.</span>
-                            <span class="annotation-preview-dev-note" role="note">Em desenvolvimento — pode mudar ou ter limitações.</span>
-                        </div>
-                    </button>
-                    <button type="button" class="annotation-preview-card" data-type="mental" aria-label="Diagrama - Nós e ramos como anexos flutuantes que você pode arrastar">
-                        <img class="annotation-preview-thumb" src="assets/annotation-preview-diagrama.png?v=20260419" alt="" aria-hidden="true" decoding="async" />
-                        <div class="annotation-preview-card-stack">
-                            <span class="annotation-preview-label">Diagrama</span>
-                            <span class="annotation-preview-hint">Nós e ramos como anexos flutuantes que você pode arrastar.</span>
-                        </div>
+                    <button type="button" class="annotation-preview-card" data-type="mental" aria-label="Diagrama">
+                        <h2 class="annotation-preview-label">Diagrama</h2>
                     </button>
                 </div>
             </div>
@@ -356,6 +376,7 @@
                         <input type="range" id="annotationMentalTextSpacingRange" min="0" max="100" value="50" step="1" aria-label="Espaçamento (0 a 100)"/>
                     </div>
                     <div class="annotation-mental-canvas annotation-mental-canvas--draggable annotation-mental-canvas--pattern" id="annotationMentalCanvas">
+                        <div id="annotationMentalXyflowHost" hidden></div>
                         <div class="annotation-mental-pan-layer" id="annotationMentalPanLayer" title="Arraste para mover a vista" aria-label="Área para arrastar e mover a vista"></div>
                         <div class="annotation-mental-zoom-wrap" id="annotationMentalZoomWrap">
                             <div class="annotation-mental-center" id="annotationMentalCenter"></div>
@@ -381,6 +402,92 @@
                 </div>
                 <div class="annotation-viewer-nav hidden" id="annotationViewerNav" style="display: none;" aria-label="Navegar anotações"></div>
             </div>
+        </div>
+    </div>
+
+    <div class="ec-confirm-modal" id="ecConfirmModal" hidden role="dialog" aria-modal="true" aria-labelledby="ecConfirmModalTitle" aria-describedby="ecConfirmModalMessage" aria-hidden="true">
+        <div class="ec-confirm-modal__overlay" id="ecConfirmModalOverlay"></div>
+        <div class="ec-confirm-modal__panel" role="document">
+            <div class="ec-confirm-modal__icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+            </div>
+            <h2 class="ec-confirm-modal__title" id="ecConfirmModalTitle">Confirmar</h2>
+            <p class="ec-confirm-modal__message" id="ecConfirmModalMessage"></p>
+            <div class="ec-confirm-modal__actions">
+                <button type="button" class="ec-confirm-modal__btn ec-confirm-modal__btn--ghost" id="ecConfirmCancelBtn">Cancelar</button>
+                <button type="button" class="ec-confirm-modal__btn ec-confirm-modal__btn--danger" id="ecConfirmOkBtn">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: escolha Visão Simplificada vs Detalhada (1ª vez em Tarefas) -->
+    <div class="ec-cal-view-modal" id="ecCalViewChoiceModal" hidden role="dialog" aria-modal="true" aria-labelledby="ecCalViewChoiceTitle" aria-describedby="ecCalViewChoiceSubtitle" aria-hidden="true">
+        <div class="ec-cal-view-modal__overlay" id="ecCalViewChoiceOverlay"></div>
+        <div class="ec-cal-view-modal__panel" role="document">
+            <header class="ec-cal-view-modal__head">
+                <div class="ec-cal-view-modal__title-row">
+                    <span class="ec-cal-view-modal__title-icon" aria-hidden="true"><i data-lucide="calendar"></i></span>
+                    <h2 class="ec-cal-view-modal__title" id="ecCalViewChoiceTitle">Escolha o tipo de visualização</h2>
+                    <button type="button" class="ec-cal-view-modal__close" id="ecCalViewChoiceClose" aria-label="Fechar">×</button>
+                </div>
+                <p class="ec-cal-view-modal__subtitle" id="ecCalViewChoiceSubtitle">Selecione como deseja visualizar o calendário.</p>
+            </header>
+            <div class="ec-cal-view-modal__options">
+                <article class="ec-cal-view-modal__card" data-cal-view="simple">
+                    <div class="ec-cal-view-modal__preview" aria-hidden="true">
+                        <div class="ec-cal-view-preview">
+                            <div class="ec-cal-view-preview__weekdays">
+                                <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
+                            </div>
+                            <div class="ec-cal-view-preview__grid ec-cal-view-preview__grid--simple" id="ecCalViewPreviewSimple"></div>
+                        </div>
+                    </div>
+                    <h3 class="ec-cal-view-modal__card-title">Visão Simplificada</h3>
+                    <p class="ec-cal-view-modal__card-desc">Visualização compacta dos dias para uma visão rápida.</p>
+                    <button type="button" class="ec-cal-view-modal__select" data-cal-view-select="simple">Selecionar</button>
+                </article>
+                <article class="ec-cal-view-modal__card" data-cal-view="detailed">
+                    <div class="ec-cal-view-modal__preview" aria-hidden="true">
+                        <div class="ec-cal-view-preview">
+                            <div class="ec-cal-view-preview__weekdays">
+                                <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
+                            </div>
+                            <div class="ec-cal-view-preview__grid ec-cal-view-preview__grid--detailed" id="ecCalViewPreviewDetailed"></div>
+                        </div>
+                    </div>
+                    <h3 class="ec-cal-view-modal__card-title">Visão Detalhada</h3>
+                    <p class="ec-cal-view-modal__card-desc">Visualização completa com os números dos dias.</p>
+                    <button type="button" class="ec-cal-view-modal__select" data-cal-view-select="detailed">Selecionar</button>
+                </article>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Últimos 30 dias (estilo perfil) -->
+    <div class="dashboard-week-modal hidden" id="dashboardWeekModal" role="dialog" aria-modal="true" aria-labelledby="dashboardWeekModalTitle" aria-hidden="true">
+        <div class="dashboard-week-modal__overlay" id="dashboardWeekModalOverlay"></div>
+        <div class="dashboard-week-modal__panel" id="dashboardWeekModalPanel">
+            <button type="button" class="dashboard-week-modal__close" id="dashboardWeekModalClose" aria-label="Fechar">×</button>
+            <header class="dashboard-week-modal__head">
+                <p class="dashboard-week-modal__eyebrow">Visão geral</p>
+                <h2 class="dashboard-week-modal__title" id="dashboardWeekModalTitle">Últimos 30 dias</h2>
+                <p class="dashboard-week-modal__summary" id="dashboardWeekModalSummary"></p>
+            </header>
+            <div class="dashboard-week-modal__body" id="dashboardWeekModalBody"></div>
+        </div>
+    </div>
+
+    <!-- Modal Tarefas pendentes -->
+    <div class="dashboard-week-modal dashboard-pending-modal hidden" id="dashboardPendingModal" role="dialog" aria-modal="true" aria-labelledby="dashboardPendingModalTitle" aria-hidden="true">
+        <div class="dashboard-week-modal__overlay" id="dashboardPendingModalOverlay"></div>
+        <div class="dashboard-week-modal__panel" id="dashboardPendingModalPanel">
+            <button type="button" class="dashboard-week-modal__close" id="dashboardPendingModalClose" aria-label="Fechar">×</button>
+            <header class="dashboard-week-modal__head">
+                <p class="dashboard-week-modal__eyebrow">Hoje</p>
+                <h2 class="dashboard-week-modal__title" id="dashboardPendingModalTitle">Tarefas pendentes</h2>
+                <p class="dashboard-week-modal__summary" id="dashboardPendingModalSummary"></p>
+            </header>
+            <div class="dashboard-week-modal__body" id="dashboardPendingModalBody"></div>
         </div>
     </div>
 
@@ -480,8 +587,12 @@
     </div>
 
     <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
-    <script src="trash-bin-button.js"></script>
-    <script src="mental-diagram-svg-export.js"></script>
-    <script src="dashboard.js?v=20260510typewriter"></script>
+    <script src="trash-bin-button.js?v=20260704cleanup"></script>
+    <link rel="stylesheet" href="lib/mental-xyflow/dist/mental-xyflow.css?v=20260716imgToggleHover">
+    <script src="lib/mental-xyflow/dist/mental-xyflow.iife.js?v=20260716imgToggleHover"></script>
+    <script src="mental-diagram-svg-export.js?v=20260704cleanup"></script>
+    <script src="lib/ec-entry-transition.js?v=20260704cleanup"></script>
+    <script src="lib/ec-busy-overlay.js?v=20260614navbusy"></script>
+    <script src="dashboard.js?v=20260716pendingModal"></script>
 </body>
 </html>

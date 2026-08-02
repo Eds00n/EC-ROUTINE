@@ -57,7 +57,7 @@ Em **cada** HTML que carrega [api-base.js](api-base.js) (`dashboard.html`, `auth
 ## 4. Front estático separado (modelo B)
 
 1. Fazer build/deploy do repositório Node com as envs corretas.
-2. Copiar para o hosting estático: todos os `.html`, `.css`, `.js` de raiz e pastas referenciadas (`assets/`, `migrations/` **não** é necessária no front público).
+2. Copiar para o hosting estático: todos os `.html`, `.css`, `.js` de raiz e pastas referenciadas (`assets/`, **`lib/`** — obrigatória: `study-routine-core.js`, `routine-streak.js`, `ec-entry-transition.js`, `plan-type-figma/`, etc.). A pasta `migrations/` **não** é necessária no front público.
 3. Garantir que `api-base.js` e o meta `ec-api-base` apontam para a API real.
 4. No browser, abrir DevTools → Rede: se aparecer erro **CORS**, corrija `CORS_ORIGIN` na API (inclua o URL exato do front).
 
@@ -82,6 +82,8 @@ Execute manualmente na URL de produção:
 - [ ] `ADMIN_EMAILS` definido; abrir `/admin` com sessão desse e-mail e confirmar estatísticas; com outra conta, confirmar 403 em `/api/admin/summary`
 - [ ] `GET https://O-TEU-SERVICO.onrender.com/api/financeiro/ping` responde **200** JSON `{"ok":true,"financeiro":true,...}` (se der **404**, faça **Manual Deploy** na Render)
 - [ ] **Financeiro CSV:** com login no site, FINANCEIRO → importar CSV → painel; `POST /api/financeiro/import` com Bearer (teste após deploy). `CORS_ORIGIN` deve incluir o domínio Hostinger (ex.: `https://seudominio.com`)
+- [ ] **Rotinas Estudos:** matérias persistem; salvar sessão atualiza heatmap, histórico e card no dashboard; modal de produtividade ao clicar na linha; menu ⋮ excluir/restaurar sessões
+- [ ] **Deploy Hostinger:** confirmar que `lib/` está no servidor (DevTools → Rede: `study-routine-core.js` e `ec-entry-transition.js` respondem **200**, não **404**)
 - [ ] (Opcional PC) FTP no `.env` local + `SINCRONIZAR_AUTOMATICO.bat` publica `Planilha_Orcamento.html` na Hostinger
 
 ## 7. Outros
@@ -90,5 +92,5 @@ Execute manualmente na URL de produção:
 - **Cold start (Render free):** o primeiro pedido após inatividade pode ser lento.
 - **Proxy:** o servidor define `trust proxy` (1 hop por defeito) para a Render e **express-rate-limit v8**. Se `POST /api/login` voltar a responder **500**, experimente `TRUST_PROXY_HOPS=2` no ambiente. O limitador de `/api/login` e `/api/register` usa `keyGenerator` com fallback de IP, `validate: false` e `passOnStoreError: true` para não derrubar o pedido por detalhes de proxy ou da store em memória.
 - **CI:** [`.github/workflows/ci.yml`](.github/workflows/ci.yml) corre `npm test` em push/PR; **não faz deploy**.
-- **Deploy automático (front na Hostinger por FTP):** [`.github/workflows/deploy-hostinger.yml`](.github/workflows/deploy-hostinger.yml) envia o site estático no push a `main`/`master` quando altera `*.html`, `*.css`, `*.js` ou `assets/`. Configure no GitHub **Settings → Secrets → Actions:** `FTP_SERVER`, `FTP_USERNAME`, `FTP_PASSWORD`. Opcional: `FTP_SERVER_DIR` (ex.: `/public_html/`); sem este secret usa-se a raiz FTP (`/`). Sem os três primeiros segredos o job é ignorado.
+- **Deploy automático (front na Hostinger por FTP):** [`.github/workflows/deploy-hostinger.yml`](.github/workflows/deploy-hostinger.yml) envia o site estático no push a `main`/`master` quando altera `*.html`, `*.css`, `*.js`, `assets/` ou `lib/`. Inclui a pasta **`lib/`** (módulos do front). Exclui apenas ficheiros de backend em `lib/` (`store.js`, `store-pg.js`, `store-files.js`, `*.mjs`). Configure no GitHub **Settings → Secrets → Actions:** `FTP_SERVER`, `FTP_USERNAME`, `FTP_PASSWORD`. Opcional: `FTP_SERVER_DIR` (ex.: `/public_html/`); sem este secret usa-se a raiz FTP (`/`). Sem os três primeiros segredos o job é ignorado.
 - **Legal:** personalizar o contacto do responsável em [privacidade.html](privacidade.html) antes de tráfego público alargado (ver [README.md](README.md)).

@@ -26,7 +26,7 @@
 
     // Rejeita vazio, espaços ou valor residual curto (não é sessão real)
     if (!token || token.length < 12) {
-        window.location.replace('auth.html?view=login');
+        window.location.replace('/auth.html?view=login');
         return;
     }
 })();

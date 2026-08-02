@@ -16,3 +16,41 @@ canvas {
 .main-content {
     min-width: 0;
 }
+
+/* Áreas de toque mínimas em mobile (WCAG ~44px) — não forçar em .fin-nav (já definido) */
+@media (max-width: 768px) {
+    button:not(.view-btn),
+    .filter-btn,
+    .back-btn,
+    .card-action-btn,
+    a.fin-btn {
+        min-height: 44px;
+    }
+
+    .fin-nav .view-btn {
+        min-height: 44px;
+    }
+
+    .card-action-btn {
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+        min-height: 36px;
+    }
+}
+
+/* Evita overflow horizontal em telemóveis */
+@media (max-width: 480px) {
+    body {
+        overflow-x: hidden;
+    }
+
+    .header,
+    .main-content,
+    .calendar-view,
+    .dashboard-overview,
+    #rotinasView {
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+}

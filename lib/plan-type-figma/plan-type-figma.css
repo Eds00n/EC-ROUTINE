@@ -1,0 +1,2567 @@
+/* Scoped from Figma export — regenerate: node lib/plan-type-figma/scope-css.mjs */
+@property --hero-v-offset {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+
+#planTypeFigmaApp,
+#planTypeFigmaApp.app {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  width: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+  font-family: Inter, sans-serif;
+  color: var(--pt-col-fg, #000);
+  background: var(--pt-app-bg, #fff);
+  -webkit-font-smoothing: antialiased;
+}
+
+#planTypeFigmaApp[hidden] {
+  display: none !important;
+}
+
+/* ---- Ponte “some → aparece” (PC + mobile, fade suave — claro e escuro) ---- */
+#planTypeFigmaApp.app {
+  transition:
+    background-color var(--dur-shade-brand-exit) var(--ease-shade-brand-exit),
+    color var(--dur-shade-brand-exit) var(--ease-shade-brand-exit);
+}
+
+/* Véu da ponte: claro = preto; dark = cinza (--pt-transition-bg) */
+#planTypeFigmaApp.app::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 38;
+  background: var(--pt-transition-bg, #000000);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity var(--dur-shade-brand-exit) var(--ease-shade-brand-exit),
+    background-color var(--dur-shade-brand-exit) var(--ease-shade-brand-exit);
+}
+
+#planTypeFigmaApp.app.is-brand-exiting::before,
+#planTypeFigmaApp.app.is-mobile-blackout::before,
+#planTypeFigmaApp.app.is-col-opening::before,
+#planTypeFigmaApp.app.is-col-open::before,
+#planTypeFigmaApp.app.is-return-to-black::before,
+#planTypeFigmaApp.app.is-return-to-default::before {
+  opacity: 1;
+}
+
+/*
+ * Voltar: tudo some JUNTO (claro e dark — sem stagger).
+ * Filhos congelam; só o container (e a img do layer) fazem fade na mesma duração.
+ */
+#planTypeFigmaApp {
+  --pt-confirm-exit-ms: 280ms;
+}
+
+#planTypeFigmaApp .tarefa-screen.is-confirm-exiting *,
+#planTypeFigmaApp .tarefa-screen.is-confirm-exiting *::before,
+#planTypeFigmaApp .tarefa-screen.is-confirm-exiting *::after {
+  transition: none !important;
+  animation: none !important;
+  transition-delay: 0s !important;
+}
+
+#planTypeFigmaApp .tarefa-screen.is-confirm-exiting {
+  opacity: 0 !important;
+  transition: opacity var(--pt-confirm-exit-ms, 280ms) ease !important;
+  pointer-events: none;
+}
+
+#planTypeFigmaApp .plan-type-mobile-img-layer.is-confirm-exiting,
+#planTypeFigmaApp .plan-type-mobile-img-layer.is-confirm-exiting > img {
+  opacity: 0 !important;
+  transition: opacity var(--pt-confirm-exit-ms, 280ms) ease !important;
+  transition-delay: 0s !important;
+  animation: none !important;
+}
+
+/* Claro — ponte: fundo atual → branco da seleção */
+html:not([data-theme="dark"]) #planTypeFigmaApp.app.is-return-to-default::before,
+html:not([data-theme="dark"]) #planTypeFigmaApp.app.is-mobile-blackout.is-return-to-default::before {
+  background: var(--pt-app-bg, #ffffff);
+}
+
+html:not([data-theme="dark"]) #planTypeFigmaApp.app.is-return-to-default {
+  background: var(--pt-app-bg, #ffffff);
+  color: var(--pt-col-fg, #000000);
+}
+
+html:not([data-theme="dark"]) #planTypeFigmaApp.app.is-brand-returning::before {
+  background: var(--pt-app-bg, #ffffff);
+  opacity: 0;
+}
+
+/* Dark — ponte: cinza → preto (característica do tema) */
+html[data-theme="dark"] #planTypeFigmaApp.app.is-return-to-black::before,
+html[data-theme="dark"] #planTypeFigmaApp.app.is-mobile-blackout.is-return-to-black::before {
+  background: #000000;
+}
+
+html[data-theme="dark"] #planTypeFigmaApp.app.is-return-to-black {
+  background: #000000;
+  color: #ffffff;
+}
+
+html[data-theme="dark"] #planTypeFigmaApp.app.is-brand-returning::before {
+  background: #000000;
+  opacity: 0;
+}
+
+#planTypeFigmaApp.app.is-brand-exiting,
+#planTypeFigmaApp.app.is-col-opening,
+#planTypeFigmaApp.app.is-col-open,
+#planTypeFigmaApp.app.is-mobile-blackout {
+  background: var(--pt-transition-bg, #000000);
+  color: #ffffff;
+}
+
+#planTypeFigmaApp.app.is-brand-exiting .stage,
+#planTypeFigmaApp.app.is-mobile-blackout .stage {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity calc(var(--dur-shade-brand-exit) * 0.85) var(--ease-shade-brand-exit);
+}
+
+#planTypeFigmaApp.app.is-brand-exiting .stage .col,
+#planTypeFigmaApp.app.is-col-opening:not(.is-col-open) .stage .col,
+#planTypeFigmaApp.app.is-mobile-blackout .stage .col {
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity calc(var(--dur-shade-brand-exit) * 0.85) var(--ease-shade-brand-exit),
+    background-color var(--dur-shade-brand-exit) var(--ease-shade-brand-exit),
+    color var(--dur-shade-brand-exit) var(--ease-shade-brand-exit);
+}
+
+#planTypeFigmaApp.app.is-brand-returning .stage {
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity calc(var(--dur-shade-brand-exit) * 0.85) var(--ease-shade-brand-exit);
+}
+
+#planTypeFigmaApp.app.is-brand-exiting .plan-type-stage-back {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-1.25rem);
+  transition:
+    opacity calc(var(--dur-shade-brand-exit) * 0.65) var(--ease-shade-brand-exit),
+    transform var(--dur-shade-brand-exit) var(--ease-shade-brand-exit),
+    visibility 0s linear var(--dur-shade-brand-exit);
+}
+
+#planTypeFigmaApp.app.is-mobile-blackout > .header,
+#planTypeFigmaApp.app.is-mobile-blackout .plan-type-stage-back {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  transition:
+    opacity calc(var(--dur-shade-brand-exit) * 0.75) var(--ease-shade-brand-exit),
+    visibility 0s linear calc(var(--dur-shade-brand-exit) * 0.75);
+}
+
+#planTypeFigmaApp.app.is-brand-returning > .header {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: none;
+  transform: translateY(0);
+  transition:
+    opacity calc(var(--dur-shade-brand-exit, 580ms) * 0.75) var(--ease-shade-brand-exit, ease),
+    transform var(--dur-shade-brand-exit, 580ms) var(--ease-shade-brand-exit, ease),
+    visibility 0s;
+}
+
+#planTypeFigmaApp.app.is-brand-returning .stage .col {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition:
+    opacity calc(var(--dur-shade-brand-exit) * 0.85) var(--ease-shade-brand-exit),
+    background-color 0.22s ease,
+    color 0.22s ease;
+}
+
+#planTypeFigmaApp.app.is-brand-returning .plan-type-stage-back {
+  opacity: 0.88;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
+  transition:
+    opacity calc(var(--dur-shade-brand-exit) * 0.65) var(--ease-shade-brand-exit),
+    transform var(--dur-shade-brand-exit) var(--ease-shade-brand-exit),
+    visibility 0s;
+}
+
+#planTypeFigmaApp .plan-type-mobile-img-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  pointer-events: none;
+  isolation: isolate;
+}
+
+#planTypeFigmaApp .plan-type-mobile-img-layer > img {
+  mix-blend-mode: normal !important;
+  filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.45));
+  transition-property: opacity !important;
+}
+
+/*
+ * EC ROUTINE — dQyTti3wysCs1K5lgSuCL8 · 1728×1117
+ * 412:6 default · 412:98 diario · 412:29 semanal · 412:52 mensal · 412:75 tarefa · 412:121 fullscreen
+ *
+ * Hover: 800ms Quick + overshoot (Smart Animate)
+ * Click:  1200ms cubic-bezier(0.71, -0.02, 0.25, 0.99)
+ */
+
+#planTypeFigmaApp *,
+#planTypeFigmaApp *::before,
+#planTypeFigmaApp *::after {
+  box-sizing: border-box;
+}
+
+#planTypeFigmaApp {
+  /*
+   * Figma 412 — modo claro de referência (Documents/figma):
+   * canvas branco + sombra preta + texto preto/branco.
+   * Não usar --ec-entry-bg aqui (é cinza claro e quebra o shade).
+   */
+  --pt-app-bg: #ffffff;
+  --pt-col-bg: #ffffff;
+  --pt-col-fg: #000000;
+  --pt-shade: #000000;
+  --pt-transition-bg: #000000;
+  --pt-on-shade-fg: #ffffff;
+  --pt-header-fg: #000000;
+
+  /* Figma Quick + overshoot intenso */
+  --ease-hover: cubic-bezier(0.22, 1.82, 0.45, 1);
+  --ease-hover-out: cubic-bezier(0, 0.6, 0.3, 1);
+  --dur-hover: 800ms;
+  --dur-hover-out: 260ms;
+  --visual-lift: -4%;
+  --visual-scale-idle: 0.78;
+  --ease-click: cubic-bezier(0.71, -0.02, 0.25, 0.99);
+  --dur-click: 1200ms;
+  --dur-shade-sweep: 1200ms;
+  --dur-shade-brand-exit: 580ms;
+  --ease-shade-brand-exit: cubic-bezier(0.4, 0, 0.22, 1);
+  --dur-word-track: 1200ms;
+  --dur-word-track-reverse: 900ms;
+  --dur-morph-fast: 1200ms;
+  --dur-morph-reverse: 900ms;
+  --dur-mobile-img-fade: 1500ms;
+  --dur-footer-reveal: 900ms;
+  --delay-footer-list: 450ms;
+  --dur-feature-reveal: 480ms;
+  --delay-feature-item-step: 105ms;
+  --delay-accent-reveal: calc(var(--delay-footer-list) + 380ms);
+  --dur-accent-draw: 1.15s;
+  --delay-footer-btn: calc(
+    var(--delay-footer-list) + 2 * var(--delay-feature-item-step) + var(--dur-feature-reveal) + 120ms
+  );
+  --delay-back-btn: 350ms;
+  --ease-footer-reveal: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-list-reveal: cubic-bezier(0.33, 1, 0.68, 1);
+
+  /* 412:6 — header superior esquerdo */
+  --header-x: 2%;       /* ~35 / 1728 */
+  --header-y: 7.5%;     /* ~84 / 1117 */
+  --title-size: 36px;
+  --subtitle-size: 14px;
+
+  /* 4 colunas iguais (432px = 25%) */
+  --col-share: 25%;
+
+  /* texto colunas — idle / hover */
+  --body-idle: 53.98%;   /* 603 / 1117 */
+  --body-active: 65.09%; /* 727 / 1117 */
+
+  /* card 3D na coluna — mesma posição idle e hover (evita salto no click) */
+  --visual-top-active: calc(var(--body-active) - var(--visual-h) - var(--visual-gap));
+  --visual-h: 38%;
+  --visual-gap: 5px;
+
+  --heading-size: 32px;
+  --tarefa-heading: 31px;
+  --desc-size: 14px;
+
+  /* 412:121 fullscreen */
+  --hero-size: 250px;
+  --tarefa-title-size: 64px;
+  --tarefa-desc-size: 20px;
+  --btn-label-size: 48px;
+  --footer-x: 3.53%;     /* 61 / 1728 */
+  --footer-title-y: 64.01%; /* 715 / 1117 */
+  --btn-w: 367px;
+  --btn-h: 80px;
+  --btn-radius: 7px;
+  --tarefa-footer-list-btn-gap: clamp(1.25rem, 2.2dvh, 2rem);
+  --tarefa-footer-title-size: 15px;
+  --tarefa-footer-lead-size: 0.75rem;
+  --tarefa-footer-feature-title: 0.75rem;
+  --tarefa-footer-feature-desc: 0.6875rem;
+  --tarefa-footer-icon-size: 1.875rem;
+  --tarefa-footer-list-gap: 0.65rem;
+  --tarefa-footer-heading-gap: 0.5rem;
+}
+
+/* Site em dark: faixa de hover cinza (não branco) — PNGs têm fundo preto e “somem” nele */
+html[data-theme="dark"] #planTypeFigmaApp {
+  --pt-app-bg: var(--ec-body-bg, #09090b);
+  --pt-col-bg: var(--ec-body-bg, #09090b);
+  --pt-col-fg: var(--ec-heading, #fafafa);
+  --pt-shade: var(--ec-surface-3, #222226);
+  --pt-transition-bg: var(--ec-surface-3, #222226);
+  --pt-on-shade-fg: var(--ec-heading, #fafafa);
+  --pt-header-fg: var(--ec-heading, #fafafa);
+}
+
+/* Fundo preto dos cards 3D mistura no shade cinza (evita retângulo preto “bugado”) */
+html[data-theme="dark"] #planTypeFigmaApp .col__visual img,
+html[data-theme="dark"] #planTypeFigmaApp .plan-type-mobile-img-layer img,
+html[data-theme="dark"] #planTypeFigmaApp .tarefa-screen__hero img {
+  mix-blend-mode: lighten;
+}
+
+
+
+#planTypeFigmaApp img {
+  display: block;
+  max-width: 100%;
+  user-select: none;
+}
+
+/* ── Header ── */
+#planTypeFigmaApp .header {
+  position: absolute;
+  left: max(1.25rem, var(--header-x));
+  top: max(1.25rem, var(--header-y));
+  z-index: 50;
+  width: max-content;
+  max-width: min(320px, calc(100% - 2.5rem));
+  overflow: visible;
+  color: var(--pt-header-fg);
+  pointer-events: none;
+  transform: translateY(0);
+  transition:
+    color var(--dur-hover) var(--ease-hover),
+    opacity var(--dur-click) var(--ease-click),
+    transform var(--dur-shade-brand-exit) var(--ease-shade-brand-exit),
+    visibility 0s;
+}
+
+#planTypeFigmaApp.app.is-brand-exiting > .header {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-2.75rem);
+  transition:
+    opacity calc(var(--dur-shade-brand-exit) * 0.75) var(--ease-shade-brand-exit),
+    transform var(--dur-shade-brand-exit) var(--ease-shade-brand-exit),
+    visibility 0s linear var(--dur-shade-brand-exit);
+}
+
+#planTypeFigmaApp .header__title {
+  display: block;
+  font-family: Inter, sans-serif;
+  font-size: clamp(1.5rem, 2.083vw, var(--title-size));
+  font-weight: 900;
+  font-synthesis: weight;
+  line-height: 1.22;
+  letter-spacing: -0.02em;
+  color: inherit;
+}
+
+#planTypeFigmaApp .header__subtitle {
+  margin-top: 0.25rem;
+  font-size: clamp(0.8125rem, 0.8vw, var(--subtitle-size));
+  font-weight: 200;
+  line-height: 1.45;
+  max-width: 240px;
+}
+
+#planTypeFigmaApp .plan-type-stage-back {
+  position: absolute;
+  top: max(1.15rem, calc(var(--header-y) - 0.35rem));
+  right: max(1.15rem, var(--footer-x));
+  z-index: 55;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 36px;
+  padding: 0.45rem 0.95rem 0.45rem 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--pt-header-fg) 14%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--pt-header-fg) 6%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--pt-header-fg);
+  font-family: Inter, sans-serif;
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  opacity: 0.88;
+  transition:
+    opacity 0.22s ease,
+    transform 0.22s ease,
+    background-color 0.22s ease,
+    border-color 0.22s ease,
+    box-shadow 0.22s ease;
+}
+
+#planTypeFigmaApp .plan-type-stage-back__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  opacity: 0.9;
+  transition: transform 0.22s ease;
+}
+
+#planTypeFigmaApp .plan-type-stage-back__icon svg {
+  display: block;
+}
+
+#planTypeFigmaApp .plan-type-stage-back:hover {
+  opacity: 1;
+  background: color-mix(in srgb, var(--pt-header-fg) 10%, transparent);
+  border-color: color-mix(in srgb, var(--pt-header-fg) 22%, transparent);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+#planTypeFigmaApp .plan-type-stage-back:hover .plan-type-stage-back__icon {
+  transform: translateX(-2px);
+}
+
+#planTypeFigmaApp .plan-type-stage-back:active {
+  transform: scale(0.98);
+}
+
+#planTypeFigmaApp .plan-type-stage-back:focus {
+  outline: none;
+}
+
+#planTypeFigmaApp .plan-type-stage-back:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--pt-header-fg) 45%, transparent);
+  outline-offset: 2px;
+}
+
+#planTypeFigmaApp.app.is-col-open .plan-type-stage-back,
+#planTypeFigmaApp.app.is-col-opening .plan-type-stage-back,
+#planTypeFigmaApp.app.is-brand-exiting .plan-type-stage-back,
+#planTypeFigmaApp.is-dissolve-exit .plan-type-stage-back {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+/* 412:98 — header branco sobre painel DIARIAMENTE (legado; brand na shade) */
+#planTypeFigmaApp.app[data-active="diario"] .header {
+  color: var(--pt-on-shade-fg);
+}
+
+/* ── Stage ── */
+#planTypeFigmaApp .stage {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  transition: opacity var(--dur-click) var(--ease-click);
+}
+
+#planTypeFigmaApp .col {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--pt-col-bg);
+  color: var(--pt-col-fg);
+  cursor: pointer;
+  outline: none;
+  transition:
+    color var(--dur-hover) var(--ease-hover),
+    opacity calc(var(--dur-shade-brand-exit) * 0.85) var(--ease-shade-brand-exit),
+    background-color var(--dur-shade-brand-exit) var(--ease-shade-brand-exit);
+}
+
+#planTypeFigmaApp .col__shade-header {
+  position: absolute;
+  top: max(1.15rem, var(--header-y));
+  left: max(1rem, calc(var(--header-x) * 0.5));
+  z-index: 1;
+  width: max-content;
+  max-width: calc(100% - 1.5rem);
+  padding: 0;
+  color: var(--pt-on-shade-fg);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(0);
+  transition:
+    opacity var(--dur-hover) var(--ease-hover),
+    visibility 0s linear var(--dur-hover),
+    transform var(--dur-shade-brand-exit) var(--ease-shade-brand-exit);
+}
+
+#planTypeFigmaApp .col__shade-header .header__title,
+#planTypeFigmaApp .col__shade-header .header__subtitle {
+  color: inherit;
+}
+
+#planTypeFigmaApp .col.is-shade-brand-exiting .col__shade-header {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-2.75rem);
+  transition:
+    opacity calc(var(--dur-shade-brand-exit) * 0.75) var(--ease-shade-brand-exit),
+    transform var(--dur-shade-brand-exit) var(--ease-shade-brand-exit),
+    visibility 0s linear var(--dur-shade-brand-exit);
+}
+
+#planTypeFigmaApp .col__shade {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  z-index: 0;
+  background: var(--pt-shade);
+  opacity: 0;
+  transition: opacity var(--dur-hover-out) var(--ease-hover-out);
+}
+
+#planTypeFigmaApp .col__visual {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: var(--visual-top-active);
+  height: var(--visual-h);
+  z-index: 2;
+  margin: 0;
+  opacity: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  overflow: hidden;
+  transform: translateY(var(--visual-lift));
+  transition:
+    opacity var(--dur-hover-out) var(--ease-hover-out),
+    transform var(--dur-hover-out) var(--ease-hover-out),
+    top var(--dur-hover-out) var(--ease-hover-out);
+}
+
+#planTypeFigmaApp .col__visual img {
+  width: auto;
+  height: 100%;
+  max-width: 88%;
+  max-height: 100%;
+  object-fit: contain;
+  object-position: center top;
+  transform: scale(var(--visual-scale-idle));
+  transition:
+    opacity var(--dur-hover-out) var(--ease-hover-out),
+    transform var(--dur-hover-out) var(--ease-hover-out);
+}
+
+/* largura do bloco de texto por coluna */
+#planTypeFigmaApp .col--diario { --body-w: 240px; }
+#planTypeFigmaApp .col--semanal { --body-w: 206px; }
+#planTypeFigmaApp .col--mensal { --body-w: 252px; }
+#planTypeFigmaApp .col--tarefa { --body-w: 280px; }
+
+#planTypeFigmaApp .col__body {
+  position: absolute;
+  left: 50%;
+  top: var(--body-idle);
+  z-index: 2;
+  width: min(var(--body-w), 88%);
+  text-align: left;
+  transform: translateX(-50%);
+  transition:
+    top var(--dur-hover) var(--ease-hover-out),
+    color var(--dur-hover) var(--ease-hover-out);
+}
+
+#planTypeFigmaApp .col__body h2 {
+  font-size: clamp(1.15rem, 1.852vw, var(--heading-size));
+  font-weight: 900;
+  line-height: 1.25;
+  margin-bottom: 0.35rem;
+  text-align: left;
+}
+
+#planTypeFigmaApp .col--tarefa .col__body h2 {
+  white-space: nowrap;
+}
+
+#planTypeFigmaApp .col__desc {
+  font-size: clamp(0.8125rem, 0.926vw, var(--desc-size));
+  line-height: 1.5;
+  text-align: left;
+}
+
+#planTypeFigmaApp .col__lead {
+  display: block;
+  margin-bottom: 0.65rem;
+  font-family: "Instrument Sans", sans-serif;
+  font-weight: 400;
+  text-align: left;
+}
+
+#planTypeFigmaApp .col__desc .col__list,
+#planTypeFigmaApp .col__desc--inter .col__list,
+#planTypeFigmaApp .col__desc--sans .col__list,
+#planTypeFigmaApp .col__list {
+  display: block;
+  font-family: "Instrument Sans", sans-serif;
+  font-weight: 400;
+  font-size: inherit;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px);
+  transition:
+    opacity var(--dur-hover-out) var(--ease-hover-out),
+    transform var(--dur-hover-out) var(--ease-hover-out),
+    visibility 0s linear var(--dur-hover-out);
+  transition-delay: 0s;
+}
+
+#planTypeFigmaApp .col--tarefa .col__desc .col__list {
+  font-family: "Instrument Sans", sans-serif;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+#planTypeFigmaApp .col__desc--inter {
+  font-family: Inter, sans-serif;
+  font-weight: 200;
+}
+
+#planTypeFigmaApp .col__desc--sans {
+  font-family: "Instrument Sans", sans-serif;
+  font-weight: 400;
+}
+
+#planTypeFigmaApp .col__desc--mensal .col__list {
+  padding-left: 0;
+}
+
+/* ── Coluna ativa ── */
+#planTypeFigmaApp.app[data-active="diario"] .col--diario,
+#planTypeFigmaApp.app[data-active="semanal"] .col--semanal,
+#planTypeFigmaApp.app[data-active="mensal"] .col--mensal,
+#planTypeFigmaApp.app[data-active="tarefa"] .col--tarefa {
+  color: var(--pt-on-shade-fg);
+}
+
+#planTypeFigmaApp.app[data-active="diario"] .col--diario .col__shade,
+#planTypeFigmaApp.app[data-active="semanal"] .col--semanal .col__shade,
+#planTypeFigmaApp.app[data-active="mensal"] .col--mensal .col__shade,
+#planTypeFigmaApp.app[data-active="tarefa"] .col--tarefa .col__shade {
+  opacity: 1;
+  transition-duration: var(--dur-hover);
+  transition-timing-function: var(--ease-hover);
+}
+
+#planTypeFigmaApp.app[data-active="diario"] .col--diario .col__visual,
+#planTypeFigmaApp.app[data-active="semanal"] .col--semanal .col__visual,
+#planTypeFigmaApp.app[data-active="mensal"] .col--mensal .col__visual,
+#planTypeFigmaApp.app[data-active="tarefa"] .col--tarefa .col__visual {
+  opacity: 1;
+  transform: translateY(0);
+  transition-duration: var(--dur-hover);
+  transition-timing-function: var(--ease-hover);
+}
+
+#planTypeFigmaApp.app[data-active="diario"] .col--diario .col__visual img,
+#planTypeFigmaApp.app[data-active="semanal"] .col--semanal .col__visual img,
+#planTypeFigmaApp.app[data-active="mensal"] .col--mensal .col__visual img,
+#planTypeFigmaApp.app[data-active="tarefa"] .col--tarefa .col__visual img {
+  transform: scale(1);
+  transition-duration: var(--dur-hover);
+  transition-timing-function: var(--ease-hover);
+}
+
+#planTypeFigmaApp.app[data-active="diario"] .col--diario .col__body,
+#planTypeFigmaApp.app[data-active="semanal"] .col--semanal .col__body,
+#planTypeFigmaApp.app[data-active="mensal"] .col--mensal .col__body,
+#planTypeFigmaApp.app[data-active="tarefa"] .col--tarefa .col__body {
+  top: var(--body-active);
+  transition-timing-function: var(--ease-hover);
+}
+
+#planTypeFigmaApp .col.is-hover-instant .col__shade,
+#planTypeFigmaApp .col.is-hover-instant .col__visual,
+#planTypeFigmaApp .col.is-hover-instant .col__visual img,
+#planTypeFigmaApp .col.is-hover-instant .col__body {
+  transition: none !important;
+}
+
+#planTypeFigmaApp.app[data-active] .col:not(.is-active) .col__body {
+  top: var(--body-idle);
+  transition-timing-function: var(--ease-hover-out);
+}
+
+#planTypeFigmaApp.app[data-active] .col:not(.is-active) {
+  background: var(--pt-col-bg);
+  color: var(--pt-col-fg);
+}
+
+#planTypeFigmaApp.app[data-active] .col:not(.is-active) .col__shade,
+#planTypeFigmaApp.app[data-active] .col:not(.is-active) .col__visual {
+  opacity: 0;
+  transform: translateY(var(--visual-lift));
+}
+
+#planTypeFigmaApp.app[data-active] .col:not(.is-active) .col__visual img {
+  transform: scale(var(--visual-scale-idle));
+}
+
+/* Click TAREFA: shade preenche a tela da direita → esquerda (2s linear) */
+#planTypeFigmaApp .tarefa-shade-sweep {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  background: var(--pt-shade);
+  pointer-events: none;
+  opacity: 1;
+  transform: scaleX(0);
+  transform-origin: right center;
+  transition: transform var(--dur-shade-sweep) var(--ease-click);
+}
+
+#planTypeFigmaApp .tarefa-shade-sweep.is-active {
+  transform: scaleX(1);
+}
+
+#planTypeFigmaApp.app.is-col-opening .header,
+#planTypeFigmaApp.app.is-col-opening .stage {
+  pointer-events: none;
+}
+
+#planTypeFigmaApp.app.is-col-closing .header,
+#planTypeFigmaApp.app.is-col-closing .stage {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: none;
+  transition: none;
+}
+
+#planTypeFigmaApp.app.is-col-closing[data-active="diario"] .col--diario .col__shade,
+#planTypeFigmaApp.app.is-col-opening[data-active="diario"] .col--diario .col__shade,
+#planTypeFigmaApp.app.is-col-closing[data-active="semanal"] .col--semanal .col__shade,
+#planTypeFigmaApp.app.is-col-opening[data-active="semanal"] .col--semanal .col__shade,
+#planTypeFigmaApp.app.is-col-closing[data-active="mensal"] .col--mensal .col__shade,
+#planTypeFigmaApp.app.is-col-opening[data-active="mensal"] .col--mensal .col__shade,
+#planTypeFigmaApp.app.is-col-closing[data-active="tarefa"] .col--tarefa .col__shade,
+#planTypeFigmaApp.app.is-col-opening[data-active="tarefa"] .col--tarefa .col__shade,
+#planTypeFigmaApp.app.is-col-shade-overlay[data-active="diario"] .col--diario .col__shade,
+#planTypeFigmaApp.app.is-col-shade-overlay[data-active="semanal"] .col--semanal .col__shade,
+#planTypeFigmaApp.app.is-col-shade-overlay[data-active="mensal"] .col--mensal .col__shade,
+#planTypeFigmaApp.app.is-col-shade-overlay[data-active="tarefa"] .col--tarefa .col__shade,
+#planTypeFigmaApp.app.is-col-shade-overlay.is-col-hover-pin[data-active="diario"] .col--diario .col__shade,
+#planTypeFigmaApp.app.is-col-shade-overlay.is-col-hover-pin[data-active="semanal"] .col--semanal .col__shade,
+#planTypeFigmaApp.app.is-col-shade-overlay.is-col-hover-pin[data-active="mensal"] .col--mensal .col__shade,
+#planTypeFigmaApp.app.is-col-shade-overlay.is-col-hover-pin[data-active="tarefa"] .col--tarefa .col__shade {
+  opacity: 0;
+  transition: none;
+}
+
+#planTypeFigmaApp.app.is-col-opening[data-active="diario"] .col--diario .col__visual,
+#planTypeFigmaApp.app.is-col-closing[data-active="diario"] .col--diario .col__visual,
+#planTypeFigmaApp.app.is-col-opening[data-active="semanal"] .col--semanal .col__visual,
+#planTypeFigmaApp.app.is-col-closing[data-active="semanal"] .col--semanal .col__visual,
+#planTypeFigmaApp.app.is-col-opening[data-active="mensal"] .col--mensal .col__visual,
+#planTypeFigmaApp.app.is-col-closing[data-active="mensal"] .col--mensal .col__visual,
+#planTypeFigmaApp.app.is-col-opening[data-active="tarefa"] .col--tarefa .col__visual,
+#planTypeFigmaApp.app.is-col-closing[data-active="tarefa"] .col--tarefa .col__visual {
+  top: var(--visual-top-active);
+  opacity: 1;
+  transform: translateY(0);
+  transition: none;
+}
+
+#planTypeFigmaApp.app.is-col-opening[data-active="diario"] .col--diario .col__visual img,
+#planTypeFigmaApp.app.is-col-closing[data-active="diario"] .col--diario .col__visual img,
+#planTypeFigmaApp.app.is-col-opening[data-active="semanal"] .col--semanal .col__visual img,
+#planTypeFigmaApp.app.is-col-closing[data-active="semanal"] .col--semanal .col__visual img,
+#planTypeFigmaApp.app.is-col-opening[data-active="mensal"] .col--mensal .col__visual img,
+#planTypeFigmaApp.app.is-col-closing[data-active="mensal"] .col--mensal .col__visual img,
+#planTypeFigmaApp.app.is-col-opening[data-active="tarefa"] .col--tarefa .col__visual img,
+#planTypeFigmaApp.app.is-col-closing[data-active="tarefa"] .col--tarefa .col__visual img {
+  transform: scale(1);
+  transition: none;
+}
+
+#planTypeFigmaApp.app.is-col-opening[data-active="diario"] .col--diario .col__body,
+#planTypeFigmaApp.app.is-col-closing[data-active="diario"] .col--diario .col__body,
+#planTypeFigmaApp.app.is-col-opening[data-active="semanal"] .col--semanal .col__body,
+#planTypeFigmaApp.app.is-col-closing[data-active="semanal"] .col--semanal .col__body,
+#planTypeFigmaApp.app.is-col-opening[data-active="mensal"] .col--mensal .col__body,
+#planTypeFigmaApp.app.is-col-closing[data-active="mensal"] .col--mensal .col__body,
+#planTypeFigmaApp.app.is-col-opening[data-active="tarefa"] .col--tarefa .col__body,
+#planTypeFigmaApp.app.is-col-closing[data-active="tarefa"] .col--tarefa .col__body {
+  top: var(--body-active);
+  transition: none;
+}
+
+#planTypeFigmaApp.app.is-col-opening[data-active="diario"] .col--diario,
+#planTypeFigmaApp.app.is-col-opening[data-active="semanal"] .col--semanal,
+#planTypeFigmaApp.app.is-col-opening[data-active="mensal"] .col--mensal,
+#planTypeFigmaApp.app.is-col-opening[data-active="tarefa"] .col--tarefa {
+  background: var(--pt-shade);
+}
+
+#planTypeFigmaApp.app.is-col-opening .col.is-shade-handoff .col__shade {
+  opacity: 0;
+  transition: none;
+}
+
+#planTypeFigmaApp.app.is-col-hover-pin[data-active="diario"] .col--diario,
+#planTypeFigmaApp.app.is-col-hover-pin[data-active="semanal"] .col--semanal,
+#planTypeFigmaApp.app.is-col-hover-pin[data-active="mensal"] .col--mensal,
+#planTypeFigmaApp.app.is-col-hover-pin[data-active="tarefa"] .col--tarefa {
+  color: var(--pt-on-shade-fg);
+}
+
+#planTypeFigmaApp.app.is-col-hover-pin[data-active="diario"] .col--diario .col__shade,
+#planTypeFigmaApp.app.is-col-hover-pin[data-active="semanal"] .col--semanal .col__shade,
+#planTypeFigmaApp.app.is-col-hover-pin[data-active="mensal"] .col--mensal .col__shade,
+#planTypeFigmaApp.app.is-col-hover-pin[data-active="tarefa"] .col--tarefa .col__shade {
+  opacity: 1;
+  transition: none;
+}
+
+#planTypeFigmaApp.app.is-col-hover-pin[data-active="diario"] .col--diario .col__visual,
+#planTypeFigmaApp.app.is-col-hover-pin[data-active="semanal"] .col--semanal .col__visual,
+#planTypeFigmaApp.app.is-col-hover-pin[data-active="mensal"] .col--mensal .col__visual,
+#planTypeFigmaApp.app.is-col-hover-pin[data-active="tarefa"] .col--tarefa .col__visual {
+  top: var(--visual-top-active);
+  opacity: 1;
+  transform: translateY(0);
+  transition: none;
+}
+
+#planTypeFigmaApp.app.is-col-hover-pin[data-active="diario"] .col--diario .col__visual img,
+#planTypeFigmaApp.app.is-col-hover-pin[data-active="semanal"] .col--semanal .col__visual img,
+#planTypeFigmaApp.app.is-col-hover-pin[data-active="mensal"] .col--mensal .col__visual img,
+#planTypeFigmaApp.app.is-col-hover-pin[data-active="tarefa"] .col--tarefa .col__visual img {
+  transform: scale(1);
+  transition: none;
+}
+
+#planTypeFigmaApp.app.is-col-hover-pin[data-active="diario"] .col--diario .col__body,
+#planTypeFigmaApp.app.is-col-hover-pin[data-active="semanal"] .col--semanal .col__body,
+#planTypeFigmaApp.app.is-col-hover-pin[data-active="mensal"] .col--mensal .col__body,
+#planTypeFigmaApp.app.is-col-hover-pin[data-active="tarefa"] .col--tarefa .col__body {
+  top: var(--body-active);
+  transition: none;
+}
+
+#planTypeFigmaApp .tarefa-screen.is-measuring {
+  display: block;
+  visibility: hidden;
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 1;
+}
+
+#planTypeFigmaApp .tarefa-screen.is-measuring .tarefa-screen__title,
+#planTypeFigmaApp .tarefa-screen.is-measuring .tarefa-screen__heading,
+#planTypeFigmaApp .tarefa-screen.is-measuring .tarefa-screen__accent,
+#planTypeFigmaApp .tarefa-screen.is-measuring .tarefa-screen__desc,
+#planTypeFigmaApp .tarefa-screen.is-measuring .tarefa-screen__lead,
+#planTypeFigmaApp .tarefa-screen.is-measuring .tarefa-screen__rule,
+#planTypeFigmaApp .tarefa-screen.is-measuring .tarefa-screen__list,
+#planTypeFigmaApp .tarefa-screen.is-measuring .tarefa-screen__card img {
+  opacity: 1;
+  transform: none;
+  transition: none;
+}
+
+/* ── 412:121 fullscreen coluna ── */
+#planTypeFigmaApp.app.is-col-open .header,
+#planTypeFigmaApp.app.is-col-open .stage {
+  opacity: 0;
+  pointer-events: none;
+  transition: none;
+}
+
+#planTypeFigmaApp .tarefa-screen {
+  --hero-word-scale: 1;
+  --hero-v-offset: 0px;
+  --hero-footer-reserve: 0px;
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: none;
+  width: 100%;
+  height: 100%;
+  max-height: 100dvh;
+  color: var(--pt-on-shade-fg);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+#planTypeFigmaApp .tarefa-screen.is-open,
+#planTypeFigmaApp .tarefa-screen.is-word-sweep {
+  display: block;
+  overflow: hidden;
+  opacity: 1;
+  visibility: visible;
+}
+
+#planTypeFigmaApp .tarefa-screen.is-open {
+  pointer-events: auto;
+}
+
+#planTypeFigmaApp .tarefa-screen.is-closing {
+  display: block;
+  pointer-events: none;
+}
+
+#planTypeFigmaApp .tarefa-screen.is-reversing {
+  display: block;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+#planTypeFigmaApp .tarefa-screen.is-reversing .tarefa-screen__word-track {
+  transition-duration: var(--dur-word-track-reverse);
+}
+
+#planTypeFigmaApp .tarefa-screen.is-reversing .tarefa-screen__backdrop {
+  opacity: 1;
+}
+
+#planTypeFigmaApp .tarefa-screen.is-reversing.is-word-sweep
+  #planTypeFigmaApp .tarefa-screen__backdrop:not(.is-sweeping):not(.is-sweep-collapsed) {
+  left: 0;
+  width: 100%;
+}
+
+#planTypeFigmaApp .tarefa-screen.is-reversing.is-word-sweep .tarefa-screen__backdrop.is-sweep-collapsed {
+  opacity: 1;
+  left: var(--shade-start-left, 0);
+  width: var(--shade-start-width, 0);
+  transition: none;
+}
+
+#planTypeFigmaApp .tarefa-screen.is-reversing .tarefa-screen__backdrop.is-sweeping.is-active {
+  left: 0;
+  width: 100%;
+}
+
+#planTypeFigmaApp .tarefa-screen.is-reversing .tarefa-screen__backdrop.is-sweeping:not(.is-active) {
+  left: var(--shade-start-left, 0);
+  width: var(--shade-start-width, 0);
+}
+
+#planTypeFigmaApp .tarefa-screen.is-reversing-chrome .tarefa-screen__back,
+#planTypeFigmaApp .tarefa-screen.is-reversing-chrome .tarefa-screen__btn,
+#planTypeFigmaApp .tarefa-screen.is-reversing-chrome .tarefa-screen__rule,
+#planTypeFigmaApp .tarefa-screen.is-reversing-chrome .tarefa-screen__accent,
+#planTypeFigmaApp .tarefa-screen.is-reversing-chrome .tarefa-screen__list {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: none;
+  transition:
+    opacity var(--dur-footer-reveal) var(--ease-footer-reveal),
+    transform var(--dur-footer-reveal) var(--ease-footer-reveal),
+    visibility 0s linear 0s;
+}
+
+#planTypeFigmaApp .tarefa-screen.is-fading-chrome .tarefa-screen__back {
+  opacity: 0;
+  transform: translateX(-10px);
+  transition-delay: 0ms;
+}
+
+#planTypeFigmaApp .tarefa-screen.is-fading-chrome .tarefa-screen__btn {
+  opacity: 0;
+  transform: translateY(-12px);
+  transition-delay: 0ms;
+}
+
+#planTypeFigmaApp .tarefa-screen.is-fading-chrome .tarefa-screen__list {
+  visibility: hidden;
+  transition-delay: calc(var(--delay-footer-btn) - var(--delay-footer-list));
+}
+
+#planTypeFigmaApp .tarefa-screen.is-fading-chrome .tarefa-screen__feature {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition-delay: 0ms;
+}
+
+#planTypeFigmaApp .tarefa-screen.is-closing-chrome .tarefa-screen__back,
+#planTypeFigmaApp .tarefa-screen.is-closing-chrome .tarefa-screen__btn,
+#planTypeFigmaApp .tarefa-screen.is-closing-chrome .tarefa-screen__list,
+#planTypeFigmaApp .tarefa-screen.is-closing-chrome .tarefa-screen__feature {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 220ms var(--ease-footer-reveal),
+    visibility 0s linear 220ms;
+}
+
+#planTypeFigmaApp .tarefa-screen__backdrop {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--shade-start-left, 0);
+  width: var(--shade-start-width, 0);
+  height: 100%;
+  z-index: 0;
+  background: var(--pt-shade);
+  opacity: 0;
+  pointer-events: none;
+  transform: none;
+  transition: opacity var(--dur-click) var(--ease-click);
+}
+
+#planTypeFigmaApp .tarefa-screen.is-word-sweep .tarefa-screen__backdrop {
+  opacity: 1;
+  left: var(--shade-start-left, 0);
+  width: var(--shade-start-width, 0);
+}
+
+#planTypeFigmaApp .tarefa-screen.is-word-sweep:not(.is-reversing) .tarefa-screen__backdrop {
+  transition: none;
+}
+
+#planTypeFigmaApp .tarefa-screen.is-word-sweep:not(.is-reversing) .tarefa-screen__backdrop.is-sweeping {
+  transition:
+    width var(--dur-shade-sweep) var(--ease-click),
+    left var(--dur-shade-sweep) var(--ease-click);
+}
+
+/* Desktop: sem sweep L→R do painel; fundo cinza full + letreiro R→L */
+#planTypeFigmaApp.app:not(.is-mobile-stack) .tarefa-screen__backdrop,
+#planTypeFigmaApp.app:not(.is-mobile-stack) .tarefa-screen.is-open .tarefa-screen__backdrop,
+#planTypeFigmaApp.app:not(.is-mobile-stack) .tarefa-screen.is-word-sweep .tarefa-screen__backdrop {
+  left: 0 !important;
+  width: 100% !important;
+  background: var(--pt-transition-bg, #222226) !important;
+  transition: opacity var(--dur-shade-brand-exit) var(--ease-shade-brand-exit) !important;
+}
+
+#planTypeFigmaApp.app:not(.is-mobile-stack) .tarefa-screen__backdrop.is-sweeping {
+  transition: none !important;
+}
+
+#planTypeFigmaApp .tarefa-screen__backdrop.is-sweeping {
+  transition:
+    width var(--dur-shade-sweep) var(--ease-click),
+    left var(--dur-shade-sweep) var(--ease-click);
+}
+
+#planTypeFigmaApp .tarefa-screen__backdrop.is-sweeping.is-active {
+  left: 0;
+  width: 100%;
+}
+
+#planTypeFigmaApp .tarefa-screen__backdrop.is-sweeping:not(.is-active) {
+  left: var(--shade-start-left, 0);
+  width: var(--shade-start-width, 0);
+}
+
+#planTypeFigmaApp .tarefa-screen__backdrop.is-sweep-collapsed,
+#planTypeFigmaApp .tarefa-screen.is-word-sweep .tarefa-screen__backdrop.is-sweep-collapsed {
+  opacity: 1;
+  left: var(--shade-start-left, 0);
+  width: var(--shade-start-width, 0);
+  transition: none;
+}
+
+#planTypeFigmaApp .tarefa-screen.is-word-sweep .tarefa-screen__backdrop.is-sweep-done,
+#planTypeFigmaApp .tarefa-screen.is-open .tarefa-screen__backdrop {
+  opacity: 1;
+  left: 0;
+  width: 100%;
+}
+
+#planTypeFigmaApp .tarefa-screen__hero {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: clamp(0.5rem, 2dvh, 1.25rem) clamp(0.75rem, 3vw, 2rem);
+  pointer-events: auto;
+  gap: 0;
+}
+
+#planTypeFigmaApp .tarefa-screen__word-track {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  pointer-events: none;
+  transform: translateX(var(--word-track-start, 100%));
+  transition: transform var(--dur-word-track) var(--ease-click);
+  will-change: transform;
+}
+
+#planTypeFigmaApp .tarefa-screen[hidden] .tarefa-screen__word-track {
+  transform: translateX(var(--word-track-start, 100%));
+  transition: none;
+}
+
+#planTypeFigmaApp .tarefa-screen.is-hero-in .tarefa-screen__word-track {
+  transform: translateX(0);
+}
+
+#planTypeFigmaApp .tarefa-screen__hero-stage {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  transform: translateY(var(--hero-v-offset, 0px));
+  transform-origin: center center;
+  pointer-events: none;
+}
+
+#planTypeFigmaApp .tarefa-screen__hero-stage.is-single-word {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: var(--hero-single-min-h, 0px);
+}
+
+#planTypeFigmaApp .tarefa-screen__hero-stage.is-single-word .tarefa-screen__word--left {
+  display: block;
+  white-space: nowrap;
+}
+
+#planTypeFigmaApp .tarefa-screen__hero-stage.is-single-word .tarefa-screen__card {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+}
+
+#planTypeFigmaApp .tarefa-screen.is-hero-settling .tarefa-screen__hero-stage {
+  transition: transform var(--dur-word-track) var(--ease-click);
+}
+
+#planTypeFigmaApp .tarefa-screen.is-hero-settling.is-hero-settling-reverse .tarefa-screen__hero-stage {
+  transition-duration: var(--dur-word-track-reverse);
+}
+
+#planTypeFigmaApp .tarefa-screen.is-hero-settling.is-content-in .tarefa-screen__hero {
+  transition: bottom var(--dur-word-track) var(--ease-click);
+}
+
+#planTypeFigmaApp .tarefa-screen.is-hero-settling.is-hero-settling-reverse.is-content-in .tarefa-screen__hero {
+  transition-duration: var(--dur-word-track-reverse);
+}
+
+#planTypeFigmaApp .tarefa-screen.is-content-in .tarefa-screen__hero {
+  bottom: 0;
+  z-index: 5;
+  overflow: visible;
+  pointer-events: none;
+}
+
+#planTypeFigmaApp .tarefa-screen.is-content-in .tarefa-screen__word-track {
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+#planTypeFigmaApp .tarefa-screen.is-word-sweep {
+  z-index: 45;
+  pointer-events: none;
+}
+
+#planTypeFigmaApp .tarefa-screen.is-word-sweep:not(.is-reversing) .tarefa-screen__footer,
+#planTypeFigmaApp .tarefa-screen.is-word-sweep:not(.is-reversing) .tarefa-screen__card,
+#planTypeFigmaApp .tarefa-screen.is-word-sweep:not(.is-reversing) .tarefa-screen__back {
+  opacity: 0;
+  visibility: visible;
+  pointer-events: none;
+}
+
+#planTypeFigmaApp .tarefa-screen.is-handoff .tarefa-screen__hero,
+#planTypeFigmaApp .tarefa-screen.is-handoff .tarefa-screen__footer,
+#planTypeFigmaApp .tarefa-screen.is-handoff .tarefa-screen__word-track,
+#planTypeFigmaApp .tarefa-screen.is-handoff .tarefa-screen__back {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: none;
+}
+
+#planTypeFigmaApp .tarefa-screen.is-handoff .tarefa-screen__backdrop {
+  transition: none;
+}
+
+#planTypeFigmaApp .tarefa-screen__back,
+#planTypeFigmaApp .tarefa-screen__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border: 1px solid color-mix(in srgb, var(--pt-on-shade-fg, #ffffff) 28%, transparent);
+  border-radius: var(--btn-radius);
+  background: color-mix(in srgb, var(--pt-on-shade-fg, #ffffff) 7%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--pt-on-shade-fg);
+  font-family: Inter, sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    opacity var(--dur-footer-reveal) var(--ease-footer-reveal),
+    transform var(--dur-footer-reveal) var(--ease-footer-reveal),
+    background-color 0.22s ease,
+    border-color 0.22s ease,
+    box-shadow 0.22s ease;
+}
+
+#planTypeFigmaApp .tarefa-screen__back {
+  position: absolute;
+  top: max(1.15rem, env(safe-area-inset-top, 1.15rem));
+  left: max(1.25rem, var(--footer-x));
+  z-index: 5;
+  padding: 0.62rem 1.15rem 0.62rem 0.9rem;
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+#planTypeFigmaApp .tarefa-screen__back-icon,
+#planTypeFigmaApp .tarefa-screen__btn-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1.125rem;
+  height: 1.125rem;
+  opacity: 0.92;
+  transition: transform 0.22s ease;
+}
+
+#planTypeFigmaApp .tarefa-screen__back-label,
+#planTypeFigmaApp .tarefa-screen__btn-label {
+  padding-top: 0.05em;
+}
+
+#planTypeFigmaApp .tarefa-screen__btn-spinner {
+  display: none;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  border-top-color: rgba(255, 255, 255, 0.92);
+  animation: planTypeContinuarSpin 0.65s linear infinite;
+  flex-shrink: 0;
+}
+
+#planTypeFigmaApp .tarefa-screen__btn.is-loading {
+  pointer-events: none;
+  opacity: 0.78;
+}
+
+#planTypeFigmaApp .tarefa-screen__btn.is-loading .tarefa-screen__btn-spinner {
+  display: inline-block;
+}
+
+@keyframes planTypeContinuarSpin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #planTypeFigmaApp .tarefa-screen__btn-spinner {
+    animation: none;
+    border-top-color: rgba(255, 255, 255, 0.55);
+  }
+}
+
+#planTypeFigmaApp .tarefa-screen.is-open .tarefa-screen__back {
+  z-index: 6;
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+  transition-delay: var(--delay-back-btn);
+}
+
+#planTypeFigmaApp .tarefa-screen__back:hover,
+#planTypeFigmaApp .tarefa-screen__btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.45);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+}
+
+#planTypeFigmaApp .tarefa-screen__back:hover .tarefa-screen__back-icon {
+  transform: translateX(-2px);
+}
+
+#planTypeFigmaApp .tarefa-screen__btn:hover .tarefa-screen__btn-icon {
+  transform: translateX(2px);
+}
+
+#planTypeFigmaApp .tarefa-screen__back:active {
+  transform: translateX(0) scale(0.98);
+}
+
+#planTypeFigmaApp .tarefa-screen__btn:active {
+  transform: translateY(0) scale(0.98);
+}
+
+#planTypeFigmaApp .tarefa-screen__back:focus-visible,
+#planTypeFigmaApp .tarefa-screen__btn:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.85);
+  outline-offset: 3px;
+}
+
+#planTypeFigmaApp .tarefa-screen__word {
+  font-size: calc(min(18vw, 24dvh, 10rem) * var(--hero-word-scale, 1));
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  text-shadow: 0 4px 4px rgba(0, 0, 0, 0.7);
+  flex: 0 0 auto;
+  min-width: 0;
+  max-width: none;
+  overflow: visible;
+  pointer-events: none;
+  user-select: none;
+}
+
+#planTypeFigmaApp .tarefa-screen__card {
+  position: relative;
+  z-index: 3;
+  flex: 0 0 auto;
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  transform: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  cursor: default;
+}
+
+#planTypeFigmaApp .tarefa-screen__hero-stage .tarefa-screen__card {
+  pointer-events: auto;
+}
+
+#planTypeFigmaApp .tarefa-screen__card img {
+  pointer-events: auto;
+  object-fit: contain;
+  object-position: center top;
+  filter: drop-shadow(0 24px 48px rgba(0, 0, 0, 0.45));
+}
+
+#planTypeFigmaApp .tarefa-screen.is-open.is-morphed .tarefa-screen__card img {
+  flex-shrink: 0;
+}
+
+#planTypeFigmaApp .tarefa-screen.is-content-in .tarefa-screen__card img {
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  flex-shrink: 0;
+}
+
+#planTypeFigmaApp .tarefa-screen.is-measuring .tarefa-screen__card {
+  width: min(50vw, 52dvh, 480px);
+  max-height: min(62dvh, 560px);
+}
+
+#planTypeFigmaApp .tarefa-screen.is-measuring .tarefa-screen__card img {
+  width: 100%;
+  height: auto;
+  max-height: min(62dvh, 560px);
+  aspect-ratio: 317 / 475;
+}
+
+#planTypeFigmaApp .tarefa-screen[data-col="diario"] {
+  --body-w: 240px;
+}
+
+#planTypeFigmaApp .tarefa-screen[data-col="semanal"] {
+  --body-w: 206px;
+}
+
+#planTypeFigmaApp .tarefa-screen[data-col="mensal"] {
+  --body-w: 252px;
+}
+
+#planTypeFigmaApp .tarefa-screen[data-col="tarefa"] {
+  --body-w: 238px;
+}
+
+#planTypeFigmaApp .tarefa-screen__footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 4;
+  width: min(var(--btn-w), calc(100% - 2.5rem));
+  margin: 0;
+  padding: clamp(0.75rem, 2dvh, 1.25rem) max(1.25rem, var(--footer-x))
+    max(1rem, env(safe-area-inset-bottom, 1rem));
+  text-align: left;
+  pointer-events: auto;
+}
+
+#planTypeFigmaApp .tarefa-screen__morph-slot {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+#planTypeFigmaApp .tarefa-screen.is-measuring .tarefa-screen__title.tarefa-screen__morph-slot,
+#planTypeFigmaApp .tarefa-screen.is-measuring .tarefa-screen__lead.tarefa-screen__morph-slot,
+#planTypeFigmaApp .tarefa-screen.is-measuring .tarefa-screen__card img.tarefa-screen__morph-slot {
+  position: static;
+  width: auto;
+  height: auto;
+  max-width: none;
+  overflow: visible;
+}
+
+#planTypeFigmaApp .tarefa-screen.is-open.is-morphed .tarefa-screen__morph-slot,
+#planTypeFigmaApp .tarefa-screen.is-morphed.is-reversing .tarefa-screen__morph-slot {
+  position: absolute !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+#planTypeFigmaApp .tarefa-screen__heading {
+  display: flex;
+  align-items: stretch;
+  gap: var(--tarefa-footer-heading-gap);
+  width: min(var(--body-w, 238px), 100%);
+  max-width: 100%;
+}
+
+#planTypeFigmaApp .tarefa-screen__heading-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+#planTypeFigmaApp .tarefa-screen__accent {
+  flex: 0 0 2px;
+  width: 2px;
+  margin: 0.1rem 0;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.88);
+  transform: scaleY(0);
+  transform-origin: top center;
+  opacity: 0;
+  transition:
+    transform var(--dur-accent-draw, 1.15s) var(--ease-footer-reveal),
+    opacity 0.55s var(--ease-footer-reveal),
+    visibility 0s linear calc(var(--delay-accent-reveal, 830ms) + var(--dur-accent-draw, 1.15s));
+}
+
+#planTypeFigmaApp .tarefa-screen.is-open.is-morphed:not(.is-list-ready) .tarefa-screen__accent,
+#planTypeFigmaApp .tarefa-screen.is-open.is-hero-in:not(.is-content-in) .tarefa-screen__accent {
+  visibility: hidden;
+  opacity: 0;
+  transform: scaleY(0);
+}
+
+#planTypeFigmaApp .tarefa-screen.is-open.is-list-ready.is-content-in .tarefa-screen__accent {
+  visibility: visible;
+  opacity: 1;
+  transform: scaleY(1);
+  transition:
+    transform var(--dur-accent-draw, 1.15s) var(--ease-footer-reveal),
+    opacity 0.55s var(--ease-footer-reveal),
+    visibility 0s linear var(--delay-accent-reveal, 830ms);
+  transition-delay: var(--delay-accent-reveal, 830ms);
+}
+
+#planTypeFigmaApp .tarefa-screen.is-fading-chrome .tarefa-screen__accent,
+#planTypeFigmaApp .tarefa-screen.is-closing-chrome .tarefa-screen__accent {
+  opacity: 0;
+  transform: scaleY(0);
+  transition-delay: calc(var(--delay-footer-btn) - var(--delay-footer-list));
+}
+
+#planTypeFigmaApp .tarefa-screen__title {
+  font-size: var(--tarefa-footer-title-size);
+  font-weight: 900;
+  line-height: 1.25;
+  white-space: nowrap;
+  margin: 0 0 4px;
+  text-align: left;
+}
+
+#planTypeFigmaApp .tarefa-screen__footer .tarefa-screen__heading-copy .tarefa-screen__title,
+#planTypeFigmaApp .tarefa-screen__footer .tarefa-screen__heading-copy h2 {
+  font-size: var(--tarefa-footer-title-size);
+  font-weight: 900;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+#planTypeFigmaApp .tarefa-screen__desc {
+  margin-top: 0.25rem;
+  width: min(var(--body-w, 238px), 100%);
+  font-family: "Instrument Sans", sans-serif;
+  font-size: clamp(0.8125rem, 1.05vw, var(--tarefa-desc-size));
+  line-height: 1.45;
+  text-align: left;
+}
+
+#planTypeFigmaApp .tarefa-screen__lead,
+#planTypeFigmaApp .tarefa-screen__list {
+  font-family: "Instrument Sans", sans-serif;
+  font-weight: 400;
+}
+
+#planTypeFigmaApp .tarefa-screen__lead {
+  display: block;
+  margin: 0;
+  text-align: left;
+  overflow: visible;
+  color: color-mix(in srgb, var(--pt-on-shade-fg, #ffffff) 62%, transparent);
+  font-size: var(--tarefa-footer-lead-size);
+  line-height: 1.35;
+}
+
+#planTypeFigmaApp .tarefa-screen__footer .col__lead.tarefa-screen__lead {
+  display: block;
+  text-align: left;
+  overflow: visible;
+  width: auto;
+  height: auto;
+  margin: 0;
+  font-size: var(--tarefa-footer-lead-size);
+  line-height: 1.35;
+}
+
+#planTypeFigmaApp .tarefa-screen__rule {
+  display: block;
+  width: 100%;
+  height: 1px;
+  margin: 0 0 0.45rem;
+  border: 0;
+  padding: 0;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--pt-on-shade-fg, #ffffff) 0%, transparent) 0%,
+    color-mix(in srgb, var(--pt-on-shade-fg, #ffffff) 38%, transparent) 18%,
+    color-mix(in srgb, var(--pt-on-shade-fg, #ffffff) 38%, transparent) 82%,
+    color-mix(in srgb, var(--pt-on-shade-fg, #ffffff) 0%, transparent) 100%
+  );
+  opacity: 0;
+  transform: scaleX(0.94);
+  transform-origin: left center;
+  transition:
+    opacity var(--dur-footer-reveal) var(--ease-footer-reveal),
+    transform var(--dur-footer-reveal) var(--ease-footer-reveal),
+    visibility 0s linear calc(var(--delay-footer-list) + var(--dur-footer-reveal));
+}
+
+#planTypeFigmaApp .tarefa-screen.is-open.is-morphed:not(.is-list-ready) .tarefa-screen__rule {
+  visibility: hidden;
+  opacity: 0;
+  transform: scaleX(0.94);
+}
+
+#planTypeFigmaApp .tarefa-screen.is-open.is-list-ready.is-content-in .tarefa-screen__rule {
+  visibility: visible;
+  opacity: 1;
+  transform: scaleX(1);
+  transition:
+    opacity var(--dur-footer-reveal) var(--ease-footer-reveal),
+    transform var(--dur-footer-reveal) var(--ease-footer-reveal),
+    visibility 0s linear var(--delay-footer-list);
+  transition-delay: var(--delay-footer-list);
+}
+
+#planTypeFigmaApp .tarefa-screen.is-fading-chrome .tarefa-screen__rule {
+  opacity: 0;
+  transform: scaleX(0.94);
+  transition-delay: calc(var(--delay-footer-btn) - var(--delay-footer-list));
+}
+
+#planTypeFigmaApp .tarefa-screen__desc .tarefa-screen__list,
+#planTypeFigmaApp .tarefa-screen__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tarefa-footer-list-gap);
+  width: 100%;
+  font-family: "Instrument Sans", sans-serif;
+  font-weight: 400;
+}
+
+#planTypeFigmaApp .tarefa-screen__feature {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  min-width: 0;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-14px);
+  transition:
+    opacity var(--dur-feature-reveal) var(--ease-list-reveal),
+    transform var(--dur-feature-reveal) var(--ease-list-reveal),
+    visibility 0s linear calc(var(--delay-footer-list) + var(--dur-feature-reveal));
+}
+
+#planTypeFigmaApp .tarefa-screen__feature-icon {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tarefa-footer-icon-size);
+  height: var(--tarefa-footer-icon-size);
+  border: 1px solid color-mix(in srgb, var(--pt-on-shade-fg, #ffffff) 28%, transparent);
+  border-radius: 8px;
+  color: var(--pt-on-shade-fg, #ffffff);
+}
+
+#planTypeFigmaApp .tarefa-screen__feature-icon svg,
+#planTypeFigmaApp .tarefa-screen__feature-icon .lucide {
+  width: 1rem;
+  height: 1rem;
+  stroke-width: 1.75;
+}
+
+#planTypeFigmaApp .tarefa-screen__feature-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+#planTypeFigmaApp .tarefa-screen__feature-title {
+  display: block;
+  font-family: "Instrument Sans", sans-serif;
+  font-size: var(--tarefa-footer-feature-title);
+  font-weight: 600;
+  line-height: 1.35;
+  color: color-mix(in srgb, var(--pt-on-shade-fg, #ffffff) 94%, transparent);
+}
+
+#planTypeFigmaApp .tarefa-screen__feature-desc {
+  display: block;
+  font-family: "Instrument Sans", sans-serif;
+  font-size: var(--tarefa-footer-feature-desc);
+  font-weight: 400;
+  line-height: 1.35;
+  color: color-mix(in srgb, var(--pt-on-shade-fg, #ffffff) 62%, transparent);
+}
+
+#planTypeFigmaApp .tarefa-screen.is-open.is-morphed:not(.is-list-ready) .tarefa-screen__list {
+  visibility: hidden;
+}
+
+#planTypeFigmaApp .tarefa-screen.is-open.is-list-ready.is-content-in .tarefa-screen__list {
+  visibility: visible;
+  transition: visibility 0s linear var(--delay-footer-list);
+}
+
+#planTypeFigmaApp .tarefa-screen.is-open.is-list-ready.is-content-in .tarefa-screen__feature {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  transition:
+    opacity var(--dur-feature-reveal) var(--ease-list-reveal),
+    transform var(--dur-feature-reveal) var(--ease-list-reveal),
+    visibility 0s linear var(--feature-reveal-delay, var(--delay-footer-list));
+  transition-delay: var(--feature-reveal-delay, var(--delay-footer-list));
+}
+
+#planTypeFigmaApp .tarefa-screen.is-open.is-list-ready.is-content-in .tarefa-screen__feature:nth-child(1) {
+  --feature-reveal-delay: var(--delay-footer-list);
+}
+
+#planTypeFigmaApp .tarefa-screen.is-open.is-list-ready.is-content-in .tarefa-screen__feature:nth-child(2) {
+  --feature-reveal-delay: calc(var(--delay-footer-list) + var(--delay-feature-item-step));
+}
+
+#planTypeFigmaApp .tarefa-screen.is-open.is-list-ready.is-content-in .tarefa-screen__feature:nth-child(3) {
+  --feature-reveal-delay: calc(var(--delay-footer-list) + 2 * var(--delay-feature-item-step));
+}
+
+#planTypeFigmaApp .tarefa-screen.is-open.is-list-ready.is-content-in .tarefa-screen__feature:nth-child(4) {
+  --feature-reveal-delay: calc(var(--delay-footer-list) + 3 * var(--delay-feature-item-step));
+}
+
+#planTypeFigmaApp .tarefa-screen.is-open.is-list-ready.is-content-in .tarefa-screen__feature:nth-child(5) {
+  --feature-reveal-delay: calc(var(--delay-footer-list) + 4 * var(--delay-feature-item-step));
+}
+
+#planTypeFigmaApp .tarefa-screen.is-open.is-list-ready.is-content-in .tarefa-screen__feature:nth-child(6) {
+  --feature-reveal-delay: calc(var(--delay-footer-list) + 5 * var(--delay-feature-item-step));
+}
+
+#planTypeFigmaApp .tarefa-screen__btn {
+  margin-top: var(--tarefa-footer-list-btn-gap);
+  width: 100%;
+  min-height: 40px;
+  height: 40px;
+  padding: 0 1.15rem 0 1.25rem;
+  opacity: 0;
+  transform: translateY(-12px);
+  pointer-events: none;
+}
+
+/* Título + lead: mesma entrada cima→baixo da lista (PC e mobile) */
+#planTypeFigmaApp .tarefa-screen__footer .tarefa-screen__title,
+#planTypeFigmaApp .tarefa-screen__footer .tarefa-screen__lead,
+#planTypeFigmaApp .tarefa-screen__footer .col__lead.tarefa-screen__lead {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-14px);
+  transition:
+    opacity var(--dur-feature-reveal) var(--ease-list-reveal),
+    transform var(--dur-feature-reveal) var(--ease-list-reveal),
+    visibility 0s linear calc(var(--delay-footer-list) + var(--dur-feature-reveal));
+}
+
+#planTypeFigmaApp .tarefa-screen.is-open.is-morphed:not(.is-list-ready) .tarefa-screen__footer .tarefa-screen__title,
+#planTypeFigmaApp .tarefa-screen.is-open.is-morphed:not(.is-list-ready) .tarefa-screen__footer .tarefa-screen__lead,
+#planTypeFigmaApp .tarefa-screen.is-open.is-morphed:not(.is-list-ready) .tarefa-screen__footer .col__lead.tarefa-screen__lead {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-14px);
+  transition: none;
+}
+
+#planTypeFigmaApp .tarefa-screen.is-open.is-list-ready.is-content-in .tarefa-screen__footer .tarefa-screen__title {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  transition:
+    opacity var(--dur-feature-reveal) var(--ease-list-reveal),
+    transform var(--dur-feature-reveal) var(--ease-list-reveal),
+    visibility 0s linear var(--delay-footer-list);
+  transition-delay: var(--delay-footer-list);
+}
+
+#planTypeFigmaApp .tarefa-screen.is-open.is-list-ready.is-content-in .tarefa-screen__footer .tarefa-screen__lead,
+#planTypeFigmaApp .tarefa-screen.is-open.is-list-ready.is-content-in .tarefa-screen__footer .col__lead.tarefa-screen__lead {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  transition:
+    opacity var(--dur-feature-reveal) var(--ease-list-reveal),
+    transform var(--dur-feature-reveal) var(--ease-list-reveal),
+    visibility 0s linear calc(var(--delay-footer-list) + var(--delay-feature-item-step));
+  transition-delay: calc(var(--delay-footer-list) + var(--delay-feature-item-step));
+}
+
+/* Voltar (PC): título/lead/lista sobem e somem — inverso da entrada */
+#planTypeFigmaApp .tarefa-screen.is-open.is-list-ready.is-content-in.is-fading-chrome .tarefa-screen__footer .tarefa-screen__title {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-14px);
+  transition:
+    opacity var(--dur-feature-reveal) var(--ease-list-reveal),
+    transform var(--dur-feature-reveal) var(--ease-list-reveal),
+    visibility 0s linear calc(var(--delay-footer-btn) - var(--delay-footer-list) + var(--dur-feature-reveal));
+  transition-delay: calc(var(--delay-footer-btn) - var(--delay-footer-list));
+}
+
+#planTypeFigmaApp .tarefa-screen.is-open.is-list-ready.is-content-in.is-fading-chrome .tarefa-screen__footer .tarefa-screen__lead,
+#planTypeFigmaApp .tarefa-screen.is-open.is-list-ready.is-content-in.is-fading-chrome .tarefa-screen__footer .col__lead.tarefa-screen__lead {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-14px);
+  transition:
+    opacity var(--dur-feature-reveal) var(--ease-list-reveal),
+    transform var(--dur-feature-reveal) var(--ease-list-reveal),
+    visibility 0s linear calc(var(--delay-footer-btn) - var(--delay-footer-list) - var(--delay-feature-item-step) + var(--dur-feature-reveal));
+  transition-delay: calc(var(--delay-footer-btn) - var(--delay-footer-list) - var(--delay-feature-item-step));
+}
+
+#planTypeFigmaApp .tarefa-screen.is-open.is-list-ready.is-content-in.is-fading-chrome .tarefa-screen__feature {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-14px);
+  transition:
+    opacity var(--dur-feature-reveal) var(--ease-list-reveal),
+    transform var(--dur-feature-reveal) var(--ease-list-reveal),
+    visibility 0s linear calc(var(--delay-footer-btn) - var(--feature-reveal-delay, var(--delay-footer-list)) + var(--dur-feature-reveal));
+  transition-delay: calc(var(--delay-footer-btn) - var(--feature-reveal-delay, var(--delay-footer-list)));
+}
+
+#planTypeFigmaApp .tarefa-screen.is-open.is-list-ready.is-content-in.is-fading-chrome .tarefa-screen__btn {
+  opacity: 0;
+  transform: translateY(-12px);
+  pointer-events: none;
+}
+
+#planTypeFigmaApp .tarefa-screen.is-open.is-list-ready.is-content-in.is-fading-chrome .tarefa-screen__back {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Hero morph: placeholders stay hidden; list/rule/btn fade in after text lands */
+#planTypeFigmaApp .tarefa-screen.is-open.is-hero-in:not(.is-content-in) .tarefa-screen__title.tarefa-screen__morph-slot,
+#planTypeFigmaApp .tarefa-screen.is-open.is-hero-in:not(.is-content-in) .tarefa-screen__lead.tarefa-screen__morph-slot,
+#planTypeFigmaApp .tarefa-screen.is-open.is-hero-in:not(.is-content-in) .tarefa-screen__list,
+#planTypeFigmaApp .tarefa-screen.is-open.is-hero-in:not(.is-content-in) .tarefa-screen__feature,
+#planTypeFigmaApp .tarefa-screen.is-open.is-hero-in:not(.is-content-in) .tarefa-screen__rule,
+#planTypeFigmaApp .tarefa-screen.is-open.is-hero-in:not(.is-content-in) .tarefa-screen__accent,
+#planTypeFigmaApp .tarefa-screen.is-open.is-hero-in:not(.is-content-in) .tarefa-screen__btn {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition:
+    opacity 0.28s var(--ease-click),
+    transform 0.28s var(--ease-click),
+    visibility 0s linear 0.28s;
+}
+
+#planTypeFigmaApp .tarefa-screen.is-content-in .tarefa-screen__title {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  transition:
+    opacity 0.28s var(--ease-click),
+    transform 0.28s var(--ease-click),
+    visibility 0s linear 0.06s;
+  transition-delay: 0.06s;
+}
+
+#planTypeFigmaApp .tarefa-screen.is-content-in .tarefa-screen__lead {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  transition:
+    opacity 0.28s var(--ease-click),
+    transform 0.28s var(--ease-click),
+    visibility 0s linear 0.1s;
+  transition-delay: 0.1s;
+}
+
+#planTypeFigmaApp .tarefa-screen.is-open.is-list-ready.is-content-in .tarefa-screen__btn {
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
+  pointer-events: auto;
+  transition-delay: var(--delay-footer-btn);
+}
+
+#planTypeFigmaApp .tarefa-screen.is-open.is-list-ready.is-content-in .tarefa-screen__btn:hover {
+  transform: translateY(-2px);
+}
+
+#planTypeFigmaApp .tarefa-screen.is-open.is-list-ready.is-content-in .tarefa-screen__btn:active {
+  transform: translateY(0) scale(0.98);
+}
+
+#planTypeFigmaApp .tarefa-screen.is-closing .tarefa-screen__backdrop {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+@media (max-height: 720px) {
+  #planTypeFigmaApp {
+    --tarefa-footer-title-size: 14px;
+    --tarefa-footer-lead-size: 0.6875rem;
+    --tarefa-footer-feature-title: 0.6875rem;
+    --tarefa-footer-feature-desc: 0.625rem;
+    --tarefa-footer-icon-size: 1.75rem;
+    --tarefa-footer-list-gap: 0.55rem;
+    --tarefa-footer-heading-gap: 0.45rem;
+    --tarefa-footer-list-btn-gap: clamp(0.85rem, 1.6dvh, 1.35rem);
+  }
+
+  #planTypeFigmaApp .tarefa-screen__word {
+    font-size: calc(min(16vw, 20dvh, 8.5rem) * var(--hero-word-scale, 1));
+  }
+
+  #planTypeFigmaApp .tarefa-screen__card,
+  #planTypeFigmaApp .tarefa-screen.is-measuring .tarefa-screen__card {
+    width: min(44vw, 46dvh, 400px);
+    max-height: min(52dvh, 440px);
+  }
+
+  #planTypeFigmaApp .tarefa-screen.is-measuring .tarefa-screen__card img {
+    max-height: min(52dvh, 440px);
+  }
+
+  #planTypeFigmaApp .tarefa-screen__desc {
+    font-size: 0.8125rem;
+  }
+
+  #planTypeFigmaApp .tarefa-screen__btn {
+    margin-top: var(--tarefa-footer-list-btn-gap);
+    min-height: 40px;
+    height: 40px;
+    font-size: 0.8125rem;
+  }
+}
+
+@media (max-width: 900px) {
+  #planTypeFigmaApp .header {
+    left: max(0.75rem, var(--header-x));
+    top: max(0.75rem, var(--header-y));
+    max-width: min(280px, 40vw);
+  }
+
+  #planTypeFigmaApp .plan-type-stage-back {
+    top: max(0.75rem, calc(var(--header-y) - 0.35rem));
+    right: max(0.75rem, var(--footer-x));
+    min-height: 34px;
+    padding: 0.4rem 0.85rem 0.4rem 0.7rem;
+    font-size: 0.74rem;
+  }
+
+  #planTypeFigmaApp .header__title {
+    font-size: clamp(1.1rem, 4vw, 1.75rem);
+  }
+
+  #planTypeFigmaApp .header__subtitle {
+    font-size: clamp(0.6875rem, 2.5vw, 0.875rem);
+  }
+
+  #planTypeFigmaApp .stage {
+    flex-direction: row;
+    padding-top: 0;
+    min-width: 100%;
+  }
+
+  #planTypeFigmaApp .col {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 100%;
+  }
+
+  #planTypeFigmaApp.app[data-active] .col.is-active {
+    height: 100%;
+  }
+
+  #planTypeFigmaApp .col__desc {
+    font-size: clamp(0.625rem, 2vw, 0.8125rem);
+  }
+
+  #planTypeFigmaApp .col__lead {
+    margin-bottom: 0.35rem;
+  }
+
+  #planTypeFigmaApp .col--diario { --body-w: 200px; }
+  #planTypeFigmaApp .col--semanal { --body-w: 170px; }
+  #planTypeFigmaApp .col--mensal { --body-w: 210px; }
+  #planTypeFigmaApp .col--tarefa { --body-w: 260px; }
+
+  #planTypeFigmaApp .col__body {
+    width: min(var(--body-w), 92%);
+  }
+
+  #planTypeFigmaApp {
+    --body-idle: 52%;
+    --body-active: 62%;
+    --visual-h: 34%;
+  }
+
+  #planTypeFigmaApp .tarefa-screen__footer {
+    padding: 0.75rem 1.25rem max(1rem, env(safe-area-inset-bottom, 1rem));
+    width: 100%;
+  }
+
+  #planTypeFigmaApp .tarefa-screen__hero {
+    padding: 0.75rem 0.5rem;
+  }
+
+  #planTypeFigmaApp .tarefa-screen__card,
+  #planTypeFigmaApp .tarefa-screen.is-measuring .tarefa-screen__card {
+    width: min(46vw, 42dvh, 360px);
+    max-height: min(50dvh, 400px);
+  }
+}
+
+@media (max-width: 640px) {
+  #planTypeFigmaApp.app.is-mobile-stack {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition:
+      background-color var(--dur-shade-brand-exit) var(--ease-shade-brand-exit),
+      color var(--dur-shade-brand-exit) var(--ease-shade-brand-exit);
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack > .header {
+    left: max(1rem, env(safe-area-inset-left, 0px));
+    top: max(0.85rem, calc(env(safe-area-inset-top, 0px) + 0.65rem));
+    max-width: calc(100% - 7.25rem);
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .header__subtitle {
+    max-width: none;
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .plan-type-stage-back {
+    top: max(0.7rem, calc(env(safe-area-inset-top, 0px) + 0.55rem));
+    right: max(0.75rem, env(safe-area-inset-right, 0px));
+    min-height: 40px;
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .stage {
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+    width: 100%;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+    padding-top: calc(5.25rem + env(safe-area-inset-top, 0px));
+    padding-bottom: max(0px, env(safe-area-inset-bottom, 0px));
+    box-sizing: border-box;
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack:not(.is-col-open):not(.is-col-opening):not(.is-brand-exiting):not(.is-mobile-blackout) > .header,
+  #planTypeFigmaApp.app.is-mobile-stack:not(.is-col-open):not(.is-col-opening):not(.is-mobile-blackout) .stage {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  /* Ponte preta enquanto a lista some / a tela da opção entra ou volta */
+  #planTypeFigmaApp.app.is-mobile-stack.is-brand-exiting,
+  #planTypeFigmaApp.app.is-mobile-stack.is-col-opening,
+  #planTypeFigmaApp.app.is-mobile-stack.is-col-open,
+  #planTypeFigmaApp.app.is-mobile-stack.is-col-closing,
+  #planTypeFigmaApp.app.is-mobile-stack.is-mobile-blackout {
+    background: var(--pt-transition-bg, #222226);
+    color: #ffffff;
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack.is-mobile-blackout > .header,
+  #planTypeFigmaApp.app.is-mobile-stack.is-mobile-blackout .plan-type-stage-back,
+  #planTypeFigmaApp.app.is-mobile-stack.is-mobile-blackout .stage .col {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack.is-mobile-blackout > .header {
+    visibility: hidden;
+    transition: none;
+  }
+
+  /* Congela o estado de saída antes do reverse */
+  #planTypeFigmaApp.app.is-mobile-stack.is-mobile-blackout.is-brand-exiting > .header,
+  #planTypeFigmaApp.app.is-mobile-stack.is-mobile-blackout.is-brand-exiting .plan-type-stage-back,
+  #planTypeFigmaApp.app.is-mobile-stack.is-mobile-blackout.is-brand-exiting .stage .col {
+    transition: none !important;
+  }
+
+  /* Reverse da saída: header desce + botão/colunas voltam */
+  #planTypeFigmaApp.app.is-mobile-stack.is-brand-returning > .header {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: none;
+    transform: translateY(0);
+    transition:
+      opacity calc(var(--dur-shade-brand-exit) * 0.75) var(--ease-shade-brand-exit),
+      transform var(--dur-shade-brand-exit) var(--ease-shade-brand-exit),
+      visibility 0s;
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack.is-brand-returning .plan-type-stage-back {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+    transition:
+      opacity calc(var(--dur-shade-brand-exit) * 0.65) var(--ease-shade-brand-exit),
+      transform var(--dur-shade-brand-exit) var(--ease-shade-brand-exit),
+      visibility 0s;
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack.is-brand-returning .stage .col {
+    opacity: 1;
+    pointer-events: auto;
+    transition:
+      opacity calc(var(--dur-shade-brand-exit) * 0.85) var(--ease-shade-brand-exit),
+      background-color 0.22s ease,
+      color 0.22s ease;
+  }
+
+  /* Header sobe e some ao selecionar uma opção */
+  #planTypeFigmaApp.app.is-mobile-stack.is-brand-exiting > .header {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(calc(-100% - max(0.85rem, env(safe-area-inset-top, 0px) + 0.65rem)));
+    transition:
+      opacity calc(var(--dur-shade-brand-exit) * 0.75) var(--ease-shade-brand-exit),
+      transform var(--dur-shade-brand-exit) var(--ease-shade-brand-exit),
+      visibility 0s linear var(--dur-shade-brand-exit);
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack.is-brand-exiting .plan-type-stage-back {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-1.25rem);
+    transition:
+      opacity calc(var(--dur-shade-brand-exit) * 0.65) var(--ease-shade-brand-exit),
+      transform var(--dur-shade-brand-exit) var(--ease-shade-brand-exit),
+      visibility 0s linear var(--dur-shade-brand-exit);
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack.is-col-opening > .header,
+  #planTypeFigmaApp.app.is-mobile-stack.is-col-opening.is-brand-exiting > .header {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .col {
+    flex: 1 1 0;
+    width: 100%;
+    min-height: 0;
+    height: auto !important;
+    display: flex;
+    align-items: center;
+    border-bottom: none;
+    -webkit-tap-highlight-color: transparent;
+    opacity: 1;
+    transition:
+      background-color 0.22s ease,
+      color 0.22s ease,
+      opacity calc(var(--dur-shade-brand-exit) * 0.85) var(--ease-shade-brand-exit);
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack.is-brand-exiting .stage .col,
+  #planTypeFigmaApp.app.is-mobile-stack.is-col-opening:not(.is-col-open) .stage .col,
+  #planTypeFigmaApp.app.is-mobile-stack.is-mobile-blackout .stage .col {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .col:active {
+    background: color-mix(in srgb, var(--pt-shade) 8%, var(--pt-col-bg));
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .col__shade,
+  #planTypeFigmaApp.app.is-mobile-stack .col__visual {
+    display: none !important;
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .col__shade-header {
+    display: none !important;
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .col__body {
+    position: relative;
+    top: auto !important;
+    left: auto;
+    transform: none;
+    width: 100%;
+    max-width: none;
+    padding: 0.75rem 1.25rem;
+    box-sizing: border-box;
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .col__body h2 {
+    font-size: clamp(1.1rem, 5vw, 1.35rem);
+    margin-bottom: 0.35rem;
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .col--tarefa .col__body h2 {
+    white-space: nowrap;
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .col__desc {
+    font-size: clamp(0.75rem, 3.4vw, 0.875rem);
+    line-height: 1.45;
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .col__lead {
+    margin-bottom: 0;
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .col__list {
+    display: none !important;
+  }
+
+  /* Hover preview desligado — só highlight suave na linha */
+  #planTypeFigmaApp.app.is-mobile-stack[data-active] .col.is-active {
+    background: color-mix(in srgb, var(--pt-shade) 11%, var(--pt-col-bg));
+    color: var(--pt-col-fg);
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack[data-active] .col.is-active .col__shade,
+  #planTypeFigmaApp.app.is-mobile-stack[data-active] .col.is-active .col__visual {
+    display: none !important;
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack[data-active] .col.is-active .col__body {
+    top: auto !important;
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack[data-active="diario"] .header {
+    color: var(--pt-header-fg);
+  }
+
+  /* Mobile: portal fixo acima do letreiro (z-index 95 > tarefa-screen 45) */
+  #planTypeFigmaApp .plan-type-mobile-img-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 95;
+    pointer-events: none;
+    isolation: isolate;
+  }
+
+  #planTypeFigmaApp .plan-type-mobile-img-layer > img {
+    mix-blend-mode: normal !important;
+    filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.45));
+    transition-property: opacity !important;
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .plan-type-mobile-img-layer.is-confirm-exiting > img {
+    opacity: 0 !important;
+    transition: opacity var(--pt-confirm-exit-ms, 280ms) ease !important;
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack.is-col-opening .tarefa-screen__hero,
+  #planTypeFigmaApp.app.is-mobile-stack.is-col-opening .tarefa-screen__word-track {
+    z-index: 1;
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen__word {
+    position: relative;
+    z-index: 1;
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen.is-mobile-img-fading .tarefa-screen__word {
+    z-index: 0;
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen__hero-stage .tarefa-screen__card {
+    z-index: 25;
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen__card img {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Morph fullscreen — hero e footer */
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen__word {
+    font-size: calc(min(14vw, 18dvh, 5.5rem) * var(--hero-word-scale, 1));
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen__card,
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen.is-measuring .tarefa-screen__card {
+    width: min(54vw, 42dvh, 210px);
+    max-height: min(33dvh, 240px);
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen__card img,
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen.is-measuring .tarefa-screen__card img,
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen.is-open.is-morphed .tarefa-screen__card img {
+    width: 100%;
+    height: auto;
+    max-height: min(33dvh, 240px);
+    aspect-ratio: 317 / 475;
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen.is-open.is-morphed .tarefa-screen__card img {
+    opacity: 1;
+    visibility: visible;
+    mix-blend-mode: lighten;
+    filter:
+      drop-shadow(0 18px 36px rgba(0, 0, 0, 0.5))
+      drop-shadow(0 0 24px rgba(255, 255, 255, 0.1));
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen__hero {
+    padding: 0.5rem max(0.75rem, env(safe-area-inset-right)) 0.5rem max(0.75rem, env(safe-area-inset-left));
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen__footer {
+    padding: 0.65rem max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom, 1rem)) max(1rem, env(safe-area-inset-left));
+    max-height: min(52dvh, 420px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen__btn {
+    min-height: 44px;
+    height: 44px;
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen__back {
+    min-height: 40px;
+    top: max(0.85rem, env(safe-area-inset-top, 0.85rem));
+    left: max(0.85rem, env(safe-area-inset-left, 0.85rem));
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen.is-reversing .tarefa-screen__hero {
+    inset: 0;
+    bottom: auto;
+    z-index: 6;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: none;
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen.is-reversing .tarefa-screen__word-track {
+    z-index: 2;
+    opacity: 1;
+    visibility: visible;
+    transition: transform var(--dur-word-track-reverse) var(--ease-click);
+    will-change: transform;
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen.is-reversing.is-hero-in .tarefa-screen__word-track {
+    transform: translateX(0);
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen.is-reversing:not(.is-hero-in) .tarefa-screen__word-track {
+    transform: translateX(var(--word-track-start, 100%));
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen.is-reversing .tarefa-screen__word {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  /* Título + lead: mesma entrada/saída da lista (feature-reveal) */
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen__footer .tarefa-screen__title,
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen__footer .tarefa-screen__lead {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-14px);
+    transition:
+      opacity var(--dur-feature-reveal) var(--ease-list-reveal),
+      transform var(--dur-feature-reveal) var(--ease-list-reveal),
+      visibility 0s linear calc(var(--delay-footer-list) + var(--dur-feature-reveal));
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen.is-open.is-morphed:not(.is-list-ready) .tarefa-screen__footer .tarefa-screen__title,
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen.is-open.is-morphed:not(.is-list-ready) .tarefa-screen__footer .tarefa-screen__lead {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-14px);
+    transition: none;
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen.is-open.is-list-ready.is-content-in .tarefa-screen__footer .tarefa-screen__title {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    transition:
+      opacity var(--dur-feature-reveal) var(--ease-list-reveal),
+      transform var(--dur-feature-reveal) var(--ease-list-reveal),
+      visibility 0s linear var(--delay-footer-list);
+    transition-delay: var(--delay-footer-list);
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen.is-open.is-list-ready.is-content-in .tarefa-screen__footer .tarefa-screen__lead {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    transition:
+      opacity var(--dur-feature-reveal) var(--ease-list-reveal),
+      transform var(--dur-feature-reveal) var(--ease-list-reveal),
+      visibility 0s linear calc(var(--delay-footer-list) + var(--delay-feature-item-step));
+    transition-delay: calc(var(--delay-footer-list) + var(--delay-feature-item-step));
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen.is-open.is-list-ready.is-content-in.is-fading-chrome .tarefa-screen__footer .tarefa-screen__title {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-14px);
+    transition:
+      opacity var(--dur-feature-reveal) var(--ease-list-reveal),
+      transform var(--dur-feature-reveal) var(--ease-list-reveal),
+      visibility 0s linear calc(var(--delay-footer-btn) - var(--delay-footer-list) + var(--dur-feature-reveal));
+    transition-delay: calc(var(--delay-footer-btn) - var(--delay-footer-list));
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen.is-open.is-list-ready.is-content-in.is-fading-chrome .tarefa-screen__footer .tarefa-screen__lead {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-14px);
+    transition:
+      opacity var(--dur-feature-reveal) var(--ease-list-reveal),
+      transform var(--dur-feature-reveal) var(--ease-list-reveal),
+      visibility 0s linear calc(var(--delay-footer-btn) - var(--delay-footer-list) - var(--delay-feature-item-step) + var(--dur-feature-reveal));
+    transition-delay: calc(var(--delay-footer-btn) - var(--delay-footer-list) - var(--delay-feature-item-step));
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen.is-open.is-list-ready.is-content-in.is-fading-chrome .tarefa-screen__feature {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-14px);
+    transition:
+      opacity var(--dur-feature-reveal) var(--ease-list-reveal),
+      transform var(--dur-feature-reveal) var(--ease-list-reveal),
+      visibility 0s linear calc(var(--delay-footer-btn) - var(--feature-reveal-delay, var(--delay-footer-list)) + var(--dur-feature-reveal));
+    transition-delay: calc(var(--delay-footer-btn) - var(--feature-reveal-delay, var(--delay-footer-list)));
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen.is-open.is-list-ready.is-content-in.is-fading-chrome .tarefa-screen__list {
+    visibility: hidden;
+    transition: visibility 0s linear calc(var(--delay-footer-btn) - var(--delay-footer-list) + var(--dur-feature-reveal));
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen.is-open.is-list-ready.is-content-in.is-fading-chrome .tarefa-screen__accent {
+    opacity: 0;
+    transform: scaleY(0);
+    transition:
+      transform var(--dur-feature-reveal) var(--ease-list-reveal),
+      opacity var(--dur-feature-reveal) var(--ease-list-reveal);
+    transition-delay: calc(var(--delay-footer-btn) - var(--delay-accent-reveal));
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen.is-open.is-list-ready.is-content-in.is-fading-chrome .tarefa-screen__btn {
+    opacity: 0;
+    transform: translateY(-12px);
+    transition:
+      opacity var(--dur-feature-reveal) var(--ease-list-reveal),
+      transform var(--dur-feature-reveal) var(--ease-list-reveal);
+    transition-delay: 0ms;
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen.is-reversing-chrome .tarefa-screen__footer .tarefa-screen__title,
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen.is-reversing-chrome .tarefa-screen__footer .tarefa-screen__lead,
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen.is-reversing-chrome .tarefa-screen__feature,
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen.is-reversing-chrome .tarefa-screen__desc .tarefa-screen__rule,
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen.is-reversing-chrome .tarefa-screen__rule {
+    visibility: visible;
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: none;
+    transition:
+      opacity var(--dur-feature-reveal) var(--ease-list-reveal),
+      transform var(--dur-feature-reveal) var(--ease-list-reveal),
+      visibility 0s linear 0s;
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen.is-reversing-chrome .tarefa-screen__accent {
+    visibility: visible;
+    opacity: 1;
+    transform: scaleY(1);
+    pointer-events: none;
+    transition:
+      transform var(--dur-feature-reveal) var(--ease-list-reveal),
+      opacity var(--dur-feature-reveal) var(--ease-list-reveal),
+      visibility 0s linear 0s;
+  }
+
+  /* Rule — mesma entrada/saída da lista (feature-reveal) */
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen__desc .tarefa-screen__rule,
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen__rule {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-14px);
+    transform-origin: center;
+    transition:
+      opacity var(--dur-feature-reveal) var(--ease-list-reveal),
+      transform var(--dur-feature-reveal) var(--ease-list-reveal),
+      visibility 0s linear calc(var(--delay-footer-list) + var(--dur-feature-reveal));
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen.is-open.is-list-ready.is-content-in .tarefa-screen__desc .tarefa-screen__rule,
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen.is-open.is-list-ready.is-content-in .tarefa-screen__rule {
+    --feature-reveal-delay: calc(var(--delay-footer-list) + 2 * var(--delay-feature-item-step));
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    transition:
+      opacity var(--dur-feature-reveal) var(--ease-list-reveal),
+      transform var(--dur-feature-reveal) var(--ease-list-reveal),
+      visibility 0s linear var(--feature-reveal-delay);
+    transition-delay: var(--feature-reveal-delay);
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen.is-open.is-list-ready.is-content-in.is-fading-chrome .tarefa-screen__desc .tarefa-screen__rule,
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen.is-open.is-list-ready.is-content-in.is-fading-chrome .tarefa-screen__rule {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-14px);
+    transition:
+      opacity var(--dur-feature-reveal) var(--ease-list-reveal),
+      transform var(--dur-feature-reveal) var(--ease-list-reveal),
+      visibility 0s linear calc(var(--delay-footer-btn) - var(--feature-reveal-delay, var(--delay-footer-list)) + var(--dur-feature-reveal));
+    transition-delay: calc(var(--delay-footer-btn) - var(--feature-reveal-delay, var(--delay-footer-list)));
+  }
+
+  #planTypeFigmaApp.app.is-mobile-stack .tarefa-screen.is-closing-chrome .tarefa-screen__rule {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    pointer-events: none;
+    transition:
+      opacity 220ms var(--ease-footer-reveal),
+      visibility 0s linear 220ms;
+  }
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #planTypeFigmaApp .tarefa-screen__accent {
+    transition-duration: 0.2s !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+  }
+}
+
+#planTypeFigmaApp.app.is-reduced-motion .tarefa-screen.is-word-sweep .tarefa-screen__word-track {
+  transition: none !important;
+}
+
+#planTypeFigmaApp.app.is-reduced-motion .tarefa-screen.is-hero-settling .tarefa-screen__hero-stage,
+#planTypeFigmaApp.app.is-reduced-motion .tarefa-screen.is-hero-settling.is-content-in .tarefa-screen__hero {
+  transition: none !important;
+}

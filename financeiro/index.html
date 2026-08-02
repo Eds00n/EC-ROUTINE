@@ -1,104 +1,123 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+  <script>
+    (function () {
+      try {
+        if (localStorage.getItem("ecRoutineTheme") === "dark") {
+          document.documentElement.setAttribute("data-theme", "dark");
+        } else {
+          document.documentElement.removeAttribute("data-theme");
+        }
+      } catch (e) {}
+    })();
+  </script>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Financeiro · EC ROUTINE</title>
   <meta name="ec-api-base" content="https://ec-routine-api.onrender.com/api" />
-  <style>
-    :root {
-      --bg: #0a0a0a;
-      --card: #141414;
-      --border: #2a2a2a;
-      --text: #f0f0f0;
-      --muted: #9a9a9a;
-      --accent: #8b5cf6;
-      --accent-dim: rgba(139, 92, 246, 0.15);
-      --ok: #3ddc84;
-      --err: #ff6b6b;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      min-height: 100vh;
-      font-family: system-ui, -apple-system, Segoe UI, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      padding: 1.25rem;
-    }
-    .wrap { max-width: 28rem; margin: 0 auto; }
-    h1 { font-size: 1.2rem; margin: 0 0 0.35rem; }
-    p.lead { color: var(--muted); font-size: 0.88rem; line-height: 1.45; margin: 0 0 1rem; }
-    .hint {
-      font-size: 0.78rem;
-      color: var(--muted);
-      border-left: 3px solid var(--accent);
-      padding: 0.5rem 0.65rem;
-      margin-bottom: 1rem;
-      background: var(--accent-dim);
-      border-radius: 0 6px 6px 0;
-      line-height: 1.45;
-    }
-    ol.steps {
-      font-size: 0.82rem;
-      color: var(--muted);
-      line-height: 1.5;
-      padding-left: 1.2rem;
-      margin: 0 0 1rem;
-    }
-    ol.steps strong { color: var(--text); }
-  </style>
-  <link rel="stylesheet" href="/financeiro/import-ui.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/ec-global-responsive.css" />
+  <link rel="stylesheet" href="/dashboard.css" />
+  <link rel="stylesheet" href="/dashboard-theme.css" />
+  <link rel="stylesheet" href="/financeiro/financeiro-theme.css?v=20260516fin-voltar-ctr" />
+  <script src="/api-base.js?v=20260419deploy"></script>
 </head>
-<body>
-  <div class="wrap">
-    <h1>Financeiro</h1>
-    <p class="lead">Atualize o orçamento com o extrato CSV do Nubank.</p>
+<body class="fin-page">
+  <header class="header fin-header fin-header--import" role="banner">
+    <div class="header-right fin-header-right">
+      <nav class="view-toggle fin-nav" aria-label="Financeiro">
+        <a class="view-btn active" href="/financeiro/index.html">Importar CSV</a>
+        <a class="view-btn" href="/financeiro/painel.html">Painel</a>
+      </nav>
+    </div>
+  </header>
 
-    <p class="hint">
-      No app: <strong>Conta</strong> → exportar extrato → formato <strong>CSV</strong> (não PDF).
-      Escolha o mês que quer ver no painel.
-    </p>
+  <main class="fin-page__main fin-import" id="fin-import-main">
+    <header class="fin-import__head">
+      <h1 class="fin-import__title">Importar extrato</h1>
+      <p class="fin-import__lead">CSV do Nubank → painel em segundos.</p>
+    </header>
 
-    <ol class="steps">
-      <li>Exportar CSV no Nubank</li>
-      <li>Entrar no EC ROUTINE (login)</li>
-      <li>Enviar o ficheiro abaixo → <strong>Importar e ver painel</strong></li>
+    <ol class="fin-flow fin-flow--compact" aria-label="Passos">
+      <li class="fin-flow__step">
+        <span class="fin-flow__badge" aria-hidden="true">1</span>
+        <span class="fin-flow__label">Exportar CSV</span>
+      </li>
+      <li class="fin-flow__step">
+        <span class="fin-flow__badge" aria-hidden="true">2</span>
+        <span class="fin-flow__label">Importar</span>
+      </li>
+      <li class="fin-flow__step">
+        <span class="fin-flow__badge" aria-hidden="true">3</span>
+        <span class="fin-flow__label">Ver painel</span>
+      </li>
     </ol>
 
-    <div id="login-required" class="card login-card">
-      <p>É preciso estar com sessão iniciada.</p>
-      <a class="btn primary" href="/auth.html?next=%2Ffinanceiro%2Findex.html">Entrar / criar conta</a>
-    </div>
-
-    <div id="upload-block" class="card" hidden>
-      <h2 class="section-title">Atualizar extrato</h2>
-      <label class="file-label">
-        <span class="file-label-text">Ficheiro CSV</span>
-        <input id="csv-file" type="file" accept=".csv,text/csv" />
-      </label>
-      <button type="button" id="btn-import" class="btn primary">Importar e ver painel</button>
-      <p id="import-status" class="import-status" role="status" aria-live="polite"></p>
-    </div>
-
-    <nav class="actions" aria-label="Ações">
-      <a class="btn secondary" href="painel.html">Ver painel (última importação)</a>
-      <a class="btn ghost" href="../dashboard.html">Voltar ao dashboard</a>
-    </nav>
-
-    <p class="foot">
-      <a href="#" id="toggle-pc-help" aria-expanded="false">Prefere usar o PC? Instruções</a>
+    <p class="fin-callout fin-callout--compact" role="note">
+      <span class="fin-callout__text">Use <strong>CSV</strong>, não PDF.</span>
+      <button
+        type="button"
+        class="fin-tip"
+        aria-label="Por que CSV e não PDF?"
+        title="O PDF do banco é só para leitura. O CSV lista data, descrição e valor de cada movimento — é isso que o painel importa."
+      >
+        ?
+      </button>
     </p>
-    <div id="pc-instructions" class="card pc-help" hidden>
-      <ol class="steps">
-        <li>Salvar CSV em <code>financeiro/import/nubank.csv</code></li>
-        <li>Rodar <code>SINCRONIZAR_AUTOMATICO.bat</code></li>
-        <li>FTP no <code>.env</code> publica o painel na Hostinger (opcional)</li>
-      </ol>
-    </div>
-  </div>
 
-  <script src="/api-base.js?v=20260419deploy"></script>
+    <div class="fin-import__body">
+      <div id="login-required" class="fin-card fin-card--login fin-card--compact">
+        <p class="fin-card__message">Inicie sessão para enviar o extrato.</p>
+        <a class="fin-btn fin-btn--primary" href="/auth.html?next=%2Ffinanceiro%2Findex.html">Entrar / criar conta</a>
+      </div>
+
+      <section id="upload-block" class="fin-card fin-card--upload fin-card--compact" aria-labelledby="upload-title" hidden>
+        <h2 id="upload-title" class="fin-card__title fin-card__title--compact">Ficheiro CSV</h2>
+
+        <label class="fin-file fin-file--compact">
+          <span class="fin-file__label" id="csv-file-label">CSV Nubank</span>
+          <span class="fin-file__zone" id="csv-file-zone">
+            <input
+              id="csv-file"
+              type="file"
+              accept=".csv,text/csv"
+              aria-labelledby="csv-file-label"
+              aria-describedby="csv-file-hint"
+            />
+            <span class="fin-file__icon" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3v12M7 8l5-5 5 5" />
+                <path d="M5 21h14" />
+              </svg>
+            </span>
+            <span class="fin-file__hint" id="csv-file-hint">Clique ou arraste aqui</span>
+            <span class="fin-file__name" id="csv-file-name" hidden></span>
+          </span>
+        </label>
+
+        <button type="button" id="btn-import" class="fin-btn fin-btn--primary fin-btn--cta fin-btn--compact">
+          Importar e ver painel
+        </button>
+        <p id="import-status" class="import-status import-status--compact" role="status" aria-live="polite" aria-atomic="true"></p>
+      </section>
+    </div>
+
+    <footer class="fin-import__footer fin-import__footer--compact">
+      <a class="fin-import__foot-link" href="painel.html">Ver painel</a>
+      <a class="fin-import__foot-link fin-import__foot-link--voltar" href="/dashboard.html">Voltar</a>
+      <button type="button" class="fin-import__foot-link fin-import__foot-link--btn" id="toggle-pc-help" aria-expanded="false" aria-controls="pc-instructions">PC</button>
+      <div id="pc-instructions" class="fin-pc-help fin-pc-help--popover" hidden>
+        <ol class="fin-steps fin-steps--compact">
+          <li>CSV em <code>financeiro/import/nubank.csv</code></li>
+          <li><code>SINCRONIZAR_AUTOMATICO.bat</code></li>
+        </ol>
+      </div>
+    </footer>
+  </main>
+
   <script src="/financeiro/import.js"></script>
 </body>
 </html>

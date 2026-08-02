@@ -11,6 +11,180 @@ function getApiBaseUrl() {
 
 var EC_ROUTINE_THEME_KEY = 'ecRoutineTheme';
 var EC_ROUTINE_DAY_NUMBERS_KEY = 'ecRoutineShowDayNumbers';
+var EC_CALENDAR_VIEW_CHOSEN_KEY = 'ecRoutineCalendarViewChosen';
+var EC_PROFILE_PICTURE_KEY = 'ecProfilePicture';
+
+function cacheEcProfilePicture(picture) {
+    try {
+        var p = picture && String(picture).trim();
+        if (p) localStorage.setItem(EC_PROFILE_PICTURE_KEY, p);
+        else localStorage.removeItem(EC_PROFILE_PICTURE_KEY);
+    } catch (e) {}
+}
+
+function getCachedEcProfilePicture() {
+    try {
+        return localStorage.getItem(EC_PROFILE_PICTURE_KEY) || '';
+    } catch (e) {
+        return '';
+    }
+}
+
+var _ecConfirmResolver = null;
+var _ecConfirmEventsBound = false;
+
+var _ecConfirmCloseTimer = null;
+
+function ensureEcConfirmModalClosed() {
+    var modal = document.getElementById('ecConfirmModal');
+    if (!modal) return;
+    if (_ecConfirmCloseTimer) {
+        clearTimeout(_ecConfirmCloseTimer);
+        _ecConfirmCloseTimer = null;
+    }
+    modal.classList.remove('is-open', 'is-closing');
+    modal.hidden = true;
+    modal.setAttribute('aria-hidden', 'true');
+}
+
+function closeEcConfirmModal(result) {
+    var modal = document.getElementById('ecConfirmModal');
+    var resolve = _ecConfirmResolver;
+    _ecConfirmResolver = null;
+    if (!modal || modal.hidden || !modal.classList.contains('is-open')) {
+        ensureEcConfirmModalClosed();
+        if (typeof resolve === 'function') resolve(!!result);
+        return;
+    }
+    modal.classList.add('is-closing');
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden', 'true');
+    if (_ecConfirmCloseTimer) clearTimeout(_ecConfirmCloseTimer);
+    _ecConfirmCloseTimer = window.setTimeout(function () {
+        _ecConfirmCloseTimer = null;
+        ensureEcConfirmModalClosed();
+    }, 160);
+    if (typeof resolve === 'function') resolve(!!result);
+}
+
+function setupEcConfirmModalEvents() {
+    if (_ecConfirmEventsBound) return;
+    _ecConfirmEventsBound = true;
+    var modal = document.getElementById('ecConfirmModal');
+    if (!modal) return;
+    ensureEcConfirmModalClosed();
+    modal.addEventListener('click', function (e) {
+        if (e.target.closest('#ecConfirmOkBtn')) {
+            e.preventDefault();
+            closeEcConfirmModal(true);
+            return;
+        }
+        if (e.target.closest('#ecConfirmCancelBtn') || e.target.closest('#ecConfirmModalOverlay')) {
+            e.preventDefault();
+            closeEcConfirmModal(false);
+        }
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+        var openModal = document.getElementById('ecConfirmModal');
+        if (openModal && openModal.classList.contains('is-open')) {
+            e.preventDefault();
+            closeEcConfirmModal(false);
+        }
+    });
+}
+
+/** Modal de confirmação no tema do app (substitui window.confirm). */
+function openEcConfirmModal(options) {
+    options = options || {};
+    setupEcConfirmModalEvents();
+    var modal = document.getElementById('ecConfirmModal');
+    if (!modal) {
+        return Promise.resolve(window.confirm(options.message || options.title || 'Confirmar?'));
+    }
+    if (_ecConfirmResolver) {
+        var prev = _ecConfirmResolver;
+        _ecConfirmResolver = null;
+        prev(false);
+    }
+    var titleEl = document.getElementById('ecConfirmModalTitle');
+    var messageEl = document.getElementById('ecConfirmModalMessage');
+    var okBtn = document.getElementById('ecConfirmOkBtn');
+    var cancelBtn = document.getElementById('ecConfirmCancelBtn');
+    var iconWrap = modal.querySelector('.ec-confirm-modal__icon');
+    if (titleEl) titleEl.textContent = options.title || 'Confirmar';
+    if (messageEl) messageEl.textContent = options.message || '';
+    if (okBtn) okBtn.textContent = options.confirmLabel || 'Confirmar';
+    if (cancelBtn) cancelBtn.textContent = options.cancelLabel || 'Cancelar';
+    if (iconWrap) iconWrap.innerHTML = '<i data-lucide="triangle-alert"></i>';
+    modal.hidden = false;
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+    var lucideLib = typeof lucide !== 'undefined' ? lucide : (typeof Lucide !== 'undefined' ? Lucide : null);
+    if (lucideLib && lucideLib.createIcons) lucideLib.createIcons();
+    window.setTimeout(function () {
+        if (okBtn) okBtn.focus();
+    }, 0);
+    return new Promise(function (resolve) {
+        _ecConfirmResolver = resolve;
+    });
+}
+
+window.openEcConfirmModal = openEcConfirmModal;
+
+function confirmMentalDiagramDelete(params) {
+    params = params || {};
+    var nodes = params.nodes || [];
+    var edges = params.edges || [];
+    var nN = nodes.length;
+    var nE = edges.length;
+    var title = 'Excluir?';
+    var message = 'Tem certeza que deseja excluir? Esta ação não pode ser desfeita.';
+    if (nN && nE) {
+        title = 'Excluir do diagrama?';
+        message = 'Excluir ' + nN + ' nó(s) e ' + nE + ' ligação(ões)? Esta ação não pode ser desfeita.';
+    } else if (nN === 1 && !nE) {
+        title = 'Excluir nó?';
+        message = 'Tem certeza que deseja excluir este nó do diagrama?';
+    } else if (nN > 1 && !nE) {
+        title = 'Excluir nós?';
+        message = 'Tem certeza que deseja excluir estes ' + nN + ' nós?';
+    } else if (!nN && nE === 1) {
+        title = 'Apagar ligação?';
+        message = 'Tem certeza que deseja apagar esta ligação?';
+    } else if (!nN && nE > 1) {
+        title = 'Apagar ligações?';
+        message = 'Tem certeza que deseja apagar estas ' + nE + ' ligações?';
+    }
+    return openEcConfirmModal({
+        title: title,
+        message: message,
+        confirmLabel: 'Excluir',
+        cancelLabel: 'Cancelar'
+    });
+}
+
+window.confirmMentalDiagramDelete = confirmMentalDiagramDelete;
+
+function generateRandomDiagramName() {
+    var nouns = ['Mapa', 'Fluxo', 'Diagrama', 'Esquema', 'Rede', 'Plano'];
+    var traits = ['Norte', 'Ágil', 'Claro', 'Livre', 'Foco', 'Orbit', 'Spark', 'Pulse', 'Nítido', 'Rápido'];
+    var noun = nouns[Math.floor(Math.random() * nouns.length)];
+    var trait = traits[Math.floor(Math.random() * traits.length)];
+    var code = Math.random().toString(36).slice(2, 6).toUpperCase();
+    return noun + ' ' + trait + ' ' + code;
+}
+
+function mentalDiagramHasContentToSave(payload) {
+    if (!payload || !Array.isArray(payload.nodes) || payload.nodes.length === 0) return false;
+    return payload.nodes.some(function (n) {
+        if (!n) return false;
+        var label = String(n.label || '').trim();
+        var desc = String(n.description || '').trim();
+        var hasImg = !!(n.image && n.image.url) || !!(typeof n.imageData === 'string' && n.imageData);
+        return !!(label || desc || hasImg || (n.shape === 'balloon'));
+    }) || (Array.isArray(payload.edges) && payload.edges.length > 0);
+}
 
 function getEcRoutineShowDayNumbers() {
     try {
@@ -62,6 +236,164 @@ function setEcRoutineShowDayNumbers(show) {
     else root.setAttribute('data-ec-day-numbers', 'off');
     syncUserProfileDayNumbersToggle();
 }
+
+function hasChosenEcCalendarView() {
+    try {
+        return localStorage.getItem(EC_CALENDAR_VIEW_CHOSEN_KEY) === '1';
+    } catch (e) {
+        return false;
+    }
+}
+
+function markEcCalendarViewChosen() {
+    try {
+        localStorage.setItem(EC_CALENDAR_VIEW_CHOSEN_KEY, '1');
+    } catch (e) {}
+}
+
+function fillEcCalViewPreviewGrids() {
+    var simple = document.getElementById('ecCalViewPreviewSimple');
+    var detailed = document.getElementById('ecCalViewPreviewDetailed');
+    if (!simple || !detailed) return;
+    if (simple.dataset.filled === '1' && detailed.dataset.filled === '1') return;
+
+    // 5×7 cells; pad 3 so day 15 fica no meio (como no preview de referência)
+    var pad = 3;
+    var total = 35;
+    var highlightDay = 15;
+
+    function buildCells(withNumbers) {
+        var html = '';
+        for (var i = 0; i < total; i++) {
+            var day = i - pad + 1;
+            if (day < 1 || day > 31) {
+                html += '<span class="ec-cal-view-preview__cell ec-cal-view-preview__cell--empty"></span>';
+                continue;
+            }
+            var accent = day === highlightDay ? ' ec-cal-view-preview__cell--accent' : '';
+            var label = withNumbers ? String(day) : '';
+            html +=
+                '<span class="ec-cal-view-preview__cell' +
+                accent +
+                '">' +
+                label +
+                '</span>';
+        }
+        return html;
+    }
+
+    simple.innerHTML = buildCells(false);
+    detailed.innerHTML = buildCells(true);
+    simple.dataset.filled = '1';
+    detailed.dataset.filled = '1';
+}
+
+var _ecCalViewChoiceEventsBound = false;
+var _ecCalViewChoicePendingTimer = null;
+
+function closeEcCalViewChoiceModal() {
+    var modal = document.getElementById('ecCalViewChoiceModal');
+    if (!modal) return;
+    modal.classList.remove('is-open');
+    modal.hidden = true;
+    modal.setAttribute('aria-hidden', 'true');
+}
+
+function chooseEcCalendarView(mode) {
+    var showNumbers = mode !== 'simple';
+    setEcRoutineShowDayNumbers(showNumbers);
+    markEcCalendarViewChosen();
+    closeEcCalViewChoiceModal();
+}
+
+function setupEcCalViewChoiceModalEvents() {
+    if (_ecCalViewChoiceEventsBound) return;
+    _ecCalViewChoiceEventsBound = true;
+    var modal = document.getElementById('ecCalViewChoiceModal');
+    if (!modal) return;
+    closeEcCalViewChoiceModal();
+    modal.addEventListener('click', function (e) {
+        var selectBtn = e.target.closest('[data-cal-view-select]');
+        if (selectBtn) {
+            e.preventDefault();
+            chooseEcCalendarView(selectBtn.getAttribute('data-cal-view-select'));
+            return;
+        }
+        if (e.target.closest('#ecCalViewChoiceClose') || e.target.closest('#ecCalViewChoiceOverlay')) {
+            e.preventDefault();
+            // Fecha sem repetir: mantém preferência atual
+            markEcCalendarViewChosen();
+            closeEcCalViewChoiceModal();
+        }
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+        var openModal = document.getElementById('ecCalViewChoiceModal');
+        if (openModal && openModal.classList.contains('is-open')) {
+            e.preventDefault();
+            markEcCalendarViewChosen();
+            closeEcCalViewChoiceModal();
+        }
+    });
+}
+
+function isEcCalViewChoiceBlockedByOverlay() {
+    if (document.documentElement.classList.contains('ec-entry-pending')) return true;
+    if (document.body.classList.contains('dashboard-entry-pending')) return true;
+    var confirm = document.getElementById('ecConfirmModal');
+    if (confirm && confirm.classList.contains('is-open')) return true;
+    var daily = document.getElementById('dailyOnboardingOverlay');
+    if (daily && !daily.hidden && daily.getAttribute('aria-hidden') !== 'true') return true;
+    var welcome = document.getElementById('postLoginWelcomeOverlay');
+    if (welcome && !welcome.hidden && welcome.getAttribute('aria-hidden') !== 'true') return true;
+    var annot = document.getElementById('annotationModal');
+    if (annot && !annot.classList.contains('hidden') && annot.getAttribute('aria-hidden') !== 'true') return true;
+    return false;
+}
+
+function openEcCalViewChoiceModal() {
+    setupEcCalViewChoiceModalEvents();
+    fillEcCalViewPreviewGrids();
+    var modal = document.getElementById('ecCalViewChoiceModal');
+    if (!modal) return;
+    modal.hidden = false;
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+    var lucideLib = typeof lucide !== 'undefined' ? lucide : typeof Lucide !== 'undefined' ? Lucide : null;
+    if (lucideLib && lucideLib.createIcons) lucideLib.createIcons();
+    window.setTimeout(function () {
+        var first = modal.querySelector('[data-cal-view-select="simple"]');
+        if (first) first.focus();
+    }, 0);
+}
+
+function maybeOpenEcCalViewChoiceModal() {
+    if (hasChosenEcCalendarView()) return;
+    if (_ecCurrentView !== 'cards') return;
+    if (_ecCalViewChoicePendingTimer) {
+        clearTimeout(_ecCalViewChoicePendingTimer);
+        _ecCalViewChoicePendingTimer = null;
+    }
+    function tryOpen(attempt) {
+        if (hasChosenEcCalendarView()) return;
+        if (_ecCurrentView !== 'cards') return;
+        if (isEcCalViewChoiceBlockedByOverlay()) {
+            if (attempt < 40) {
+                _ecCalViewChoicePendingTimer = window.setTimeout(function () {
+                    tryOpen(attempt + 1);
+                }, 350);
+            }
+            return;
+        }
+        openEcCalViewChoiceModal();
+    }
+    _ecCalViewChoicePendingTimer = window.setTimeout(function () {
+        tryOpen(0);
+    }, 280);
+}
+
+window.openEcCalViewChoiceModal = openEcCalViewChoiceModal;
+window.maybeOpenEcCalViewChoiceModal = maybeOpenEcCalViewChoiceModal;
 
 function closeUserProfileSettingsMenu() {
     var menu = document.getElementById('userProfileSettingsMenu');
@@ -128,10 +460,60 @@ function getAttachmentFullUrl(url) {
     return getApiBaseUrl() + (url.indexOf('/') === 0 ? '' : '/') + url;
 }
 
-/** Evita usar rotas JSON (ex. /api/profile) como src de <img> — o browser mostrava o HTML de erro. */
-function getAvatarImageUrl(raw) {
+/** Corrige foto guardada só como nome.jpeg ou URL na raiz da API (evita 404 no console). */
+function normalizeProfilePictureRef(raw) {
     if (!raw || typeof raw !== 'string') return '';
     var u = raw.trim();
+    if (!u) return '';
+    if (u.indexOf('data:') === 0) return u;
+    var low = u.toLowerCase();
+    var attMarker = '/api/attachments/';
+    if (low.indexOf(attMarker) !== -1) {
+        var idPart = u.slice(u.indexOf(attMarker) + attMarker.length).split(/[?#]/)[0];
+        if (idPart && idPart.indexOf('..') === -1 && idPart.indexOf('/') === -1 && idPart.indexOf('\\') === -1) {
+            try {
+                idPart = decodeURIComponent(idPart);
+            } catch (e) {}
+            return attMarker + encodeURIComponent(idPart);
+        }
+        return '';
+    }
+    if (low.indexOf('attachments/') === 0 || low.indexOf('/attachments/') !== -1) {
+        var tail = u.replace(/^\/+/, '');
+        if (tail.indexOf('attachments/') === 0) return '/api/' + tail.split(/[?#]/)[0];
+    }
+    if (!/[\\/]/.test(u) && u.indexOf('://') === -1) {
+        if (/^[a-zA-Z0-9._-]+\.(png|jpe?g|webp|gif|svg)$/i.test(u)) {
+            return attMarker + encodeURIComponent(u);
+        }
+        return '';
+    }
+    if (low.indexOf('http://') === 0 || low.indexOf('https://') === 0) {
+        try {
+            var parsed = new URL(u);
+            var host = (parsed.hostname || '').toLowerCase();
+            var isOurApi =
+                host === 'localhost' || host === '127.0.0.1' || host.slice(-12) === '.onrender.com';
+            var base = (parsed.pathname || '').split('/').filter(Boolean).pop() || '';
+            if (
+                isOurApi &&
+                base &&
+                /^[a-zA-Z0-9._-]+\.(png|jpe?g|webp|gif|svg)$/i.test(base) &&
+                (parsed.pathname || '').indexOf(attMarker) === -1
+            ) {
+                return attMarker + encodeURIComponent(base);
+            }
+            if ((parsed.pathname || '').indexOf('/api/') === -1) return u;
+        } catch (e) {
+            return '';
+        }
+    }
+    return '';
+}
+
+/** Evita usar rotas JSON (ex. /api/profile) como src de <img> — o browser mostrava o HTML de erro. */
+function getAvatarImageUrl(raw) {
+    var u = normalizeProfilePictureRef(raw);
     if (!u) return '';
     var low = u.toLowerCase();
     if (low.indexOf('/api/profile') !== -1) return '';
@@ -140,14 +522,10 @@ function getAvatarImageUrl(raw) {
     if (low.indexOf('/api/register') !== -1) return '';
     if (low.indexOf('/api/routines') !== -1) return '';
     if (low.indexOf('/api/') !== -1 && low.indexOf('/api/attachments/') === -1) return '';
-    // Evita tentar carregar valores inválidos (ex.: tokens/ids soltos sem caminho de arquivo).
-    var isAbsolute = low.indexOf('http://') === 0 || low.indexOf('https://') === 0 || low.indexOf('data:') === 0;
-    var hasAttachmentPath =
-        low.indexOf('/api/attachments/') !== -1 ||
-        low.indexOf('/attachments/') !== -1 ||
-        low.indexOf('attachments/') === 0;
-    var looksLikeImageFile = /\.(png|jpe?g|webp|gif|svg)(\?.*)?$/i.test(u);
-    if (!isAbsolute && !hasAttachmentPath && !looksLikeImageFile) return '';
+    if (low.indexOf('http://') === 0 || low.indexOf('https://') === 0 || low.indexOf('data:') === 0) {
+        return u;
+    }
+    if (low.indexOf('/api/attachments/') === -1) return '';
     return getAttachmentFullUrl(u);
 }
 
@@ -221,7 +599,14 @@ function applyAvatarPicture(slot, picture) {
     var avatarFetchOpts = { headers: { Authorization: 'Bearer ' + tok } };
     fetch(full, avatarFetchOpts)
         .then(function (res) {
-            if (!res.ok) throw new Error('avatar');
+            if (!res.ok) {
+                if (res.status === 404) {
+                    try {
+                        localStorage.removeItem(EC_PROFILE_PICTURE_KEY);
+                    } catch (e) {}
+                }
+                throw new Error('avatar');
+            }
             return res.blob();
         })
         .then(function (blob) {
@@ -911,8 +1296,6 @@ function stripBase64FromRoutines(routines) {
     return out;
 }
 
-var _dashboardBootLoaderHidden = false;
-
 function waitMs(ms) {
     return new Promise(function (resolve) {
         setTimeout(resolve, ms);
@@ -943,13 +1326,27 @@ function withTimeout(promise, timeoutMs) {
     });
 }
 
-var ENTRY_BOOT_LOADER_MS = 3400;
+/** localStorage: data (YYYY-MM-DD) em que o splash EC ROUTINE já foi mostrado. */
+var ENTRY_SPLASH_DAY_KEY = 'ec_entry_splash_day';
+var ENTRY_BOOT_TO_ONBOARDING_MS = 160;
 var ENTRY_ROUTINES_WAIT_MS = 1200;
+var DASHBOARD_ENTRY_REVEAL_MS = 780;
 /** Texto da marca (único sítio para animação typewriter + aria). */
 var EC_ROUTINE_BRAND_TEXT = 'EC ROUTINE';
+var EC_ENTRY_TRANSITION_MS =
+    typeof window !== 'undefined' && window.EcEntryTransition
+        ? (typeof window.EcEntryTransition.computeTotalMs === 'function'
+            ? window.EcEntryTransition.computeTotalMs(EC_ROUTINE_BRAND_TEXT)
+            : window.EcEntryTransition.TOTAL_MS)
+        : 2600;
 var TYPEWRITER_MS_PER_CHAR = 55;
-/** Header anima depois do overlay de boot + tempo para o fade (~350 ms no loader). */
-var HEADER_TYPEWRITER_DELAY_AFTER_BOOT_MS = 450;
+/** Header após splash: texto já foi escrito no overlay — só revelar. */
+var HEADER_TYPEWRITER_DELAY_AFTER_BOOT_MS = 380;
+/** Cancela typewriter pendente no header (evita duplicar "EC ROUTINE" com +=). */
+var _ecHeaderTypewriterTimer = null;
+var _ecHeaderTypewriterGen = 0;
+/** true quando o splash de entrada já mostrou a marca nesta sessão. */
+var _ecBrandTypedOnBootSplash = false;
 
 /**
  * Efeito máquina de escrever; caret via CSS (.typewriter-active / ::after).
@@ -958,6 +1355,11 @@ var HEADER_TYPEWRITER_DELAY_AFTER_BOOT_MS = 450;
 function runTypewriter(element, fullText, options) {
     options = options || {};
     var msPerChar = options.msPerChar != null ? options.msPerChar : TYPEWRITER_MS_PER_CHAR;
+    var gen = ++_ecHeaderTypewriterGen;
+    if (_ecHeaderTypewriterTimer) {
+        clearTimeout(_ecHeaderTypewriterTimer);
+        _ecHeaderTypewriterTimer = null;
+    }
     return new Promise(function (resolve) {
         if (!element) {
             resolve();
@@ -969,37 +1371,113 @@ function runTypewriter(element, fullText, options) {
         element.classList.remove('typewriter-done');
         var i = 0;
         function tick() {
+            if (gen !== _ecHeaderTypewriterGen) {
+                resolve();
+                return;
+            }
             if (i >= fullText.length) {
                 element.classList.remove('typewriter-active');
                 element.classList.add('typewriter-done');
+                _ecHeaderTypewriterTimer = null;
                 resolve();
                 return;
             }
             element.textContent += fullText.charAt(i);
             i += 1;
-            setTimeout(tick, msPerChar);
+            _ecHeaderTypewriterTimer = setTimeout(tick, msPerChar);
         }
         tick();
     });
 }
 
-/** Arranque: boot overlay + header conforme flags.session boot loader. */
+function cancelHeaderTypewriter() {
+    _ecHeaderTypewriterGen += 1;
+    if (_ecHeaderTypewriterTimer) {
+        clearTimeout(_ecHeaderTypewriterTimer);
+        _ecHeaderTypewriterTimer = null;
+    }
+}
+
+/** Arranque: prepara header (typewriter só em revealHeaderBrandAfterEntry). */
 function scheduleEcRoutineBrandAnimations(entryFlags) {
-    var bootEl = document.querySelector('.dashboard-boot-loader__brand-text');
     var headerEl = document.querySelector('.header-title-text');
-    if (entryFlags.showBootLoader && bootEl) {
-        runTypewriter(bootEl, EC_ROUTINE_BRAND_TEXT, { msPerChar: TYPEWRITER_MS_PER_CHAR });
-        if (headerEl) {
-            setTimeout(function () {
-                runTypewriter(headerEl, EC_ROUTINE_BRAND_TEXT, { msPerChar: TYPEWRITER_MS_PER_CHAR });
-            }, ENTRY_BOOT_LOADER_MS + HEADER_TYPEWRITER_DELAY_AFTER_BOOT_MS);
-        }
+    if (!headerEl) return;
+    cancelHeaderTypewriter();
+    headerEl.textContent = '';
+    headerEl.classList.remove('typewriter-active', 'typewriter-done');
+}
+
+/** Revela a marca no header após splash + onboarding (evita 2.º EC ROUTINE visível). */
+function revealHeaderBrandAfterEntry(options) {
+    options = options || {};
+    var headerEl = document.querySelector('.header-title-text');
+    if (!headerEl) return;
+    cancelHeaderTypewriter();
+    var skipTypewriter = !!options.skipTypewriter || _ecBrandTypedOnBootSplash;
+    if (skipTypewriter) {
+        headerEl.textContent = EC_ROUTINE_BRAND_TEXT;
+        headerEl.classList.remove('typewriter-active');
+        headerEl.classList.add('typewriter-done');
         return;
     }
-    if (headerEl) {
+    headerEl.textContent = '';
+    headerEl.classList.remove('typewriter-done');
         setTimeout(function () {
             runTypewriter(headerEl, EC_ROUTINE_BRAND_TEXT, { msPerChar: TYPEWRITER_MS_PER_CHAR });
-        }, 80);
+    }, HEADER_TYPEWRITER_DELAY_AFTER_BOOT_MS);
+}
+
+function hasShownEntrySplashToday() {
+    try {
+        return localStorage.getItem(ENTRY_SPLASH_DAY_KEY) === getLocalDateStr(new Date());
+    } catch (e) {
+        return false;
+    }
+}
+
+function markEntrySplashShownToday() {
+    try {
+        localStorage.setItem(ENTRY_SPLASH_DAY_KEY, getLocalDateStr(new Date()));
+    } catch (e) {}
+}
+
+/** Voltar do detalhe da rotina / create — ir direto aos cards sem splash EC ROUTINE. */
+function isDashboardCardsReturnView() {
+    try {
+        return new URLSearchParams(window.location.search).get('view') === 'cards';
+    } catch (e) {
+        return false;
+    }
+}
+
+function skipDashboardEntrySplash() {
+    if (typeof window.EcEntryTransition !== 'undefined' && window.EcEntryTransition.forceHide) {
+        window.EcEntryTransition.forceHide();
+    }
+    clearEntryPendingChrome();
+    try {
+        document.body.classList.remove('dashboard-entry-pending', 'dashboard-boot-active');
+    } catch (_) {}
+}
+
+/** Dev/teste: ?replayDay=1 — simula primeira abertura do dashboard no dia. */
+function maybeReplayFirstOpenOfDayFromUrl() {
+    try {
+        var params = new URLSearchParams(window.location.search);
+        if (params.get('replayDay') !== '1') return false;
+
+        localStorage.removeItem(ENTRY_SPLASH_DAY_KEY);
+        localStorage.removeItem('ecRoutineDailyOnboardingLastSeenDate');
+        var uid = String(localStorage.getItem('userId') || '').trim();
+        if (uid) localStorage.removeItem('ecRoutineDailyOnboardingLastSeenDate_' + uid);
+
+        params.delete('replayDay');
+        var nextQuery = params.toString();
+        var nextUrl = window.location.pathname + (nextQuery ? '?' + nextQuery : '') + window.location.hash;
+        history.replaceState(null, '', nextUrl);
+        return true;
+    } catch (e) {
+        return false;
     }
 }
 
@@ -1008,11 +1486,11 @@ function readAndClearEntryTransitionFlags() {
         mode: 'default',
         showBootLoader: false,
         forceDailyOnboarding: false,
-        postLoginWelcome: false
+        postLoginWelcome: false,
+        skipEntrySplash: false
     };
     try {
         flags.mode = String(sessionStorage.getItem('ec_entry_transition_mode') || 'default');
-        flags.showBootLoader = sessionStorage.getItem('ec_show_login_boot_loader') === '1';
         flags.forceDailyOnboarding = sessionStorage.getItem('ec_force_daily_onboarding') === '1';
         flags.postLoginWelcome = sessionStorage.getItem('ec_post_login_welcome') === '1';
         sessionStorage.removeItem('ec_entry_transition_mode');
@@ -1021,90 +1499,285 @@ function readAndClearEntryTransitionFlags() {
         sessionStorage.removeItem('ec_post_login_welcome');
         sessionStorage.removeItem('ec_adm_quick_login');
     } catch (e) {}
+    /* Primeira abertura do dia: splash EC ROUTINE + welcome + tarefas; demais aberturas: só EC ROUTINE. */
+    flags.showBootLoader = !hasShownEntrySplashToday();
+    flags.skipEntrySplash = isDashboardCardsReturnView();
+    if (flags.skipEntrySplash) flags.showBootLoader = false;
     return flags;
 }
 
-function showDashboardBootLoader() {
-    try {
-        var loader = document.getElementById('dashboardBootLoader');
-        if (!loader) return false;
-        _dashboardBootLoaderHidden = false;
-        loader.classList.remove('is-hidden');
-        loader.setAttribute('aria-hidden', 'false');
-        return true;
-    } catch (e) {
-        return false;
+function runEcEntryTransition() {
+    if (typeof window.EcEntryTransition !== 'undefined' && window.EcEntryTransition.run) {
+        return window.EcEntryTransition.run({ brandText: EC_ROUTINE_BRAND_TEXT });
     }
+    return Promise.resolve();
 }
 
-function hideDashboardBootLoader() {
-    if (_dashboardBootLoaderHidden) return;
+function setupAddRoutineCardNavigation() {
+    if (window._ecAddRoutineNavBound) return;
+    window._ecAddRoutineNavBound = true;
+
+    function activate(card) {
+        var href = (card && card.getAttribute('data-href')) || 'create.html';
+        navigateToCreatePage(href, card);
+    }
+
+    document.addEventListener('click', function (e) {
+        var card = e.target.closest && e.target.closest('.add-routine-card');
+        if (!card) return;
+        e.preventDefault();
+        e.stopPropagation();
+        activate(card);
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        var card = e.target.closest && e.target.closest('.add-routine-card');
+        if (!card) return;
+        e.preventDefault();
+        activate(card);
+    });
+}
+
+function navigateToCreatePage(href, card) {
+    if (window._ecNavigatingToCreate) return;
+    window._ecNavigatingToCreate = true;
+    href = href || 'create.html';
+    if (card) card.classList.add('is-navigating');
+
+    if (typeof showEcBusyOverlay === 'function') {
+        showEcBusyOverlay({ minMs: 420 });
+    }
+    if (typeof setNavBusyForNavigation === 'function') {
+        setNavBusyForNavigation();
+    } else {
+        try {
+            sessionStorage.setItem('ec_nav_busy', '1');
+            document.documentElement.classList.add('ec-busy-pending');
+        } catch (_) {}
+    }
+
+    var exitPromise =
+        typeof window.EcEntryTransition !== 'undefined' && window.EcEntryTransition.runPageExit
+            ? window.EcEntryTransition.runPageExit({ href: href })
+            : Promise.resolve().then(function () {
+                  window.location.href = href;
+              });
+
+    exitPromise.catch(function () {
+        window._ecNavigatingToCreate = false;
+        if (card) card.classList.remove('is-navigating');
+        try {
+            sessionStorage.removeItem('ec_nav_busy');
+            document.documentElement.classList.remove('ec-busy-pending');
+        } catch (_) {}
+        if (typeof hideEcBusyOverlay === 'function') {
+            hideEcBusyOverlay().catch(function () {});
+        }
+        window.location.href = href;
+    });
+}
+
+window.navigateToCreatePage = navigateToCreatePage;
+
+function clearEntryPendingChrome() {
     try {
-        var loader = document.getElementById('dashboardBootLoader');
-        if (!loader) return;
-        _dashboardBootLoaderHidden = true;
-        loader.classList.add('is-hidden');
-        loader.setAttribute('aria-hidden', 'true');
-        setTimeout(function () {
-            try {
-                if (loader && loader.parentNode) loader.parentNode.removeChild(loader);
-            } catch (_) {}
-        }, 450);
-    } catch (e) {}
+        document.documentElement.classList.remove('ec-entry-pending', 'ec-entry-boot');
+        document.body.classList.remove(
+            'dashboard-entry-pending',
+            'dashboard-boot-active',
+            'dashboard-unified-visible'
+        );
+    } catch (_) {}
 }
 
-async function runEntryTransitionFlow(entryFlags, routinesLoadPromise, bootDelayPromise) {
+function waitForCssAnimationEnd(el, animationName, timeoutMs) {
+    return new Promise(function (resolve) {
+        if (!el) {
+            resolve();
+            return;
+        }
+        var done = false;
+        function finish() {
+            if (done) return;
+            done = true;
+            try {
+                el.removeEventListener('animationend', onEnd);
+            } catch (_) {}
+            resolve();
+        }
+        function onEnd(e) {
+            if (!e || e.target !== el) return;
+            if (animationName && e.animationName && e.animationName !== animationName) return;
+            finish();
+        }
+        el.addEventListener('animationend', onEnd);
+        setTimeout(finish, timeoutMs || 900);
+    });
+}
+
+/** Revela header + overview após boot/onboarding (evita flash e cortes bruscos). */
+async function revealDashboardEntry(options) {
+    options = options || {};
+    forceHideAllOnboardingOverlays();
+    var dashboardOverview = document.getElementById('dashboardOverview');
+    var rotinasView = document.getElementById('rotinasView');
+    var openCardsFromUrl = !!options.openCardsFromUrl;
+    var skipOverviewAnimation = !!options.skipOverviewAnimation;
+    var skipEntrySplash = !!options.skipEntrySplash;
+
+    clearEntryPendingChrome();
+    document.body.classList.add('dashboard-entry-revealing');
+    revealHeaderBrandAfterEntry({ skipTypewriter: skipEntrySplash || openCardsFromUrl });
+
+    if (openCardsFromUrl) {
+        if (typeof navigateEcView === 'function') {
+            navigateEcView('cards', { instant: true });
+        } else if (typeof showRotinasView === 'function') {
+            showRotinasView();
+        }
+        try {
+            history.replaceState(null, '', 'dashboard.html');
+        } catch (eRep) { /* ignore */ }
+        await waitMs(skipEntrySplash ? 0 : 420);
+        document.body.classList.remove('dashboard-entry-revealing');
+        return;
+    }
+
+    if (dashboardOverview && rotinasView) {
+        if (typeof navigateEcView === 'function') {
+            navigateEcView('dashboard', { instant: true });
+        } else {
+            dashboardOverview.classList.remove('hidden');
+            rotinasView.classList.add('hidden');
+            document.body.classList.add('dashboard-overview-visible');
+            applyNavCtaVisibility();
+            scheduleViewToggleIndicatorUpdate();
+        }
+        if (!skipOverviewAnimation) {
+            dashboardOverview.classList.add('dashboard-overview--entry-reveal');
+            await waitForCssAnimationEnd(
+                dashboardOverview,
+                'dashboardEntryReveal',
+                DASHBOARD_ENTRY_REVEAL_MS + 140
+            );
+            dashboardOverview.classList.remove('dashboard-overview--entry-reveal');
+        }
+    }
+
+    await waitMs(60);
+    document.body.classList.remove('dashboard-entry-revealing');
+    syncOnboardingOverlaysWithDashboard();
+}
+
+async function runEntryTransitionFlow(entryFlags, routinesLoadPromise) {
     var dashboardOverview = document.getElementById('dashboardOverview');
     var rotinasView = document.getElementById('rotinasView');
     if (dashboardOverview && dashboardOverview.classList) dashboardOverview.classList.add('hidden');
     if (rotinasView && rotinasView.classList) rotinasView.classList.add('hidden');
 
-    if (entryFlags.showBootLoader && bootDelayPromise) {
-        await bootDelayPromise;
-        hideDashboardBootLoader();
+    if (typeof hideEcBusyOverlay === 'function') {
+        await hideEcBusyOverlay().catch(function () {});
+    }
+    try {
+        document.documentElement.classList.remove('ec-busy-pending');
+        sessionStorage.removeItem('ec_nav_busy');
+    } catch (_) {}
+
+    var isFirstOpenOfDay = !!entryFlags.showBootLoader;
+    var skipEntrySplash = !!entryFlags.skipEntrySplash;
+
+    if (skipEntrySplash) {
+        skipDashboardEntrySplash();
+        _ecBrandTypedOnBootSplash = true;
+    } else {
+        document.body.classList.add('dashboard-boot-active');
+        try {
+            document.documentElement.classList.add('ec-entry-boot');
+        } catch (_) {}
+        await runEcEntryTransition();
+        _ecBrandTypedOnBootSplash = true;
+        document.body.classList.remove('dashboard-boot-active');
+        if (isFirstOpenOfDay) {
+            markEntrySplashShownToday();
+            await waitMs(ENTRY_BOOT_TO_ONBOARDING_MS);
+        }
     }
 
-    // Dá um tempo curto para dados chegarem sem prender o fluxo visual.
-    await withTimeout(routinesLoadPromise, ENTRY_ROUTINES_WAIT_MS);
-
-    var routinesLoaded = Array.isArray(allRoutines);
-    var noRoutines = routinesLoaded && allRoutines.length === 0;
-    var redirectingToCreateAfterWelcome = false;
     try {
-        if (entryFlags.postLoginWelcome && noRoutines) {
-            if (typeof runPostLoginWelcomeOnboarding === 'function') {
-                redirectingToCreateAfterWelcome = !!(await runPostLoginWelcomeOnboarding());
+        await routinesLoadPromise;
+    } catch (eLoadWait) {}
+
+    var noRoutines = Array.isArray(allRoutines) && allRoutines.length === 0;
+    var redirectingToCreateAfterWelcome = false;
+    var ranOnboarding = false;
+    var showFullDailyOnboarding = !skipEntrySplash && (!!entryFlags.forceDailyOnboarding || isFirstOpenOfDay);
+    try {
+        if (noRoutines && (entryFlags.postLoginWelcome || showFullDailyOnboarding)) {
+            if (typeof runNewUserWelcomeToCreateFlow === 'function') {
+                redirectingToCreateAfterWelcome = !!(await runNewUserWelcomeToCreateFlow({
+                    skipBrandStep: true
+                }));
             }
         } else {
-            if (typeof runDailyOnboarding === 'function') {
-                await runDailyOnboarding(true);
+            forceHideAllOnboardingOverlays();
+            if (showFullDailyOnboarding && typeof runDailyOnboarding === 'function') {
+                ranOnboarding = !!(await runDailyOnboarding(entryFlags.forceDailyOnboarding, {
+                    skipBrandStep: true
+                }));
             }
         }
     } catch (e) {
         if (dashboardOverview && dashboardOverview.classList) dashboardOverview.classList.add('hidden');
         if (rotinasView && rotinasView.classList) rotinasView.classList.add('hidden');
+        forceHideAllOnboardingOverlays();
     }
 
-    return { redirectingToCreateAfterWelcome: redirectingToCreateAfterWelcome };
+    if (!redirectingToCreateAfterWelcome) {
+        forceHideAllOnboardingOverlays();
+    }
+
+    return {
+        redirectingToCreateAfterWelcome: redirectingToCreateAfterWelcome,
+        ranOnboarding: ranOnboarding
+    };
 }
 
 // Verificar autenticação e carregar dados
 document.addEventListener('DOMContentLoaded', async () => {
+    if (typeof hideEcBusyOverlay === 'function') {
+        await hideEcBusyOverlay().catch(function () {});
+    }
+    try {
+        document.documentElement.classList.remove('ec-busy-pending');
+        sessionStorage.removeItem('ec_nav_busy');
+    } catch (_) {}
+
+    maybeReplayFirstOpenOfDayFromUrl();
+    var openCardsFromUrlEarly = isDashboardCardsReturnView();
+    if (openCardsFromUrlEarly) skipDashboardEntrySplash();
+    var legacyFinHdr = document.querySelector('.header:not(.fin-header) .header-financeiro-btn');
+    if (legacyFinHdr && legacyFinHdr.parentNode) legacyFinHdr.parentNode.removeChild(legacyFinHdr);
     applyEcRoutineThemeFromStorage();
     applyEcRoutineDayNumbersFromStorage();
+    if (!openCardsFromUrlEarly) {
+        document.body.classList.add('dashboard-entry-pending');
+    }
     var dashboardOverview = document.getElementById('dashboardOverview');
     var rotinasView = document.getElementById('rotinasView');
     if (dashboardOverview && dashboardOverview.classList) dashboardOverview.classList.add('hidden');
     if (rotinasView && rotinasView.classList) rotinasView.classList.add('hidden');
     var entryFlags = readAndClearEntryTransitionFlags();
-    var bootDelayPromise = null;
-    if (entryFlags.showBootLoader) {
-        showDashboardBootLoader();
-        bootDelayPromise = waitMs(ENTRY_BOOT_LOADER_MS);
-    }
     scheduleEcRoutineBrandAnimations(entryFlags);
-    // Failsafe extremo para não prender o ecrã em erro inesperado.
-    setTimeout(hideDashboardBootLoader, 11000);
+    if (openCardsFromUrlEarly) {
+        revealHeaderBrandAfterEntry({ skipTypewriter: true });
+    }
+    setTimeout(function () {
+        if (typeof window.EcEntryTransition !== 'undefined' && window.EcEntryTransition.forceHide) {
+            window.EcEntryTransition.forceHide();
+        }
+        clearEntryPendingChrome();
+    }, 12000);
     try {
         var saved = localStorage.getItem('ecRoutineSyncQueue');
         if (saved) window._syncQueue = JSON.parse(saved);
@@ -1115,6 +1788,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     setupAnnotationDownloadUi();
     ensureCarouselClipResizeListener();
+    setupFrequencyChartResize();
+    setupAddRoutineCardNavigation();
+    setupRoutineDeleteDelegation();
+    initDashboardWeekModal();
+    initDashboardPendingModal();
 
     // Anexar botões de navegação logo no início para não depender do resto do carregamento
     const btnVerRotinas = document.getElementById('btnVerRotinas');
@@ -1126,7 +1804,42 @@ document.addEventListener('DOMContentLoaded', async () => {
         btnVoltarDashboard.addEventListener('click', (e) => { e.preventDefault(); showDashboardOverview(); });
     }
 
-    // Delegação de eventos na view de rotinas (fallback para view-toggle e filtros)
+    const mainNavEl = document.getElementById('dashboardMainNav');
+    if (mainNavEl) {
+        mainNavEl.addEventListener('click', function (e) {
+            const viewBtn = e.target.closest('.view-btn[data-view]');
+            const createTaskBtn = e.target.closest('.filter-btn--create');
+            if (createTaskBtn) {
+                e.preventDefault();
+                navigateToCreatePage('create.html', createTaskBtn);
+                return;
+            }
+            const filterBtn = e.target.closest('.filter-btn[data-filter]');
+            if (viewBtn) {
+                e.preventDefault();
+                const view = viewBtn.dataset.view;
+                if (view === 'dashboard') {
+                    showDashboardOverview();
+                    return;
+                }
+                if (typeof switchRotinasView === 'function') switchRotinasView(view);
+                return;
+            }
+            if (filterBtn) {
+                e.preventDefault();
+                mainNavEl.querySelectorAll('.filter-btn[data-filter]').forEach(function (b) {
+                    b.classList.remove('active');
+                });
+                filterBtn.classList.add('active');
+                if (typeof applyVerTodasFilters === 'function') applyVerTodasFilters(filterBtn.dataset.filter);
+                setTimeout(function () {
+                    if (typeof reapplyAllHeatmapPositions === 'function') reapplyAllHeatmapPositions();
+                }, 300);
+            }
+        });
+    }
+
+    // Delegação de eventos na view de rotinas (agenda, anotações, etc.)
     const rotinasViewEl = document.getElementById('rotinasView');
     if (rotinasViewEl) {
         rotinasViewEl.addEventListener('click', function(e) {
@@ -1169,52 +1882,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 openAgendaTaskMenu(menuBtn, routineId, taskId, dateStr);
                 return;
             }
+            const agendaAddBtn = e.target.closest('#agendaAddAnnotationBtn, .agenda-add-annotation-btn');
+            if (agendaAddBtn) {
+                e.preventDefault();
+                if (typeof openAgendaAnnotationWizard === 'function') openAgendaAnnotationWizard();
+                return;
+            }
             if (e.target.closest('.agenda-menu-dropdown') || e.target.closest('.agenda-history-modal')) return;
             closeAgendaTaskMenu();
-            const viewBtn = e.target.closest('.view-btn[data-view]');
-            const filterBtn = e.target.closest('.filter-btn[data-filter]');
-            if (viewBtn) {
-                e.preventDefault();
-                const view = viewBtn.dataset.view;
-                if (view === 'dashboard') {
-                    showDashboardOverview();
-                    return;
-                }
-                const cardsViewBtn = document.getElementById('cardsViewBtn');
-                const calendarViewBtn = document.getElementById('calendarViewBtn');
-                const agendaViewBtn = document.getElementById('agendaViewBtn');
-                const dashboardLayout = document.querySelector('.dashboard-layout');
-                const routinesGrid = document.getElementById('routinesGrid');
-                const calendarView = document.getElementById('calendarView');
-                const agendaView = document.getElementById('agendaView');
-                rotinasViewEl.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
-                viewBtn.classList.add('active');
-                if (view === 'cards') {
-                    if (dashboardLayout) dashboardLayout.classList.remove('hidden');
-                    if (routinesGrid) routinesGrid.classList.remove('hidden');
-                    if (calendarView) calendarView.classList.add('hidden');
-                    if (agendaView) agendaView.classList.add('hidden');
-                } else if (view === 'calendar') {
-                    if (dashboardLayout) dashboardLayout.classList.add('hidden');
-                    if (routinesGrid) routinesGrid.classList.add('hidden');
-                    if (calendarView) calendarView.classList.remove('hidden');
-                    if (agendaView) agendaView.classList.add('hidden');
-                    if (typeof renderCalendar === 'function') renderCalendar();
-                } else if (view === 'agenda') {
-                    if (dashboardLayout) dashboardLayout.classList.add('hidden');
-                    if (routinesGrid) routinesGrid.classList.add('hidden');
-                    if (calendarView) calendarView.classList.add('hidden');
-                    if (agendaView) agendaView.classList.remove('hidden');
-                    if (typeof renderAgenda === 'function') renderAgenda();
-                }
-            }
-            if (filterBtn) {
-                e.preventDefault();
-                rotinasViewEl.querySelectorAll('.filter-btn[data-filter]').forEach(b => b.classList.remove('active'));
-                filterBtn.classList.add('active');
-                if (typeof applyVerTodasFilters === 'function') applyVerTodasFilters(filterBtn.dataset.filter);
-                setTimeout(function() { if (typeof reapplyAllHeatmapPositions === 'function') reapplyAllHeatmapPositions(); }, 300);
-            }
         });
     }
 
@@ -1227,6 +1902,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const token = localStorage.getItem('token');
     if (token) {
+        var cachedPic = normalizeProfilePictureRef(getCachedEcProfilePicture());
+        if (cachedPic) setHeaderAvatar(cachedPic);
         try {
             const response = await apiRequest('/verify');
             if (response.user && response.user.name && usernameElement) {
@@ -1234,7 +1911,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 localStorage.setItem('userName', response.user.name);
             }
             if (response.user) {
-                setHeaderAvatar(response.user.picture || '');
+                var picNorm = normalizeProfilePictureRef(response.user.picture || '');
+                cacheEcProfilePicture(picNorm);
+                setHeaderAvatar(picNorm);
                 syncProfileAdminButton(response.user);
             }
             var ru = response.user;
@@ -1244,6 +1923,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 skipOnb = !!(uidStore && localStorage.getItem('ec_profile_onboarding_skip_' + uidStore) === '1');
             } catch (eSkip) {}
             if (ru && (!ru.birthDate || String(ru.birthDate).length < 10) && !skipOnb) {
+                if (typeof hideEcBusyOverlay === 'function') {
+                    await hideEcBusyOverlay();
+                }
                 window.location.replace('profile-setup.html');
                 return;
             }
@@ -1265,7 +1947,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 localStorage.removeItem('token');
                 localStorage.removeItem('userName');
                 localStorage.removeItem('userId');
-                window.location.replace('auth.html?view=login');
+                if (typeof hideEcBusyOverlay === 'function') {
+                    await hideEcBusyOverlay();
+                }
+                window.location.replace('/auth.html?view=login');
                 return;
             }
             console.log('Servidor não disponível, usando modo offline');
@@ -1282,35 +1967,36 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Configurar controles (com checagem para não quebrar se algum elemento não existir)
     setupControls();
+    initViewToggleIndicator();
     setupDetailListFilters();
     if (typeof setupAnnotationModal === 'function') setupAnnotationModal();
     // Ordem fixa e centralizada: EC ROUTINE -> overlay -> dashboard.
-    var transitionState = await runEntryTransitionFlow(entryFlags, routinesLoadPromise, bootDelayPromise);
+    var transitionState = await runEntryTransitionFlow(entryFlags, routinesLoadPromise);
     dashboardOverview = document.getElementById('dashboardOverview');
     rotinasView = document.getElementById('rotinasView');
     var redirectingToCreateAfterWelcome = !!(transitionState && transitionState.redirectingToCreateAfterWelcome);
 
     // Evita mostrar o dashboard por um instante antes do redirect para /create
-    if (redirectingToCreateAfterWelcome) return;
+    if (redirectingToCreateAfterWelcome) {
+        clearEntryPendingChrome();
+        if (typeof hideEcBusyOverlay === 'function') {
+            await hideEcBusyOverlay();
+        }
+        return;
+    }
 
     // Visão geral primeiro, ou grelha de cards se ?view=cards (ex.: ← Voltar no detalhe da rotina)
-    var openCardsFromUrl = false;
-    try {
-        openCardsFromUrl = new URLSearchParams(window.location.search).get('view') === 'cards';
-    } catch (eUrl) { /* ignore */ }
-    if (dashboardOverview && rotinasView) {
-        if (openCardsFromUrl) {
-            if (typeof showRotinasView === 'function') showRotinasView();
-            if (typeof switchRotinasView === 'function') switchRotinasView('cards');
-            try {
-                history.replaceState(null, '', 'dashboard.html');
-            } catch (eRep) { /* ignore */ }
-        } else {
-            dashboardOverview.classList.remove('hidden');
-            rotinasView.classList.add('hidden');
-            document.body.classList.add('dashboard-overview-visible');
-        }
+    var openCardsFromUrl = openCardsFromUrlEarly || isDashboardCardsReturnView();
+    await revealDashboardEntry({
+        openCardsFromUrl: openCardsFromUrl,
+        skipOverviewAnimation: !!(transitionState && transitionState.ranOnboarding),
+        skipEntrySplash: !!(entryFlags && entryFlags.skipEntrySplash)
+    });
+
+    if (typeof hideEcBusyOverlay === 'function') {
+        await hideEcBusyOverlay();
     }
+
     // Garantir que o overview seja renderizado após carregar dados
     try {
         if (typeof renderDashboardOverview === 'function') renderDashboardOverview();
@@ -1336,53 +2022,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Configurar controles de visualização e filtros
 function setupControls() {
-    const cardsViewBtn = document.getElementById('cardsViewBtn');
-    const calendarViewBtn = document.getElementById('calendarViewBtn');
-    const agendaViewBtn = document.getElementById('agendaViewBtn');
-    const dashboardLayout = document.querySelector('.dashboard-layout');
-    const routinesGrid = document.getElementById('routinesGrid');
-    const calendarView = document.getElementById('calendarView');
-    const agendaView = document.getElementById('agendaView');
+    // Troca de página fica em navigateEcView / switchRotinasView (slide + indicador).
+    // Aqui só filtros Todas / Sequências e selects auxiliares.
 
-    if (cardsViewBtn) {
-    cardsViewBtn.addEventListener('click', () => {
-            if (cardsViewBtn) cardsViewBtn.classList.add('active');
-            if (calendarViewBtn) calendarViewBtn.classList.remove('active');
-        if (agendaViewBtn) agendaViewBtn.classList.remove('active');
-        if (dashboardLayout) dashboardLayout.classList.remove('hidden');
-            if (routinesGrid) routinesGrid.classList.remove('hidden');
-            if (calendarView) calendarView.classList.add('hidden');
-        if (agendaView) agendaView.classList.add('hidden');
-    });
-    }
-
-    if (calendarViewBtn) {
-    calendarViewBtn.addEventListener('click', () => {
-            if (calendarViewBtn) calendarViewBtn.classList.add('active');
-            if (cardsViewBtn) cardsViewBtn.classList.remove('active');
-        if (agendaViewBtn) agendaViewBtn.classList.remove('active');
-        if (dashboardLayout) dashboardLayout.classList.add('hidden');
-            if (routinesGrid) routinesGrid.classList.add('hidden');
-            if (calendarView) calendarView.classList.remove('hidden');
-        if (agendaView) agendaView.classList.add('hidden');
-            if (typeof renderCalendar === 'function') renderCalendar();
-    });
-    }
-
-    if (agendaViewBtn) {
-        agendaViewBtn.addEventListener('click', () => {
-            agendaViewBtn.classList.add('active');
-            if (cardsViewBtn) cardsViewBtn.classList.remove('active');
-            if (calendarViewBtn) calendarViewBtn.classList.remove('active');
-            if (dashboardLayout) dashboardLayout.classList.add('hidden');
-            if (routinesGrid) routinesGrid.classList.add('hidden');
-            if (calendarView) calendarView.classList.add('hidden');
-            if (agendaView) agendaView.classList.remove('hidden');
-            if (typeof renderAgenda === 'function') renderAgenda();
-        });
-    }
-
-    const filterBtns = document.querySelectorAll('#rotinasView .filter-btn[data-filter]');
+    const filterBtns = document.querySelectorAll('#dashboardMainNav .filter-btn[data-filter]');
     filterBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             filterBtns.forEach(b => b.classList.remove('active'));
@@ -1416,10 +2059,76 @@ function focusFirstRotinasControl() {
     });
 }
 
+/** Indicador deslizante da barra Dashboard / Cards / … (estilo “pretinho”). */
+function updateViewToggleIndicator(activeBtn) {
+    var views = document.getElementById('viewToggleViews')
+        || document.querySelector('#dashboardMainNav .view-toggle__views');
+    var indicator = document.getElementById('viewToggleIndicator');
+    if (!views || !indicator) return;
+    var btn = activeBtn || views.querySelector('.view-btn.active');
+    if (!btn || !btn.offsetWidth) {
+        indicator.style.width = '0px';
+        return;
+    }
+    var pad = 0;
+    indicator.style.width = btn.offsetWidth + 'px';
+    indicator.style.transform = 'translateX(' + Math.max(0, btn.offsetLeft - pad) + 'px)';
+    if (btn.offsetTop > 0) {
+        indicator.style.top = btn.offsetTop + 'px';
+        indicator.style.height = btn.offsetHeight + 'px';
+    } else {
+        indicator.style.top = '0px';
+        indicator.style.height = btn.offsetHeight ? btn.offsetHeight + 'px' : '100%';
+    }
+}
+
+function scheduleViewToggleIndicatorUpdate(activeBtn) {
+    requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+            updateViewToggleIndicator(activeBtn);
+        });
+    });
+}
+
+window.updateViewToggleIndicator = updateViewToggleIndicator;
+
+var _viewToggleIndicatorBound = false;
+function initViewToggleIndicator() {
+    if (_viewToggleIndicatorBound) {
+        scheduleViewToggleIndicatorUpdate();
+        return;
+    }
+    _viewToggleIndicatorBound = true;
+    var views = document.getElementById('viewToggleViews')
+        || document.querySelector('#dashboardMainNav .view-toggle__views');
+    if (views && typeof ResizeObserver !== 'undefined') {
+        var ro = new ResizeObserver(function () {
+            updateViewToggleIndicator();
+        });
+        ro.observe(views);
+    }
+    window.addEventListener('resize', function () {
+        updateViewToggleIndicator();
+    });
+    if (views) {
+        views.addEventListener('scroll', function () {
+            updateViewToggleIndicator();
+        }, { passive: true });
+    }
+    scheduleViewToggleIndicatorUpdate();
+}
+function applyNavCtaVisibility() {
+    var btn = document.getElementById('btnVerRotinas');
+    if (!btn) return;
+    var show = document.body.classList.contains('dashboard-overview-visible');
+    btn.classList.toggle('hidden', !show);
+}
+
 /** Estado do botão Ver cards alinhado ao progresso do dia (classes só para estilo do botão). */
 function applyVerCardsButtonDayState() {
     var btn = document.getElementById('btnVerRotinas');
     if (!btn || typeof allRoutines === 'undefined' || typeof isRoutineDate !== 'function' || typeof getRoutineCompletedDates !== 'function') return;
+    applyNavCtaVisibility();
     var todayStr = getLocalDateStr(new Date());
     var routinesToday = allRoutines.filter(function(r) { return isRoutineDate(todayStr, r); });
     var completedCount = 0;
@@ -1435,168 +2144,297 @@ function applyVerCardsButtonDayState() {
     btn.classList.add('btn-ver-cards--' + state);
 }
 
-function showDashboardOverview() {
-    const dashboardOverview = document.getElementById('dashboardOverview');
-    const rotinasView = document.getElementById('rotinasView');
-    if (!dashboardOverview || !rotinasView) return;
+/** Ordem das abas — define a direção do slide (como no HTML de exemplo). */
+var EC_VIEW_ORDER = ['dashboard', 'cards', 'calendar', 'agenda', 'biblioteca'];
+var _ecCurrentView = null;
+var _ecPageAnimating = false;
+var _ecPageAnimToken = 0;
 
-    function runSwitch() {
-        rotinasView.classList.remove('rotinas-view-enter-active', 'dashboard-view-fade-in');
-        rotinasView.classList.add('hidden');
-        dashboardOverview.classList.remove('hidden');
-        document.body.classList.add('dashboard-overview-visible');
+function getEcPageEl(view) {
+    if (view === 'dashboard') return document.getElementById('dashboardOverview');
+    if (view === 'cards') {
+        return document.getElementById('cardsPage')
+            || document.querySelector('#routinesContainer > .dashboard-layout');
+    }
+    if (view === 'calendar') return document.getElementById('calendarView');
+    if (view === 'agenda') return document.getElementById('agendaView');
+    if (view === 'biblioteca') return document.getElementById('bibliotecaView');
+    return null;
+}
+
+function clearEcPageMotionClasses(el) {
+    if (!el || !el.classList) return;
+    el.classList.remove(
+        'current',
+        'enter-from-right',
+        'enter-from-left',
+        'exit-to-left',
+        'exit-to-right',
+        'ec-page-off',
+        'dashboard-overview-enter-active',
+        'rotinas-view-enter-active'
+    );
+}
+
+function updateEcPagesHeight() {
+    var pages = document.getElementById('ecPages');
+    var el = getEcPageEl(_ecCurrentView);
+    if (!pages) return;
+    // Em repouso a página .current é relative → altura natural; limpa trava do slide.
+    if (!pages.classList.contains('is-sliding')) {
+        pages.style.height = '';
+        pages.style.minHeight = '';
+        return;
+    }
+    if (!el) return;
+    var h = Math.max(el.offsetHeight || 0, el.scrollHeight || 0, 280);
+    pages.style.height = h + 'px';
+}
+
+function lockEcPagesHeightForSlide(fromEl, toEl) {
+    var pages = document.getElementById('ecPages');
+    if (!pages) return;
+    var hFrom = fromEl ? Math.max(fromEl.offsetHeight || 0, fromEl.scrollHeight || 0) : 0;
+    var hTo = toEl ? Math.max(toEl.offsetHeight || 0, toEl.scrollHeight || 0) : 0;
+    pages.style.height = Math.max(hFrom, hTo, 280) + 'px';
+}
+
+function unlockEcPagesHeight() {
+    var pages = document.getElementById('ecPages');
+    if (!pages) return;
+    pages.classList.remove('is-sliding');
+    pages.style.height = '';
+    pages.style.minHeight = '';
+}
+
+function syncEcNavChrome(view) {
+    var mainNav = document.getElementById('dashboardMainNav');
+    if (mainNav) {
+        mainNav.querySelectorAll('.view-btn[data-view]').forEach(function (b) {
+            b.classList.toggle('active', b.dataset.view === view);
+        });
+    }
+    var filtersEl = document.getElementById('viewToggleFilters')
+        || document.querySelector('#dashboardMainNav .filters');
+    if (filtersEl) {
+        // Mantém a altura da 2ª linha; só desativa interação/visual dos filtros fora de Tarefas
+        filtersEl.classList.remove('hidden');
+        filtersEl.classList.toggle('is-nav-inert', view !== 'cards');
+        filtersEl.setAttribute('aria-hidden', view !== 'cards' ? 'true' : 'false');
+    }
+    document.body.classList.toggle('dashboard-overview-visible', view === 'dashboard');
+    applyNavCtaVisibility();
+    scheduleViewToggleIndicatorUpdate();
+}
+
+function renderEcViewContent(view) {
+    if (view === 'dashboard' && typeof renderDashboardOverview === 'function') {
         renderDashboardOverview();
+    } else if (view === 'calendar' && typeof renderCalendar === 'function') {
+        renderCalendar();
+    } else if (view === 'agenda' && typeof renderAgenda === 'function') {
+        renderAgenda();
+    } else if (view === 'biblioteca' && typeof renderBiblioteca === 'function') {
+        renderBiblioteca();
+    } else if (view === 'cards') {
+        setTimeout(function () {
+            if (typeof reapplyAllHeatmapPositions === 'function') reapplyAllHeatmapPositions();
+        }, 200);
+    }
+    requestAnimationFrame(function () {
+        updateEcPagesHeight();
+    });
+}
+
+function setEcHostsForView(view, duringAnim) {
+    // Hosts usam display:contents — páginas ec-page cuidam sozinhas do slide.
+    var overview = document.getElementById('dashboardOverview');
+    var rotinasView = document.getElementById('rotinasView');
+    if (rotinasView) rotinasView.classList.remove('hidden');
+    if (overview && duringAnim) overview.classList.remove('hidden');
+}
+
+function finishEcPageOff(el) {
+    if (!el) return;
+    clearEcPageMotionClasses(el);
+    el.classList.add('hidden');
+    el.classList.add('ec-page-off');
+}
+
+function showEcPageInstant(target) {
+    unlockEcPagesHeight();
+    var rotinasView = document.getElementById('rotinasView');
+    if (rotinasView) rotinasView.classList.remove('hidden');
+
+    EC_VIEW_ORDER.forEach(function (name) {
+        var el = getEcPageEl(name);
+        if (!el) return;
+        clearEcPageMotionClasses(el);
+        if (name === target) {
+            el.classList.remove('hidden', 'ec-page-off');
+            el.classList.add('current');
+        } else {
+            el.classList.add('hidden', 'ec-page-off');
+        }
+    });
+    _ecCurrentView = target;
+    syncEcNavChrome(target);
+    renderEcViewContent(target);
+    requestAnimationFrame(function () {
+        updateEcPagesHeight();
+    });
+    if (target === 'cards') maybeOpenEcCalViewChoiceModal();
+}
+
+/**
+ * Navegação deslizante entre páginas (mesma lógica do HTML de exemplo).
+ * @param {string} target
+ * @param {{ instant?: boolean, force?: boolean }} [opts]
+ */
+function navigateEcView(target, opts) {
+    opts = opts || {};
+    if (EC_VIEW_ORDER.indexOf(target) < 0) return;
+    if (_ecPageAnimating && !opts.force && !opts.instant) return;
+
+    var prefersReduced = false;
+    try {
+        prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch (ePref) {}
+
+    if (_ecCurrentView === target && !opts.force) {
+        syncEcNavChrome(target);
+        return;
     }
 
-    function afterOverviewVisible(useCssEnter) {
-        if (useCssEnter) {
-            requestAnimationFrame(function() {
-                requestAnimationFrame(function() {
-                    dashboardOverview.classList.add('dashboard-overview-enter-active');
-                    dashboardOverview.addEventListener('animationend', function onEnd() {
-                        dashboardOverview.classList.remove('dashboard-overview-enter-active');
-                        dashboardOverview.removeEventListener('animationend', onEnd);
-                    }, { once: true });
-                });
-            });
+    if (_ecCurrentView == null || opts.instant || prefersReduced) {
+        showEcPageInstant(target);
+        return;
+    }
+
+    var from = _ecCurrentView;
+    var oldEl = getEcPageEl(from);
+    var newEl = getEcPageEl(target);
+    if (!newEl) return;
+
+    var fromIndex = EC_VIEW_ORDER.indexOf(from);
+    var toIndex = EC_VIEW_ORDER.indexOf(target);
+    var goingForward = toIndex > fromIndex;
+
+    _ecPageAnimating = true;
+    var token = ++_ecPageAnimToken;
+
+    var pages = document.getElementById('ecPages');
+    var rotinasView = document.getElementById('rotinasView');
+    if (rotinasView) rotinasView.classList.remove('hidden');
+
+    if (pages) pages.classList.add('is-sliding');
+    lockEcPagesHeightForSlide(oldEl, null);
+
+    clearEcPageMotionClasses(newEl);
+    newEl.classList.remove('hidden', 'ec-page-off');
+    newEl.classList.add(goingForward ? 'enter-from-right' : 'enter-from-left');
+    // força commit da posição fora da tela
+    void newEl.offsetWidth;
+    lockEcPagesHeightForSlide(oldEl, newEl);
+
+    requestAnimationFrame(function () {
+        if (token !== _ecPageAnimToken) return;
+        newEl.classList.remove('enter-from-right', 'enter-from-left');
+        newEl.classList.add('current');
+        if (oldEl) {
+            oldEl.classList.remove('current');
+            oldEl.classList.add(goingForward ? 'exit-to-left' : 'exit-to-right');
+        }
+    });
+
+    function finish() {
+        if (token !== _ecPageAnimToken) return;
+        if (oldEl) finishEcPageOff(oldEl);
+        clearEcPageMotionClasses(newEl);
+        newEl.classList.remove('hidden', 'ec-page-off');
+        newEl.classList.add('current');
+
+        EC_VIEW_ORDER.forEach(function (name) {
+            if (name === target) return;
+            var other = getEcPageEl(name);
+            if (other) finishEcPageOff(other);
+        });
+
+        unlockEcPagesHeight();
+        _ecCurrentView = target;
+        _ecPageAnimating = false;
+        syncEcNavChrome(target);
+        requestAnimationFrame(function () {
+            updateEcPagesHeight();
+        });
+        if (target === 'cards') {
+            setTimeout(function () {
+                if (typeof reapplyAllHeatmapPositions === 'function') reapplyAllHeatmapPositions();
+                updateEcPagesHeight();
+            }, 180);
+            maybeOpenEcCalViewChoiceModal();
         }
     }
 
-    if (typeof document.startViewTransition === 'function') {
-        try {
-            var transition = document.startViewTransition(runSwitch);
-            if (transition && transition.finished && typeof transition.finished.then === 'function') {
-                transition.finished.then(function() { afterOverviewVisible(false); });
-            } else {
-                afterOverviewVisible(false);
-            }
+    var done = false;
+    function onEnd(e) {
+        if (done) return;
+        if (!oldEl) {
+            done = true;
+            finish();
             return;
-        } catch (e) { /* fallback abaixo */ }
+        }
+        if (e && e.target !== oldEl) return;
+        if (e && e.propertyName && e.propertyName !== 'transform') return;
+        done = true;
+        if (oldEl) oldEl.removeEventListener('transitionend', onEnd);
+        finish();
     }
-    runSwitch();
-    afterOverviewVisible(true);
+    if (oldEl) oldEl.addEventListener('transitionend', onEnd);
+    window.setTimeout(onEnd, 480);
+
+    _ecCurrentView = target;
+    syncEcNavChrome(target);
+    renderEcViewContent(target);
+}
+
+function showDashboardOverview() {
+    navigateEcView('dashboard');
 }
 
 function showRotinasView() {
-    const dashboardOverview = document.getElementById('dashboardOverview');
-    const rotinasView = document.getElementById('rotinasView');
-    const cardsViewBtn = document.getElementById('cardsViewBtn');
-    const calendarViewBtn = document.getElementById('calendarViewBtn');
-    const agendaViewBtn = document.getElementById('agendaViewBtn');
-    const dashboardLayout = document.querySelector('.dashboard-layout');
-    const routinesGrid = document.getElementById('routinesGrid');
-    const calendarView = document.getElementById('calendarView');
-    const agendaView = document.getElementById('agendaView');
-    if (!dashboardOverview || !rotinasView) return;
-
-    function runSwitch() {
-        dashboardOverview.classList.remove('dashboard-overview-enter-active');
-        dashboardOverview.classList.add('hidden');
-        rotinasView.classList.remove('hidden');
-        document.body.classList.remove('dashboard-overview-visible');
-        if (cardsViewBtn) cardsViewBtn.classList.add('active');
-        if (calendarViewBtn) calendarViewBtn.classList.remove('active');
-        if (agendaViewBtn) agendaViewBtn.classList.remove('active');
-        if (dashboardLayout) dashboardLayout.classList.remove('hidden');
-        if (routinesGrid) routinesGrid.classList.remove('hidden');
-        if (calendarView) calendarView.classList.add('hidden');
-        if (agendaView) agendaView.classList.add('hidden');
-        setTimeout(reapplyAllHeatmapPositions, 200);
-    }
-
-    function afterRotinasVisible(useCssEnter) {
-        if (useCssEnter) {
-            requestAnimationFrame(function() {
-                requestAnimationFrame(function() {
-                    rotinasView.classList.add('rotinas-view-enter-active');
-                    rotinasView.addEventListener('animationend', function onEnd() {
-                        rotinasView.classList.remove('rotinas-view-enter-active');
-                        rotinasView.removeEventListener('animationend', onEnd);
-                    }, { once: true });
-                });
-            });
-        }
-        focusFirstRotinasControl();
-    }
-
-    if (typeof document.startViewTransition === 'function') {
-        try {
-            var transition2 = document.startViewTransition(runSwitch);
-            if (transition2 && transition2.finished && typeof transition2.finished.then === 'function') {
-                transition2.finished.then(function() { afterRotinasVisible(false); });
-            } else {
-                afterRotinasVisible(false);
-            }
-            return;
-        } catch (e) { /* fallback abaixo */ }
-    }
-    runSwitch();
-    afterRotinasVisible(true);
+    navigateEcView('cards');
+    focusFirstRotinasControl();
 }
 
 window.showRotinasView = showRotinasView;
 window.showDashboardOverview = showDashboardOverview;
+window.navigateEcView = navigateEcView;
 
 function switchRotinasView(view) {
     if (view === 'dashboard') {
-        showDashboardOverview();
+        navigateEcView('dashboard');
         return;
     }
-    const rotinasView = document.getElementById('rotinasView');
-    const cardsViewBtn = document.getElementById('cardsViewBtn');
-    const calendarViewBtn = document.getElementById('calendarViewBtn');
-    const agendaViewBtn = document.getElementById('agendaViewBtn');
-    const bibliotecaViewBtn = document.getElementById('bibliotecaViewBtn');
-    const dashboardLayout = document.querySelector('.dashboard-layout');
-    const routinesGrid = document.getElementById('routinesGrid');
-    const calendarView = document.getElementById('calendarView');
-    const agendaView = document.getElementById('agendaView');
-    const bibliotecaView = document.getElementById('bibliotecaView');
-    if (!rotinasView) return;
-    /* Evita main-content com overflow:hidden da vista overview (cartões cortados no telemóvel) */
-    document.body.classList.remove('dashboard-overview-visible');
-    rotinasView.querySelectorAll('.view-btn[data-view]').forEach(function(b) { b.classList.remove('active'); });
-    var filtersEl = rotinasView ? rotinasView.querySelector('.dashboard-controls .filters') : null;
-    if (view === 'cards') {
-        if (cardsViewBtn) cardsViewBtn.classList.add('active');
-        if (dashboardLayout) dashboardLayout.classList.remove('hidden');
-        if (routinesGrid) routinesGrid.classList.remove('hidden');
-        if (calendarView) calendarView.classList.add('hidden');
-        if (agendaView) agendaView.classList.add('hidden');
-        if (bibliotecaView) bibliotecaView.classList.add('hidden');
-        if (filtersEl) filtersEl.classList.remove('hidden');
-    } else if (view === 'calendar') {
-        if (calendarViewBtn) calendarViewBtn.classList.add('active');
-        if (dashboardLayout) dashboardLayout.classList.add('hidden');
-        if (routinesGrid) routinesGrid.classList.add('hidden');
-        if (calendarView) calendarView.classList.remove('hidden');
-        if (agendaView) agendaView.classList.add('hidden');
-        if (bibliotecaView) bibliotecaView.classList.add('hidden');
-        if (typeof renderCalendar === 'function') renderCalendar();
-        if (filtersEl) filtersEl.classList.add('hidden');
-    } else if (view === 'agenda') {
-        if (agendaViewBtn) agendaViewBtn.classList.add('active');
-        if (dashboardLayout) dashboardLayout.classList.add('hidden');
-        if (routinesGrid) routinesGrid.classList.add('hidden');
-        if (calendarView) calendarView.classList.add('hidden');
-        if (agendaView) agendaView.classList.remove('hidden');
-        if (bibliotecaView) bibliotecaView.classList.add('hidden');
-        if (typeof renderAgenda === 'function') renderAgenda();
-        if (filtersEl) filtersEl.classList.add('hidden');
-    } else if (view === 'biblioteca') {
-        if (bibliotecaViewBtn) bibliotecaViewBtn.classList.add('active');
-        if (dashboardLayout) dashboardLayout.classList.add('hidden');
-        if (routinesGrid) routinesGrid.classList.add('hidden');
-        if (calendarView) calendarView.classList.add('hidden');
-        if (agendaView) agendaView.classList.add('hidden');
-        if (bibliotecaView) bibliotecaView.classList.remove('hidden');
-        if (typeof renderBiblioteca === 'function') renderBiblioteca();
-        if (filtersEl) filtersEl.classList.add('hidden');
-    }
+    navigateEcView(view);
 }
 window.switchRotinasView = switchRotinasView;
 
 const MONTH_NAMES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+const WEEKDAY_NAMES = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+
+function getTaxaHojeMessage(taxaHoje, totalToday, completedCountToday) {
+    if (totalToday === 0) return 'Nenhuma tarefa agendada hoje';
+    if (completedCountToday === 0) return 'Comece uma tarefa hoje';
+    if (taxaHoje >= 100) return 'Dia completo!';
+    if (taxaHoje >= 50) return 'Muito bom! Continue assim 🚀';
+    return 'Você está no caminho';
+}
+
+function refreshDashboardLucideIcons() {
+    const lucideLib = typeof lucide !== 'undefined' ? lucide : (typeof Lucide !== 'undefined' ? Lucide : null);
+    if (lucideLib && lucideLib.createIcons) lucideLib.createIcons();
+}
 
 function formatLastUpdate(isoStr) {
     if (!isoStr) return '';
@@ -1626,13 +2464,21 @@ function renderDaySummary(routinesToday, completedCount) {
     const now = new Date();
     const day = now.getDate();
     const month = MONTH_NAMES[now.getMonth()];
+    const weekday = WEEKDAY_NAMES[now.getDay()];
     const total = routinesToday.length;
     const dateText = `${day} de ${month}`;
-    const parts = [];
-    parts.push(`<span class="dashboard-day-summary-stat"><i data-lucide="check-circle" class="dashboard-day-summary-icon dashboard-day-summary-icon--done" aria-hidden="true"></i>${completedCount}/${total} tarefas</span>`);
-    el.innerHTML = `<span class="dashboard-day-summary-date">${escapeHtml(dateText)}</span><span class="dashboard-day-summary-stats">${parts.join('<span class="dashboard-day-summary-sep">·</span>')}</span>`;
-    const lucideLib = typeof lucide !== 'undefined' ? lucide : (typeof Lucide !== 'undefined' ? Lucide : null);
-    if (lucideLib && lucideLib.createIcons) lucideLib.createIcons();
+    el.innerHTML =
+        '<div class="dashboard-day-summary-left">'
+        + '<i data-lucide="calendar" class="dashboard-day-summary-icon dashboard-day-summary-icon--calendar" aria-hidden="true"></i>'
+        + '<div class="dashboard-day-summary-date-block">'
+        + `<span class="dashboard-day-summary-date">${escapeHtml(dateText)}</span>`
+        + `<span class="dashboard-day-summary-weekday">${escapeHtml(weekday)}</span>`
+        + '</div>'
+        + '</div>'
+        + '<div class="dashboard-day-summary-stats">'
+        + `<span class="dashboard-day-summary-stat"><i data-lucide="check-circle" class="dashboard-day-summary-icon dashboard-day-summary-icon--done" aria-hidden="true"></i>${completedCount}/${total} tarefas concluídas</span>`
+        + '</div>';
+    refreshDashboardLucideIcons();
 }
 
 function updateDashboardLastUpdate() {
@@ -1713,22 +2559,28 @@ function renderDashboardOverview() {
             dayProgressState = pct >= 100 ? 'complete' : 'pending';
         }
         if (progressSection) {
-            progressSection.className = 'dashboard-card dashboard-card--progress dashboard-card--progress--' + dayProgressState;
+            progressSection.className = 'dashboard-card dashboard-metric-card dashboard-card--progress dashboard-card--progress--' + dayProgressState;
         }
+        if (total === 0) {
+            progressEl.innerHTML = '<p class="dashboard-frequency-empty dashboard-metric-empty">Sem tarefas</p>';
+        } else {
         progressEl.innerHTML = `
             <p class="dashboard-progress-text">${completedCount} de ${total} concluídas</p>
             <div class="dashboard-progress-bar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100">
                 <div class="dashboard-progress-fill chart-animate-width" data-width="${pct}" style="width:0%"></div>
-            </div>`;
+            </div>
+            <p class="dashboard-metric-card-footer">${escapeHtml(pct + '% do objetivo diário alcançado')}</p>`;
+        }
     }
 
     // Bloco Pendentes – contador grande e direto
     const pendingEl = document.getElementById('dashboardPendingTasksContent');
     if (pendingEl) {
         const pendingCount = Math.max(0, routinesToday.length - completedCount);
-        pendingEl.innerHTML = `
-            <h2 class="dashboard-pending-tasks-title">TAREFAS PENDENTES</h2>
-            <p class="dashboard-pending-tasks-value">${pendingCount}</p>`;
+        pendingEl.innerHTML = ''
+            + '<h2 class="dashboard-pending-tasks-title"><i data-lucide="clipboard-list" class="dashboard-metric-card-icon" aria-hidden="true"></i>Tarefas pendentes</h2>'
+            + `<p class="dashboard-pending-tasks-value">${pendingCount}</p>`
+            + '<p class="dashboard-metric-card-footer">Tarefas restantes para hoje</p>';
     }
 
     // Bloco Próximas – hoje com horário (ex: "Reunião 14h") + próximos 7 dias
@@ -1796,6 +2648,7 @@ function renderDashboardOverview() {
     try {
         if (typeof applyVerCardsButtonDayState === 'function') applyVerCardsButtonDayState();
     } catch (e) { /* noop */ }
+    refreshDashboardLucideIcons();
 }
 
 // Função para fazer requisições à API
@@ -1921,9 +2774,11 @@ function syncProfileAdminButton(user) {
 function openUserProfileModal() {
     var modal = document.getElementById('userProfileModal');
     var trig = document.getElementById('headerProfileTrigger');
-    if (!modal) return;
+    var panel = document.getElementById('userProfilePanel');
+    if (!modal || !panel) return;
+    if (modal.classList.contains('is-open') && !modal.classList.contains('is-closing')) return;
     closeUserProfileSettingsMenu();
-    modal.classList.remove('hidden');
+    modal.classList.remove('is-closing', 'is-open', 'is-settled', 'hidden');
     modal.setAttribute('aria-hidden', 'false');
     if (trig) trig.setAttribute('aria-expanded', 'true');
     _profileState.open = true;
@@ -1931,20 +2786,67 @@ function openUserProfileModal() {
     syncEcRoutineThemeToggle();
     syncUserProfileDayNumbersToggle();
     loadUserProfileIntoModal();
+    requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+            modal.classList.add('is-open');
+            function onGrowEnd(e) {
+                if (e.target !== panel || e.animationName !== 'calendar-day-detail-grow') return;
+                panel.removeEventListener('animationend', onGrowEnd);
+                modal.classList.add('is-settled');
+            }
+            panel.addEventListener('animationend', onGrowEnd);
+        });
+    });
 }
 
 function closeUserProfileModal() {
     var modal = document.getElementById('userProfileModal');
     var trig = document.getElementById('headerProfileTrigger');
+    var panel = document.getElementById('userProfilePanel');
     if (!modal) return;
+    if (modal.classList.contains('hidden') || modal.classList.contains('is-closing')) return;
     closeUserProfileSettingsMenu();
-    modal.classList.add('hidden');
-    modal.setAttribute('aria-hidden', 'true');
-    if (trig) trig.setAttribute('aria-expanded', 'false');
     _profileState.open = false;
     _profileState.edit = false;
     setProfileModalMode(false);
+    modal.classList.remove('is-open', 'is-settled');
+    modal.classList.add('is-closing');
+
+    function finishClose() {
+        if (modal.dataset.profileClosing === '1') return;
+        modal.dataset.profileClosing = '1';
+        modal.classList.remove('is-closing');
+        modal.classList.add('hidden');
+        modal.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
+        if (trig) trig.setAttribute('aria-expanded', 'false');
+        var active = document.activeElement;
+        if (active && modal.contains(active)) {
+            if (trig && typeof trig.focus === 'function') {
+                try {
+                    trig.focus();
+                } catch (e) {}
+            } else if (typeof active.blur === 'function') {
+                try {
+                    active.blur();
+                } catch (e2) {}
+            }
+        }
+        delete modal.dataset.profileClosing;
+    }
+
+    if (panel) {
+        var done = false;
+        function onAnimEnd(e) {
+            if (done || e.target !== panel) return;
+            if (e.animationName !== 'calendar-day-detail-shrink') return;
+            done = true;
+            panel.removeEventListener('animationend', onAnimEnd);
+            finishClose();
+        }
+        panel.addEventListener('animationend', onAnimEnd);
+    }
+    window.setTimeout(finishClose, 280);
 }
 
 function setProfileModalMode(edit) {
@@ -1980,6 +2882,7 @@ function applyProfileModalData(data, prevUserSnap) {
     setProfileStatValue(document.getElementById('profileStatRoutines'), s.routinesCount);
     setProfileStatValue(document.getElementById('profileStatSeqActive'), s.activeSequences);
     setProfileStatValue(document.getElementById('profileStatSeqMax'), s.maxStreak);
+    if (u.picture) cacheEcProfilePicture(u.picture);
     setModalAvatar(u.picture);
     var en = document.getElementById('profileEditName');
     if (en) en.value = u.name || '';
@@ -2128,6 +3031,7 @@ function setupUserProfileModal() {
                 if (out.user) {
                     if (!_profileState.last) _profileState.last = {};
                     _profileState.last.user = Object.assign({}, _profileState.last.user || {}, out.user);
+                    if (out.user.picture) cacheEcProfilePicture(out.user.picture);
                     var nameEl = document.getElementById('username');
                     if (nameEl && out.user.name) nameEl.textContent = out.user.name.toUpperCase();
                     localStorage.setItem('userName', out.user.name);
@@ -2147,18 +3051,36 @@ function setupUserProfileModal() {
                 localStorage.removeItem('token');
                 localStorage.removeItem('userName');
                 localStorage.removeItem('userId');
+                localStorage.removeItem(EC_PROFILE_PICTURE_KEY);
                 localStorage.removeItem('ecRoutineSyncQueue');
             } catch (e) {}
             try {
                 window._syncQueue = [];
             } catch (e2) {}
-            window.location.replace('auth.html?view=login');
+            window.location.replace('/auth.html?view=login');
         });
     }
-    if (btnPhoto && inputPhoto) {
-        btnPhoto.addEventListener('click', function () {
-            inputPhoto.click();
+    function openProfilePhotoPicker() {
+        if (inputPhoto) inputPhoto.click();
+    }
+
+    var avatarBlock = document.querySelector('.user-profile-avatar-block');
+    if (avatarBlock && inputPhoto) {
+        avatarBlock.style.cursor = 'pointer';
+        avatarBlock.setAttribute('role', 'button');
+        avatarBlock.setAttribute('tabindex', '0');
+        avatarBlock.setAttribute('aria-label', 'Mudar foto de perfil');
+        avatarBlock.addEventListener('click', openProfilePhotoPicker);
+        avatarBlock.addEventListener('keydown', function (ev) {
+            if (ev.key === 'Enter' || ev.key === ' ') {
+                ev.preventDefault();
+                openProfilePhotoPicker();
+            }
         });
+    }
+
+    if (btnPhoto && inputPhoto) {
+        btnPhoto.addEventListener('click', openProfilePhotoPicker);
         inputPhoto.addEventListener('change', async function () {
             var f = inputPhoto.files && inputPhoto.files[0];
             inputPhoto.value = '';
@@ -2169,6 +3091,7 @@ function setupUserProfileModal() {
             }
             var tok = localStorage.getItem('token');
             if (!tok) return;
+            var photoSaveGen = ++_profileState.loadGeneration;
             try {
                 var fd = new FormData();
                 fd.append('file', f);
@@ -2190,15 +3113,19 @@ function setupUserProfileModal() {
                     method: 'PUT',
                     body: JSON.stringify({ picture: urlPath })
                 });
+                if (photoSaveGen !== _profileState.loadGeneration) return;
                 if (out2.user) {
-                    if (!_profileState.last) _profileState.last = {};
+                    cacheEcProfilePicture(out2.user.picture || urlPath);
+                    if (!_profileState.last) _profileState.last = { stats: {} };
                     _profileState.last.user = Object.assign({}, _profileState.last.user || {}, out2.user);
+                    applyProfileModalData(_profileState.last, null);
                     setHeaderAvatar(out2.user.picture);
-                    setModalAvatar(out2.user.picture);
                 }
                 showToast('Foto atualizada', 3000);
             } catch (err) {
-                showToast(String((err && err.message) || 'Erro ao enviar foto'), 5000);
+                if (photoSaveGen === _profileState.loadGeneration) {
+                    showToast(String((err && err.message) || 'Erro ao enviar foto'), 5000);
+                }
             }
         });
     }
@@ -2252,6 +3179,14 @@ function mergeRoutineProgressFromLocal(serverRoutines) {
                 task.completedDates = Array.from(cset).sort();
                 if (lt.completed === true) task.completed = true;
             });
+            if (typeof StudyRoutineCore !== 'undefined' && StudyRoutineCore.mergeStudySubjectsList) {
+                routine.studySubjects = StudyRoutineCore.mergeStudySubjectsList(
+                    routine.studySubjects,
+                    loc.studySubjects
+                );
+            } else if (Array.isArray(loc.studySubjects) && loc.studySubjects.length) {
+                routine.studySubjects = loc.studySubjects;
+            }
         });
     } catch (e) { /* noop */ }
 }
@@ -2409,11 +3344,12 @@ async function loadRoutines(filter = 'all') {
 
     // Reaplicar posição dos heatmaps (layout pode demorar)
     setTimeout(reapplyAllHeatmapPositions, 300);
+    syncOnboardingOverlaysWithDashboard();
 }
 
 // Aplica filtros da view "Ver todas" (Todas/Sequências + Tipo, Status, Categoria) e renderiza
 function applyVerTodasFilters(initialViewFilter) {
-    const viewFilterBtn = document.querySelector('#rotinasView .filter-btn.active');
+    const viewFilterBtn = document.querySelector('#dashboardMainNav .filter-btn.active');
     const viewFilter = initialViewFilter !== undefined ? initialViewFilter : (viewFilterBtn?.dataset.filter || 'all');
     const typeEl = document.getElementById('viewFilterType');
     const statusEl = document.getElementById('viewFilterStatus');
@@ -2468,7 +3404,7 @@ function renderRoutines(routines) {
     const routinesGrid = document.getElementById('routinesGrid');
 
     if (routines.length === 0) {
-        var viewFilterBtnEmpty = document.querySelector('#rotinasView .filter-btn.active');
+        var viewFilterBtnEmpty = document.querySelector('#dashboardMainNav .filter-btn.active');
         var viewFilterEmpty =
             viewFilterBtnEmpty && viewFilterBtnEmpty.dataset && viewFilterBtnEmpty.dataset.filter
                 ? String(viewFilterBtnEmpty.dataset.filter)
@@ -2477,13 +3413,14 @@ function renderRoutines(routines) {
             viewFilterEmpty === 'sequences' ? 'Nenhuma sequência ativa.' : 'Nenhuma tarefa criada';
         routinesGrid.innerHTML =
             '<div class="routines-empty-state">' +
-            '<div class="add-routine-card routines-empty-combined" role="link" tabindex="0" aria-label="Criar nova rotina ou tarefa" onclick="window.location.href=\'create.html\'" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();window.location.href=\'create.html\';}">' +
+            '<div class="add-routine-card routines-empty-combined" role="link" tabindex="0" data-href="create.html" aria-label="Criar nova rotina ou tarefa">' +
             '<div class="add-routine-content">' +
             '<p class="routines-empty-msg" role="status">' +
             emptyListMsg +
             '</p>' +
             '<div class="add-routine-icon" aria-hidden="true">+</div>' +
             '</div></div></div>';
+        if (typeof updateEcPagesHeight === 'function') updateEcPagesHeight();
         return;
     }
 
@@ -2515,18 +3452,14 @@ function renderRoutines(routines) {
             });
         }
 
-        // Botão de deletar
-        const deleteBtn = document.querySelector(`[data-delete-id="${routine.id}"]`);
-        if (deleteBtn) {
-            deleteBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                deleteRoutine(routine.id);
-            });
-        }
-
         attachHeatmapListeners(card, routine);
     });
     applyMobileHeatmapCompactUI();
+    if (typeof updateEcPagesHeight === 'function') {
+        requestAnimationFrame(function () {
+            updateEcPagesHeight();
+        });
+    }
 }
 
 // Obter dados de frequência dos últimos 30 dias
@@ -2653,7 +3586,7 @@ function shouldShowRoutineNoFixedTimeAwaitingHint(routine) {
 
 function routineNoFixedTimeAwaitingHintHtml() {
     return (
-        '<div class="routine-card-no-time-awaiting" role="status">' +
+        '<div class="routine-card-no-time-awaiting" role="status" aria-label="À espera que concluas esta tarefa — não tem horário definido.">' +
         '<span class="routine-card-no-time-awaiting__icon" aria-hidden="true"><i data-lucide="alert-circle"></i></span>' +
         '<span class="routine-card-no-time-awaiting__text">À espera que concluas esta tarefa — não tem horário definido.</span>' +
         '</div>'
@@ -2821,15 +3754,157 @@ function setupDetailListFilters() {
     if (contextSelect) contextSelect.addEventListener('change', onChange);
 }
 
+function formatFrequencyChartTooltipDate(dateStr) {
+    if (!dateStr) return '—';
+    var parts = String(dateStr).trim().split('-');
+    if (parts.length !== 3) return dateStr;
+    var d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function buildFrequencyTooltipHtml(name, dateStr, value, dotState) {
+    var statusClass = dotState === 'done' ? 'is-done' : dotState === 'missed' ? 'is-missed' : 'is-pending';
+    var statusLabel = dotState === 'done' ? 'Concluída' : dotState === 'missed' ? 'Não concluída' : 'Pendente';
+    return ''
+        + '<div class="dashboard-frequency-tooltip__inner">'
+        + '  <p class="dashboard-frequency-tooltip__title">' + escapeHtml(name || 'Rotina') + '</p>'
+        + '  <p class="dashboard-frequency-tooltip__date">' + escapeHtml(formatFrequencyChartTooltipDate(dateStr)) + '</p>'
+        + '  <div class="dashboard-frequency-tooltip__rows">'
+        + '    <div class="dashboard-frequency-tooltip__row">'
+        + '      <span class="dashboard-frequency-tooltip__label">Frequência</span>'
+        + '      <span class="dashboard-frequency-tooltip__value">' + escapeHtml(String(value)) + '</span>'
+        + '    </div>'
+        + '    <div class="dashboard-frequency-tooltip__row">'
+        + '      <span class="dashboard-frequency-tooltip__label">Status</span>'
+        + '      <span class="dashboard-frequency-tooltip__value dashboard-frequency-tooltip__status ' + statusClass + '">'
+        + '        <span class="dashboard-frequency-tooltip__status-dot" aria-hidden="true"></span>'
+        + escapeHtml(statusLabel)
+        + '      </span>'
+        + '    </div>'
+        + '  </div>'
+        + '</div>';
+}
+
+/** Dia agendado sem conclusão: penaliza no mesmo dia (não espera virar "ontem"). Com horário fixo, só após passar o horário. */
+function isFrequencyDayPenalizable(dateStr, routine, completedDates) {
+    if (!dateStr || !routine || !isRoutineDate(dateStr, routine)) return false;
+    if (completedDates && completedDates.has(dateStr)) return false;
+    var todayStr = getLocalDateStr(new Date());
+    if (dateStr > todayStr) return false;
+    if (dateStr < todayStr) return true;
+    if (routine.schedule && routine.schedule.time) {
+        return scheduleTimeHasPassedToday(routine.schedule);
+    }
+    return true;
+}
+
+function getFrequencyDotState(dateStr, isCompleted, routine) {
+    if (isCompleted) return 'done';
+    if (!routine || !isRoutineDate(dateStr, routine)) return 'pending';
+    if (isFrequencyDayPenalizable(dateStr, routine, null)) return 'missed';
+    return 'pending';
+}
+
+/** Início da simulação da frequência acumulada (baseline antes da janela visível). */
+function getFrequencyBaselineStart(routine, windowStart) {
+    if (!windowStart) return '';
+    var maxLookbackDays = 365;
+    var windowDate = new Date(windowStart + 'T12:00:00');
+    var lookbackDate = new Date(windowDate);
+    lookbackDate.setDate(lookbackDate.getDate() - maxLookbackDays);
+    var startStr = getLocalDateStr(lookbackDate);
+    if (routine && routine.createdAt) {
+        var createdStr = normalizeDateStr(String(routine.createdAt));
+        if (createdStr && createdStr > startStr) startStr = createdStr;
+    }
+    return startStr;
+}
+
+/**
+ * Frequência acumulada até windowStart (exclusive):
+ * +1 no dia agendado concluído; −1 se agendado e não concluiu (incluso hoje); futuro permanece.
+ */
+function computeFrequencyCumulativeUntil(completedDates, routine, startDateStr, untilDateStrExclusive) {
+    if (!startDateStr || !untilDateStrExclusive || startDateStr >= untilDateStrExclusive) return 0;
+    var cumulative = 0;
+    var d = new Date(startDateStr + 'T12:00:00');
+    var end = new Date(untilDateStrExclusive + 'T12:00:00');
+    while (d < end) {
+        var ds = getLocalDateStr(d);
+        if (isRoutineDate(ds, routine)) {
+            if (completedDates.has(ds)) cumulative += 1;
+            else if (isFrequencyDayPenalizable(ds, routine, completedDates)) cumulative = Math.max(0, cumulative - 1);
+        }
+        d.setDate(d.getDate() + 1);
+    }
+    return cumulative;
+}
+
+function shouldShowFrequencyChartDot(series, dayIndex, visStart, visEnd, routine, dayStr) {
+    if (dayIndex === visEnd) return true;
+    if (isRoutineDate(dayStr, routine)) return true;
+    if (dayIndex <= visStart) return true;
+    var prev = series.values[dayIndex - 1];
+    var cur = series.values[dayIndex];
+    return prev !== cur;
+}
+
 // Renderiza gráfico de produtividade (linhas acumuladas estilo mercado) – 7d/30d
-function renderFrequencyChart() {
-    const el = document.getElementById('dashboardFrequencyContent');
-    if (!el) return;
-    const now = new Date();
+function getDashboardFrequencyPeriod() {
     if (window._dashboardFrequencyPeriod !== '7d' && window._dashboardFrequencyPeriod !== '30d') {
         window._dashboardFrequencyPeriod = '7d';
     }
-    const period = window._dashboardFrequencyPeriod;
+    return window._dashboardFrequencyPeriod;
+}
+
+function syncDashboardFrequencyPeriodSwitch() {
+    var btn = document.getElementById('dashboardFrequencyPeriodSwitch');
+    if (!btn) return;
+    var period = getDashboardFrequencyPeriod();
+    var is30 = period === '30d';
+    btn.setAttribute('aria-checked', is30 ? 'true' : 'false');
+    btn.setAttribute(
+        'aria-label',
+        is30 ? 'Período: 30 dias. Clicar para 7 dias.' : 'Período: 7 dias. Clicar para 30 dias.'
+    );
+}
+
+function applyDashboardFrequencyPeriod(nextPeriod) {
+    if (window._dashboardFrequencyPeriod === nextPeriod) return;
+    var host = document.getElementById('dashboardFrequencyContent');
+    if (host) host.classList.add('is-period-transitioning-out');
+    setTimeout(function () {
+        window._dashboardFrequencyPeriod = nextPeriod;
+        renderFrequencyChart();
+        var hostIn = document.getElementById('dashboardFrequencyContent');
+        if (!hostIn) return;
+        hostIn.classList.remove('is-period-transitioning-out');
+        hostIn.classList.add('is-period-transitioning-in');
+        setTimeout(function () {
+            hostIn.classList.remove('is-period-transitioning-in');
+        }, 220);
+    }, 130);
+}
+
+function setupDashboardFrequencyPeriodSwitch() {
+    if (window._dashboardFrequencyPeriodSwitchSetup) return;
+    window._dashboardFrequencyPeriodSwitchSetup = true;
+    var btn = document.getElementById('dashboardFrequencyPeriodSwitch');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+        var nextPeriod = getDashboardFrequencyPeriod() === '7d' ? '30d' : '7d';
+        applyDashboardFrequencyPeriod(nextPeriod);
+    });
+    syncDashboardFrequencyPeriodSwitch();
+}
+
+function renderFrequencyChart() {
+    const el = document.getElementById('dashboardFrequencyContent');
+    if (!el) return;
+    syncDashboardFrequencyPeriodSwitch();
+    const now = new Date();
+    const period = getDashboardFrequencyPeriod();
     const daysCount = period === '7d' ? 7 : 30;
     const days = [];
     for (let i = daysCount - 1; i >= 0; i--) {
@@ -2847,23 +3922,29 @@ function renderFrequencyChart() {
         const tasks = Array.isArray(routine && routine.tasks) ? routine.tasks : [];
         const windowStart = days.length ? days[0] : '';
 
-        function pushSeriesFromCompletedSet(completedDatesSet, idSuffix, displayName) {
+        function buildProductionFrequencyValues(completedDatesSet) {
             const completedDates = completedDatesSet instanceof Set ? completedDatesSet : new Set(completedDatesSet || []);
-            let cumulative = 0;
-            if (windowStart) {
-                completedDates.forEach(d => {
-                    if (d < windowStart) cumulative += 1;
-                });
-            }
-            const values = days.map(d => {
+            const baselineStart = windowStart ? getFrequencyBaselineStart(routine, windowStart) : '';
+            let cumulative = windowStart
+                ? computeFrequencyCumulativeUntil(completedDates, routine, baselineStart, windowStart)
+                : 0;
+            return days.map(d => {
+                if (!isRoutineDate(d, routine)) return cumulative;
                 if (completedDates.has(d)) cumulative += 1;
+                else if (isFrequencyDayPenalizable(d, routine, completedDates)) cumulative = Math.max(0, cumulative - 1);
                 return cumulative;
             });
+        }
+
+        function pushSeriesFromCompletedSet(completedDatesSet, idSuffix, displayName) {
+            const completedDates = completedDatesSet instanceof Set ? completedDatesSet : new Set(completedDatesSet || []);
+            const values = buildProductionFrequencyValues(completedDates);
             series.push({
                 id: `${routine.id || rIdx}-${idSuffix}`,
                 name: displayName,
                 values,
-                completedDates
+                completedDates,
+                routine
             });
         }
 
@@ -2884,39 +3965,34 @@ function renderFrequencyChart() {
                     if (normalized) completedDates.add(normalized);
                 });
             }
-            let cumulative = 0;
-            if (windowStart) {
-                completedDates.forEach(d => {
-                    if (d < windowStart) cumulative += 1;
-                });
-            }
-            const values = days.map(d => {
-                if (completedDates.has(d)) cumulative += 1;
-                return cumulative;
-            });
+            const values = buildProductionFrequencyValues(completedDates);
             series.push({
                 id: `${routine.id || rIdx}-${task.id || tIdx}`,
                 name: taskName,
                 values,
-                completedDates
+                completedDates,
+                routine
             });
         });
     });
 
     if (!series.length) {
-        el.innerHTML = '<p class="dashboard-frequency-chart-legend">Sem rotinas para exibir no período.</p>';
+        el.innerHTML = '<p class="dashboard-frequency-empty">Sem tarefas</p>';
         return;
     }
 
     const goalValue = 3;
-    const maxYVisible = Math.max(goalValue, ...series.flatMap(s => s.values), 1);
-
-    /* Cor da série: no tema claro preto; no escuro o CSS força traço/legenda brancos. */
-    const palette = series.map(() => '#0f172a');
+    const dataMaxY = series.reduce(function (maxVal, s) {
+        var localMax = s.values.reduce(function (m, v) { return Math.max(m, v); }, 0);
+        return Math.max(maxVal, localMax);
+    }, 0);
+    const maxYVisible = dataMaxY >= goalValue
+        ? goalValue
+        : Math.min(goalValue, Math.max(2, Math.ceil(dataMaxY + 0.25)));
 
     const w = 960;
-    const h = 260;
-    const pad = { left: 30, right: 14, top: 18, bottom: 44 };
+    const h = 200;
+    const pad = { left: 36, right: 14, top: 16, bottom: 32 };
     const plotW = w - pad.left - pad.right;
     const plotH = h - pad.top - pad.bottom;
     const x = (i) => pad.left + ((i - visStart) / visibleSpan) * plotW;
@@ -2925,7 +4001,11 @@ function renderFrequencyChart() {
         return pad.top + plotH - (vv / maxYVisible) * plotH;
     };
 
-    const yTicks = Array.from({ length: 5 }, (_, i) => Math.round((maxYVisible / 4) * i));
+    const yTicks = (function () {
+        var ticks = [];
+        for (var t = 0; t <= maxYVisible; t++) ticks.push(t);
+        return ticks;
+    })();
     const labels = [];
     const visibleLabelStep = Math.max(1, Math.floor((visEnd - visStart + 1) / 6));
     for (let i = visStart; i <= visEnd; i += visibleLabelStep) {
@@ -2986,9 +4066,11 @@ function renderFrequencyChart() {
         });
     }
 
-    const lineStroke = '2';
-    const dotRadius = '3.2';
-    const labelSize = '10';
+    const lineStroke = '2.25';
+    const dotRadius = '3.5';
+    const dotHitRadius = '9';
+    const labelSize = '11';
+    const showEndLabels = series.length <= 4;
 
     const seriesPaths = series.map((s, si) => {
         const points = s.values.slice(visStart, visEnd + 1).map((v, localIdx) => {
@@ -2996,21 +4078,56 @@ function renderFrequencyChart() {
             const offset = yOffsetBySeriesPoint[`${si}:${i}`] || 0;
             return { x: x(i), y: y(v) + offset };
         });
-        return `<path d="${toSmoothPath(points)}" class="dashboard-frequency-series-line" data-series="${si}" style="--series-color:${palette[si % palette.length]};--freq-line-width:${lineStroke}px"/>`;
+        return `<path d="${toSmoothPath(points)}" class="dashboard-frequency-series-line" data-series="${si}" style="--freq-line-width:${lineStroke}px"/>`;
     }).join('');
 
     const seriesDots = series.map((s, si) => {
         return s.values.slice(visStart, visEnd + 1).map((v, localIdx) => {
             const i = visStart + localIdx;
-            if (i > visStart && s.values[i - 1] === v && i !== visEnd) return '';
+            const dayStr = days[i];
+            if (!shouldShowFrequencyChartDot(s, i, visStart, visEnd, s.routine, dayStr)) return '';
             const offset = yOffsetBySeriesPoint[`${si}:${i}`] || 0;
-            const isCompleted = s.completedDates && s.completedDates.has(days[i]);
-            const dotState = isCompleted ? 'done' : 'pending';
-            return `<circle cx="${x(i)}" cy="${y(v) + offset}" r="${dotRadius}" class="dashboard-frequency-series-dot" data-series="${si}" data-date="${days[i]}" data-value="${v}" data-state="${dotState}" style="--series-color:${palette[si % palette.length]}"/>`;
+            const isCompleted = s.completedDates && s.completedDates.has(dayStr);
+            const dotState = getFrequencyDotState(dayStr, isCompleted, s.routine);
+            return (
+                '<g class="dashboard-frequency-series-dot-group" data-series="' +
+                si +
+                '">' +
+                '<circle cx="' +
+                x(i) +
+                '" cy="' +
+                (y(v) + offset) +
+                '" r="' +
+                dotHitRadius +
+                '" class="dashboard-frequency-series-dot-hit" data-series="' +
+                si +
+                '" data-date="' +
+                days[i] +
+                '" data-value="' +
+                v +
+                '" data-state="' +
+                dotState +
+                '"/>' +
+                '<circle cx="' +
+                x(i) +
+                '" cy="' +
+                (y(v) + offset) +
+                '" r="' +
+                dotRadius +
+                '" class="dashboard-frequency-series-dot" data-series="' +
+                si +
+                '" data-date="' +
+                days[i] +
+                '" data-value="' +
+                v +
+                '" data-state="' +
+                dotState +
+                '"/></g>'
+            );
         }).join('');
     }).join('');
 
-    const endLabelMinGap = 14;
+    const endLabelMinGap = 18;
     const endLabelCandidates = series.map((s, si) => {
         const xEnd = x(visEnd);
         const yEnd = y(s.values[visEnd] || 0);
@@ -3047,11 +4164,15 @@ function renderFrequencyChart() {
         if (c.yLabel < minLabelY) c.yLabel = minLabelY;
     });
 
-    const endLabels = endLabelCandidates.map((c, idx) => {
-        const sideOffset = idx % 2 === 0 ? 10 : 20;
+    const endLabels = showEndLabels
+        ? endLabelCandidates
+              .map((c, idx) => {
+                  const sideOffset = idx % 2 === 0 ? 12 : 24;
         const xLabel = c.xEnd - sideOffset;
-        return `<text x="${xLabel}" y="${c.yLabel}" text-anchor="end" class="dashboard-frequency-end-label" data-series="${c.si}" style="--series-color:${palette[c.si % palette.length]};--freq-label-size:${labelSize}px">${escapeHtml(c.text)}</text>`;
-    }).join('');
+                  return `<text x="${xLabel}" y="${c.yLabel}" text-anchor="end" class="dashboard-frequency-end-label" data-series="${c.si}" style="--freq-label-size:${labelSize}px">${escapeHtml(c.text)}</text>`;
+              })
+              .join('')
+        : '';
 
     const finalSeriesIdx = series.reduce((bestIdx, s, idx) => {
         if (bestIdx === -1) return idx;
@@ -3065,7 +4186,7 @@ function renderFrequencyChart() {
     const legendRows = series
         .map(
             (s, si) =>
-                `<span class="dashboard-frequency-legend-item" data-series="${si}" tabindex="0" role="button" aria-label="Destacar linha no gráfico"><span class="dashboard-frequency-legend-dot" style="background:${palette[si % palette.length]}"></span>${escapeHtml(
+                `<span class="dashboard-frequency-legend-item" data-series="${si}" tabindex="0" role="button" aria-label="Destacar linha no gráfico"><span class="dashboard-frequency-legend-dot" aria-hidden="true"></span>${escapeHtml(
                     s.name
                 )}</span>`
         )
@@ -3073,10 +4194,6 @@ function renderFrequencyChart() {
 
     el.innerHTML = `
     <div class="dashboard-frequency-chart-wrap">
-        <div class="dashboard-frequency-controls">
-            <button type="button" class="dashboard-frequency-toggle ${period === '7d' ? 'is-active' : ''}" data-period="7d">7d</button>
-            <button type="button" class="dashboard-frequency-toggle ${period === '30d' ? 'is-active' : ''}" data-period="30d">30d</button>
-        </div>
         <div class="dashboard-frequency-legend dashboard-frequency-legend--top" role="list" aria-label="Linhas por tarefa">${legendRows}</div>
         <div class="dashboard-frequency-chart-tooltip" id="dashboardFrequencyTooltip" hidden></div>
         <svg class="dashboard-frequency-chart-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet" aria-label="Produtividade acumulada por tarefa em linhas">
@@ -3084,34 +4201,227 @@ function renderFrequencyChart() {
             ${seriesPaths}
             ${seriesDots}
             ${endLabels}
-            <circle cx="${finalPointX}" cy="${finalPointY}" r="6.4" class="dashboard-frequency-final-focus" aria-hidden="true"/>
+            <circle cx="${finalPointX}" cy="${finalPointY}" r="5" class="dashboard-frequency-final-focus" aria-hidden="true"/>
             ${labels.map(l => `<text x="${x(l.i)}" y="${h - 8}" text-anchor="middle" class="dashboard-frequency-chart-label">${escapeHtml(l.day)}</text>`).join('')}
             ${yTicks.slice(1).map(t => `<text x="${pad.left - 6}" y="${y(t) + 4}" text-anchor="end" class="dashboard-frequency-chart-axis">${t}</text>`).join('')}
         </svg>
-        <p class="dashboard-frequency-chart-legend">Índice acumulado por tarefa. A linha sobe quando você conclui a tarefa.</p>
     </div>`;
 
     const svg = el.querySelector('.dashboard-frequency-chart-svg');
     const tooltip = el.querySelector('#dashboardFrequencyTooltip');
     const lines = el.querySelectorAll('.dashboard-frequency-series-line');
-    const dots = el.querySelectorAll('.dashboard-frequency-series-dot');
+    const dots = el.querySelectorAll('.dashboard-frequency-series-dot-hit');
     const endLabelEls = el.querySelectorAll('.dashboard-frequency-end-label');
-    const toggles = el.querySelectorAll('.dashboard-frequency-toggle');
     const finalFocusEl = el.querySelector('.dashboard-frequency-final-focus');
     const legendItems = el.querySelectorAll('.dashboard-frequency-legend-item');
+    var pinnedSeriesIdx = null;
+    var hoverSeriesIdx = null;
+    var pinnedTooltipDot = null;
+    var hoveredDotHit = null;
 
-    legendItems.forEach(item => {
-        const si = Number(item.dataset.series);
+    function clearFrequencyDotHoverClasses() {
+        dots.forEach(function (d) {
+            d.classList.remove('is-hovered');
+            var g = d.closest('.dashboard-frequency-series-dot-group');
+            var vd = g ? g.querySelector('.dashboard-frequency-series-dot') : null;
+            if (vd) vd.classList.remove('is-hovered');
+        });
+    }
+
+    function positionFrequencyTooltip(anchorEl) {
+        if (!tooltip || !svg || !anchorEl) return;
+        var group = anchorEl.closest('.dashboard-frequency-series-dot-group');
+        var visibleDot = group ? group.querySelector('.dashboard-frequency-series-dot') : null;
+        var anchor = visibleDot || anchorEl;
+        var svgRect = svg.getBoundingClientRect();
+        var dotBox = anchor.getBoundingClientRect();
+        tooltip.style.left = dotBox.left - svgRect.left + dotBox.width / 2 + 'px';
+        tooltip.style.top = dotBox.top - svgRect.top + dotBox.height / 2 + 'px';
+    }
+
+    function showFrequencySeriesDotTooltip(dotHitEl, opts) {
+        opts = opts || {};
+        if (!tooltip || !svg || !dotHitEl) return;
+        var sIdx = Number(dotHitEl.dataset.series);
+        var s = series[sIdx];
+        if (!s) return;
+
+        if (opts.persist) pinnedTooltipDot = dotHitEl;
+
+        hoveredDotHit = dotHitEl;
+        hoverSeriesIdx = sIdx;
+        applySeriesHighlight();
+
+        clearFrequencyDotHoverClasses();
+        dotHitEl.classList.add('is-hovered');
+        var group = dotHitEl.closest('.dashboard-frequency-series-dot-group');
+        var visibleDot = group ? group.querySelector('.dashboard-frequency-series-dot') : null;
+        if (visibleDot) visibleDot.classList.add('is-hovered');
+
+        var date = dotHitEl.dataset.date || '';
+        var value = dotHitEl.dataset.value || '0';
+        var dotState = dotHitEl.dataset.state || 'pending';
+        tooltip.innerHTML = buildFrequencyTooltipHtml(s.name, date, value, dotState);
+        tooltip.hidden = false;
+        positionFrequencyTooltip(dotHitEl);
+        if (!tooltip.classList.contains('is-visible')) {
+            requestAnimationFrame(function () {
+                tooltip.classList.add('is-visible');
+            });
+        }
+    }
+
+    function hideFrequencySeriesDotTooltip(force) {
+        if (!tooltip) return;
+        if (!force && pinnedTooltipDot) return;
+        if (hoveredDotHit) {
+            hoveredDotHit.classList.remove('is-hovered');
+            var group = hoveredDotHit.closest('.dashboard-frequency-series-dot-group');
+            var visibleDot = group ? group.querySelector('.dashboard-frequency-series-dot') : null;
+            if (visibleDot) visibleDot.classList.remove('is-hovered');
+        }
+        hoveredDotHit = null;
+        pinnedTooltipDot = null;
+        tooltip.classList.remove('is-visible');
+        tooltip.hidden = true;
+        hoverSeriesIdx = null;
+        applySeriesHighlight();
+    }
+
+    function findDotForSeriesAtClientX(seriesIdx, clientX) {
+        var candidates = Array.from(dots).filter(function (d) {
+            return Number(d.dataset.series) === seriesIdx;
+        });
+        if (!candidates.length) return null;
+        var nearest = null;
+        var minDist = Infinity;
+        candidates.forEach(function (d) {
+            var box = d.getBoundingClientRect();
+            var cx = box.left + box.width / 2;
+            var dist = Math.abs(cx - clientX);
+            if (dist < minDist) {
+                minDist = dist;
+                nearest = d;
+            }
+        });
+        return nearest;
+    }
+
+    function findLastDotForSeries(seriesIdx) {
+        var candidates = Array.from(dots).filter(function (d) {
+            return Number(d.dataset.series) === seriesIdx;
+        });
+        return candidates.length ? candidates[candidates.length - 1] : null;
+    }
+
+    function setSeriesHighlight(seriesIdx) {
+        lines.forEach(function (line) {
+            var isCurrent = line.dataset.series === String(seriesIdx);
+            line.classList.toggle('is-muted', seriesIdx !== null && !isCurrent);
+            line.classList.toggle('is-focused', seriesIdx !== null && isCurrent);
+        });
+        dots.forEach(function (dot) {
+            var isCurrent = dot.dataset.series === String(seriesIdx);
+            dot.classList.toggle('is-muted', seriesIdx !== null && !isCurrent);
+            dot.classList.toggle('is-focused', seriesIdx !== null && isCurrent);
+            var group = dot.closest('.dashboard-frequency-series-dot-group');
+            var visibleDot = group ? group.querySelector('.dashboard-frequency-series-dot') : null;
+            if (visibleDot) {
+                visibleDot.classList.toggle('is-muted', seriesIdx !== null && !isCurrent);
+                visibleDot.classList.toggle('is-focused', seriesIdx !== null && isCurrent);
+            }
+        });
+        endLabelEls.forEach(function (label) {
+            var isCurrent = label.dataset.series === String(seriesIdx);
+            label.classList.toggle('is-muted', seriesIdx !== null && !isCurrent);
+            label.classList.toggle('is-focused', seriesIdx !== null && isCurrent);
+        });
+        legendItems.forEach(function (item) {
+            var isCurrent = item.dataset.series === String(seriesIdx);
+            var isPinned = item.dataset.series === String(pinnedSeriesIdx);
+            item.classList.toggle('is-active', seriesIdx !== null && isCurrent);
+            item.classList.toggle('is-selected', pinnedSeriesIdx !== null && isPinned);
+            item.setAttribute('aria-pressed', isPinned ? 'true' : 'false');
+        });
+    }
+
+    function applySeriesHighlight() {
+        var activeIdx = hoverSeriesIdx !== null ? hoverSeriesIdx : pinnedSeriesIdx;
+        setSeriesHighlight(activeIdx);
+    }
+
+    legendItems.forEach(function (item) {
+        var si = Number(item.dataset.series);
         if (Number.isNaN(si)) return;
-        item.addEventListener('mouseenter', () => setSeriesHighlight(si));
-        item.addEventListener('mouseleave', () => setSeriesHighlight(null));
-        item.addEventListener('focus', () => setSeriesHighlight(si));
-        item.addEventListener('blur', () => setSeriesHighlight(null));
-        item.addEventListener('keydown', ev => {
+        item.addEventListener('mouseenter', function () {
+            hoverSeriesIdx = si;
+            applySeriesHighlight();
+        });
+        item.addEventListener('mouseleave', function () {
+            hoverSeriesIdx = null;
+            applySeriesHighlight();
+        });
+        item.addEventListener('focus', function () {
+            hoverSeriesIdx = si;
+            applySeriesHighlight();
+        });
+        item.addEventListener('blur', function () {
+            hoverSeriesIdx = null;
+            applySeriesHighlight();
+        });
+        item.addEventListener('click', function (ev) {
+            ev.preventDefault();
+            var wasPinned = pinnedSeriesIdx === si;
+            pinnedSeriesIdx = wasPinned ? null : si;
+            if (pinnedSeriesIdx !== null) {
+                var legendDot = findLastDotForSeries(si);
+                if (legendDot) showFrequencySeriesDotTooltip(legendDot, { persist: true });
+                else applySeriesHighlight();
+            } else {
+                hideFrequencySeriesDotTooltip(true);
+            }
+        });
+        item.addEventListener('keydown', function (ev) {
             if (ev.key === 'Enter' || ev.key === ' ') {
                 ev.preventDefault();
-                setSeriesHighlight(si);
+                var wasPinned = pinnedSeriesIdx === si;
+                pinnedSeriesIdx = wasPinned ? null : si;
+                if (pinnedSeriesIdx !== null) {
+                    var legendDot = findLastDotForSeries(si);
+                    if (legendDot) showFrequencySeriesDotTooltip(legendDot, { persist: true });
+                    else applySeriesHighlight();
+                } else {
+                    hideFrequencySeriesDotTooltip(true);
+                }
             }
+        });
+    });
+
+    lines.forEach(function (line) {
+        var si = Number(line.dataset.series);
+        if (Number.isNaN(si)) return;
+        line.style.pointerEvents = 'stroke';
+        line.addEventListener('mouseenter', function () {
+            hoverSeriesIdx = si;
+            applySeriesHighlight();
+        });
+        line.addEventListener('mouseleave', function () {
+            hoverSeriesIdx = null;
+            applySeriesHighlight();
+        });
+        line.addEventListener('click', function (ev) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            var wasPinned = pinnedSeriesIdx === si;
+            if (wasPinned) {
+                pinnedSeriesIdx = null;
+                hideFrequencySeriesDotTooltip(true);
+                return;
+            }
+            pinnedSeriesIdx = si;
+            var nearestDot = findDotForSeriesAtClientX(si, ev.clientX);
+            if (nearestDot) showFrequencySeriesDotTooltip(nearestDot, { persist: true });
+            else applySeriesHighlight();
         });
     });
 
@@ -3120,71 +4430,58 @@ function renderFrequencyChart() {
         if (finalFocusEl) finalFocusEl.classList.add('is-active');
     }
 
-    function setSeriesHighlight(seriesIdx) {
-        lines.forEach(line => {
-            const isCurrent = line.dataset.series === String(seriesIdx);
-            line.classList.toggle('is-muted', seriesIdx !== null && !isCurrent);
-            line.classList.toggle('is-focused', seriesIdx !== null && isCurrent);
+    dots.forEach(function (dot) {
+        dot.addEventListener('mouseenter', function () {
+            showFrequencySeriesDotTooltip(dot);
         });
-        dots.forEach(dot => {
-            const isCurrent = dot.dataset.series === String(seriesIdx);
-            dot.classList.toggle('is-muted', seriesIdx !== null && !isCurrent);
-            dot.classList.toggle('is-focused', seriesIdx !== null && isCurrent);
+        dot.addEventListener('mouseleave', function () {
+            if (pinnedTooltipDot === dot) return;
+            dot.classList.remove('is-hovered');
+            var group = dot.closest('.dashboard-frequency-series-dot-group');
+            var visibleDot = group ? group.querySelector('.dashboard-frequency-series-dot') : null;
+            if (visibleDot) visibleDot.classList.remove('is-hovered');
+            if (hoveredDotHit === dot) hoveredDotHit = null;
+            hoverSeriesIdx = null;
+            applySeriesHighlight();
+            if (pinnedTooltipDot) showFrequencySeriesDotTooltip(pinnedTooltipDot, { persist: true });
+            else hideFrequencySeriesDotTooltip(true);
         });
-        endLabelEls.forEach(label => {
-            const isCurrent = label.dataset.series === String(seriesIdx);
-            label.classList.toggle('is-muted', seriesIdx !== null && !isCurrent);
-            label.classList.toggle('is-focused', seriesIdx !== null && isCurrent);
-        });
-    }
-
-    dots.forEach(dot => {
-        dot.addEventListener('mouseenter', () => {
-            if (!tooltip || !svg) return;
-            const sIdx = Number(dot.dataset.series);
-            const s = series[sIdx];
-            if (!s) return;
-            setSeriesHighlight(sIdx);
-            const date = dot.dataset.date || '';
-            const value = dot.dataset.value || '0';
-            const stateText = dot.dataset.state === 'done' ? 'Concluída' : 'Não concluída';
-            tooltip.innerHTML = `<strong>${escapeHtml(s.name)}</strong><br>${escapeHtml(date)}<br>Índice acumulado: ${value}<br>Status: ${stateText}`;
-            tooltip.hidden = false;
-            const svgRect = svg.getBoundingClientRect();
-            const dotBox = dot.getBoundingClientRect();
-            tooltip.style.left = `${dotBox.left - svgRect.left + dotBox.width / 2}px`;
-            tooltip.style.top = `${dotBox.top - svgRect.top - 8}px`;
-        });
-        dot.addEventListener('mouseleave', () => {
-            if (tooltip) tooltip.hidden = true;
-            setSeriesHighlight(null);
-        });
-    });
-
-    toggles.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const nextPeriod = btn.dataset.period === '7d' ? '7d' : '30d';
-            if (window._dashboardFrequencyPeriod === nextPeriod) return;
-            const host = document.getElementById('dashboardFrequencyContent');
-            if (host) host.classList.add('is-period-transitioning-out');
-            setTimeout(() => {
-                window._dashboardFrequencyPeriod = nextPeriod;
-                renderFrequencyChart();
-                const hostIn = document.getElementById('dashboardFrequencyContent');
-                if (!hostIn) return;
-                hostIn.classList.remove('is-period-transitioning-out');
-                hostIn.classList.add('is-period-transitioning-in');
-                setTimeout(() => {
-                    hostIn.classList.remove('is-period-transitioning-in');
-                }, 220);
-            }, 130);
+        dot.addEventListener('click', function (ev) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            if (pinnedTooltipDot === dot) {
+                pinnedSeriesIdx = null;
+                hideFrequencySeriesDotTooltip(true);
+                return;
+            }
+            var sIdx = Number(dot.dataset.series);
+            if (!Number.isNaN(sIdx)) pinnedSeriesIdx = sIdx;
+            showFrequencySeriesDotTooltip(dot, { persist: true });
         });
     });
 
     runCinematicZoom();
 }
 
-// Gráficos estatísticos: donut (por tipo), barras (7 dias), círculo (taxa hoje)
+function setupFrequencyChartResize() {
+    if (window._frequencyChartResizeSetup) return;
+    window._frequencyChartResizeSetup = true;
+    setupDashboardFrequencyPeriodSwitch();
+    var resizeTimer;
+    window.addEventListener('resize', function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function () {
+            if (
+                document.body.classList.contains('dashboard-overview-visible') &&
+                typeof renderFrequencyChart === 'function'
+            ) {
+                renderFrequencyChart();
+            }
+        }, 150);
+    });
+}
+
+// Gráficos estatísticos: donut (por tipo), heatmap (30 dias), círculo (taxa hoje)
 function renderStatsCharts(routinesToday, completedCountToday) {
     const todayStr = getLocalDateStr(new Date());
     const totalToday = routinesToday.length;
@@ -3242,72 +4539,24 @@ function renderStatsCharts(routinesToday, completedCountToday) {
         </div>`;
     }
 
-    // 2) Barras: últimos 7 dias — mesma altura em todos os dias; % = concluídas/total do dia
-    const weekDataDone = [];
-    for (let i = 6; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        const dateStr = getLocalDateStr(d);
-        const routinesOnDay = allRoutines.filter((r) => isRoutineDate(dateStr, r));
-        const total = routinesOnDay.length;
-        const done = routinesOnDay.filter((r) => getRoutineCompletedDates(r).has(dateStr)).length;
-        weekDataDone.push({ dateStr, total, done, pending: Math.max(0, total - done) });
-    }
+    // 2) Heatmap: últimos 30 dias — grelha estilo GitHub/cartões com números do dia
+    const weekDataDone = typeof getDashboardRecent30DaysData === 'function'
+        ? getDashboardRecent30DaysData()
+        : [];
+    _dashboardRecent30DaysCache = weekDataDone;
+    _dashboardWeekModalPrepared = false;
     const barEl = document.getElementById('dashboardBarWeekContent');
     if (barEl) {
-        const w = 220;
-        const h = 100;
-        const pad = { left: 18, right: 10, top: 12, bottom: 24 };
-        const plotW = w - pad.left - pad.right;
-        const plotH = h - pad.top - pad.bottom;
-        const barW = plotW / 7 * 0.7;
-        const gap = plotW / 7 * 0.3;
-        const dayLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-        const stackColors = {
-            done: '#16a34a',
-            pending: '#d1d5db'
-        };
-        const bars = weekDataDone.map((item, i) => {
-            const x = pad.left + i * (plotW / 7) + gap / 2;
-            const dayName = dayLabels[new Date(item.dateStr + 'T12:00:00').getDay()];
-            let stacks = '';
-            // Todas as barras com a mesma altura; só a repartição verde/cinza reflete concluídas/pendentes.
-            const barTotalH = plotH;
-            const hDone = item.total > 0 ? (item.done / item.total) * barTotalH : 0;
-            const hPen = item.total > 0 ? (item.pending / item.total) * barTotalH : 0;
-            const y0 = pad.top + plotH;
-            const yBarTop = y0 - barTotalH;
-            // Verde (concluidas) cresce de baixo para cima.
-            const yDoneTop = y0 - hDone;
-            const yPenTop = yBarTop;
-            const pctDay = item.total > 0 ? Math.round((item.done / item.total) * 100) : 0;
-            stacks += `<rect x="${x}" y="${yBarTop}" width="${barW}" height="${barTotalH}" class="dashboard-bar-week-fill dashboard-bar-week-fill--base" fill="#d1d5db" rx="4" ry="4"/>`;
-            if (hPen > 0.5) {
-                stacks += `<rect x="${x}" y="${yPenTop}" width="${barW}" height="${hPen}" class="dashboard-bar-week-fill dashboard-bar-week-fill--pending" fill="${stackColors.pending}" rx="4" ry="4"/>`;
-            }
-            if (hDone > 0.5) {
-                stacks += `<rect x="${x}" y="${yDoneTop}" width="${barW}" height="${hDone}" class="dashboard-bar-week-fill dashboard-bar-week-fill--done" fill="${stackColors.done}" rx="4" ry="4"/>`;
-            }
-            if (barTotalH >= 16) {
-                stacks += `<text x="${x + barW / 2}" y="${yBarTop + barTotalH / 2 + 3}" text-anchor="middle" class="dashboard-bar-week-percent">${pctDay}%</text>`;
-            }
-            return `<g>${stacks}<text x="${x + barW / 2}" y="${h - 8}" text-anchor="middle" class="dashboard-bar-week-label">${escapeHtml(dayName)}</text></g>`;
-        }).join('');
-        const legend =
-            `<span class="dashboard-bar-week-legend-item"><span class="dashboard-bar-week-legend-dot" style="background:${stackColors.done}"></span>Concluídas</span>` +
-            `<span class="dashboard-bar-week-legend-item"><span class="dashboard-bar-week-legend-dot" style="background:${stackColors.pending}"></span>Pendentes</span>`;
-        barEl.innerHTML = `
-        <div class="dashboard-bar-week-wrap">
-            <svg class="dashboard-bar-week-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet" aria-label="Últimos 7 dias — concluídas e pendentes">
-                ${bars}
-            </svg>
-            <div class="dashboard-bar-week-legend">${legend}</div>
-        </div>`;
+        barEl.innerHTML = buildDashboardWeekHeatmapHTML(weekDataDone);
     }
+    prepareDashboardWeekModalContent(weekDataDone);
 
     // 3) Círculo: taxa de conclusão hoje (%)
     const circleEl = document.getElementById('dashboardCircleTodayContent');
     if (circleEl) {
+        if (totalToday === 0) {
+            circleEl.innerHTML = '<p class="dashboard-frequency-empty dashboard-metric-empty">Sem tarefas</p>';
+        } else {
         const size = 108;
         const cx = size / 2;
         const cy = size / 2;
@@ -3346,8 +4595,11 @@ function renderStatsCharts(routinesToday, completedCountToday) {
                 ${progressGroup}
             </svg>
             <span class="dashboard-circle-today-value dashboard-circle-today-value--${circleState}">${taxaHoje}%</span>
-        </div>`;
+        </div>
+        <p class="dashboard-metric-card-footer">${escapeHtml(getTaxaHojeMessage(taxaHoje, totalToday, completedCountToday))}</p>`;
     }
+    }
+    refreshDashboardLucideIcons();
 }
 
 // Renderiza bloco de estatísticas (KPIs)
@@ -3739,8 +4991,450 @@ function getCurrentStreak(routine) {
     return streak;
 }
 
-// Modo debug: obter data de referência a partir dos parâmetros da URL (?mes=0-11&ano=YYYY)
+const DASHBOARD_RECENT_DAYS = 30;
+const DASHBOARD_RECENT_WEEKDAY_LABELS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+var _dashboardRecent30DaysCache = null;
+var _dashboardWeekModalPrepared = false;
+
+function getDashboardWeekDayHeatClasses(total, done) {
+    var classes = ['heatmap-square', 'dashboard-week-day'];
+    if (total <= 0) {
+        classes.push('dashboard-week-day--empty');
+        return classes.join(' ');
+    }
+    classes.push('routine-day');
+    if (done >= total) {
+        classes.push('checked');
+    } else if (done > 0) {
+        var pct = done / total;
+        if (pct >= 0.75) classes.push('heat-level-3');
+        else if (pct >= 0.5) classes.push('heat-level-2');
+        else classes.push('heat-level-1');
+    }
+    return classes.join(' ');
+}
+
+function getDashboardRecent30DaysData() {
+    var weekDataDone = [];
+    var days = typeof DASHBOARD_RECENT_DAYS === 'number' ? DASHBOARD_RECENT_DAYS : 30;
+    var routines = allRoutines || [];
+    var completedByRoutine = new Map();
+    routines.forEach(function (routine) {
+        completedByRoutine.set(routine, getRoutineCompletedDates(routine));
+    });
+    for (var i = days - 1; i >= 0; i--) {
+        var d = new Date();
+        d.setDate(d.getDate() - i);
+        var dateStr = getLocalDateStr(d);
+        var routinesOnDay = routines.filter(function (r) {
+            return typeof isRoutineDate === 'function' && isRoutineDate(dateStr, r);
+        });
+        var total = routinesOnDay.length;
+        var done = routinesOnDay.filter(function (r) {
+            var completedDates = completedByRoutine.get(r);
+            return completedDates && completedDates.has(dateStr);
+        }).length;
+        weekDataDone.push({ dateStr: dateStr, total: total, done: done, pending: Math.max(0, total - done) });
+    }
+    return weekDataDone;
+}
+
+function prepareDashboardWeekModalContent(weekData) {
+    var body = document.getElementById('dashboardWeekModalBody');
+    var summary = document.getElementById('dashboardWeekModalSummary');
+    if (!body) return;
+    var data = weekData || [];
+    if (summary) summary.textContent = formatDashboardWeekModalSummary(data);
+    body.innerHTML = typeof buildDashboardWeekHeatmapHTML === 'function'
+        ? buildDashboardWeekHeatmapHTML(data)
+        : '';
+    _dashboardWeekModalPrepared = true;
+}
+
+function formatDashboardWeekModalSummary(weekData) {
+    var daysWithRoutines = 0;
+    var daysDone = 0;
+    var totalDone = 0;
+    var totalScheduled = 0;
+    (weekData || []).forEach(function (item) {
+        if (item.total > 0) {
+            daysWithRoutines += 1;
+            totalScheduled += item.total;
+            totalDone += item.done;
+            if (item.done >= item.total) daysDone += 1;
+        }
+    });
+    if (daysWithRoutines === 0) {
+        return 'Nenhuma rotina agendada neste período.';
+    }
+    return (
+        daysDone +
+        ' de ' +
+        daysWithRoutines +
+        ' dias com rotina concluídos · ' +
+        totalDone +
+        '/' +
+        totalScheduled +
+        ' check-ins'
+    );
+}
+
+function closeDashboardWeekModal() {
+    var modal = document.getElementById('dashboardWeekModal');
+    var panel = document.getElementById('dashboardWeekModalPanel');
+    if (!modal || modal.classList.contains('hidden') || modal.classList.contains('is-closing')) return;
+    modal.classList.remove('is-open', 'is-settled');
+    modal.classList.add('is-closing');
+
+    function finishClose() {
+        if (modal.dataset.weekModalClosing === '1') return;
+        modal.dataset.weekModalClosing = '1';
+        modal.classList.remove('is-closing');
+        modal.classList.add('hidden');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+        delete modal.dataset.weekModalClosing;
+        var trigger = document.getElementById('dashboardBarWeek');
+        if (trigger && typeof trigger.focus === 'function') {
+            try {
+                trigger.focus({ preventScroll: true });
+            } catch (e) {
+                try {
+                    trigger.focus();
+                } catch (e2) {}
+            }
+        }
+    }
+
+    if (panel) {
+        var done = false;
+        function onAnimEnd(e) {
+            if (done || e.target !== panel) return;
+            if (e.animationName !== 'calendar-day-detail-shrink') return;
+            done = true;
+            panel.removeEventListener('animationend', onAnimEnd);
+            finishClose();
+        }
+        panel.addEventListener('animationend', onAnimEnd);
+    }
+    window.setTimeout(finishClose, 380);
+}
+
+function openDashboardWeekModal() {
+    var modal = document.getElementById('dashboardWeekModal');
+    var panel = document.getElementById('dashboardWeekModalPanel');
+    var body = document.getElementById('dashboardWeekModalBody');
+    if (!modal || !panel || !body) return;
+    if (modal.classList.contains('is-open') && !modal.classList.contains('is-closing')) return;
+
+    var pendingModal = document.getElementById('dashboardPendingModal');
+    if (pendingModal && !pendingModal.classList.contains('hidden') && typeof closeDashboardPendingModal === 'function') {
+        closeDashboardPendingModal();
+    }
+
+    if (!_dashboardWeekModalPrepared) {
+        _dashboardRecent30DaysCache = getDashboardRecent30DaysData();
+        prepareDashboardWeekModalContent(_dashboardRecent30DaysCache);
+    }
+
+    modal.classList.remove('is-closing', 'is-open', 'is-settled', 'hidden');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+            modal.classList.add('is-open');
+            function onGrowEnd(e) {
+                if (e.target !== panel || e.animationName !== 'calendar-day-detail-grow') return;
+                panel.removeEventListener('animationend', onGrowEnd);
+                modal.classList.add('is-settled');
+            }
+            panel.addEventListener('animationend', onGrowEnd);
+            window.setTimeout(function () {
+                if (!modal.classList.contains('is-settled') && modal.classList.contains('is-open')) {
+                    modal.classList.add('is-settled');
+                }
+            }, 340);
+        });
+    });
+}
+
+var _dashboardWeekModalInited = false;
+function initDashboardWeekModal() {
+    if (_dashboardWeekModalInited) return;
+    _dashboardWeekModalInited = true;
+    var card = document.getElementById('dashboardBarWeek');
+    var overlay = document.getElementById('dashboardWeekModalOverlay');
+    var closeBtn = document.getElementById('dashboardWeekModalClose');
+
+    function onOpen(e) {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        openDashboardWeekModal();
+    }
+
+    if (card) {
+        card.addEventListener('click', onOpen);
+        card.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onOpen(e);
+            }
+        });
+    }
+    if (overlay) {
+        overlay.addEventListener('click', function () {
+            closeDashboardWeekModal();
+        });
+    }
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            closeDashboardWeekModal();
+        });
+    }
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+        var modal = document.getElementById('dashboardWeekModal');
+        if (!modal || modal.classList.contains('hidden')) return;
+        closeDashboardWeekModal();
+    });
+}
+
+window.openDashboardWeekModal = openDashboardWeekModal;
+window.closeDashboardWeekModal = closeDashboardWeekModal;
+
+function getPendingRoutinesToday() {
+    var todayStr = getLocalDateStr(new Date());
+    var routinesToday = (allRoutines || []).filter(function (r) {
+        return typeof isRoutineDate === 'function' && isRoutineDate(todayStr, r);
+    });
+    return routinesToday
+        .filter(function (r) {
+            return !(typeof getRoutineCompletedDates === 'function' && getRoutineCompletedDates(r).has(todayStr));
+        })
+        .slice()
+        .sort(function (a, b) {
+            var ta = (a.schedule && a.schedule.time) || '99:99';
+            var tb = (b.schedule && b.schedule.time) || '99:99';
+            return String(ta).localeCompare(String(tb));
+        });
+}
+
+function buildDashboardPendingModalHTML(pendingRoutines) {
+    var list = pendingRoutines || [];
+    if (list.length === 0) {
+        return '<p class="dashboard-pending-modal__empty">Nenhuma tarefa pendente para hoje.</p>';
+    }
+    var items = list.map(function (r) {
+        var title = (r && r.title ? String(r.title).trim() : '') || 'Rotina';
+        var time = r && r.schedule && r.schedule.time ? String(r.schedule.time) : '';
+        var href = 'routine-detail.html?id=' + encodeURIComponent(r.id);
+        return (
+            '<li class="dashboard-pending-modal__item">' +
+            '<a class="dashboard-pending-modal__link" href="' +
+            href +
+            '">' +
+            '<span class="dashboard-pending-modal__name">' +
+            escapeHtml(title) +
+            '</span>' +
+            (time
+                ? '<span class="dashboard-pending-modal__time">' + escapeHtml(time) + '</span>'
+                : '<span class="dashboard-pending-modal__time">Sem horário</span>') +
+            '</a></li>'
+        );
+    }).join('');
+    return '<ul class="dashboard-pending-modal__list" aria-label="Lista de tarefas pendentes">' + items + '</ul>';
+}
+
+function prepareDashboardPendingModalContent(pendingRoutines) {
+    var body = document.getElementById('dashboardPendingModalBody');
+    var summary = document.getElementById('dashboardPendingModalSummary');
+    if (!body) return;
+    var list = pendingRoutines || [];
+    if (summary) {
+        if (list.length === 0) summary.textContent = 'Nenhuma tarefa restante para hoje.';
+        else if (list.length === 1) summary.textContent = '1 tarefa restante para hoje.';
+        else summary.textContent = list.length + ' tarefas restantes para hoje.';
+    }
+    body.innerHTML = buildDashboardPendingModalHTML(list);
+}
+
+function closeDashboardPendingModal() {
+    var modal = document.getElementById('dashboardPendingModal');
+    var panel = document.getElementById('dashboardPendingModalPanel');
+    if (!modal || modal.classList.contains('hidden') || modal.classList.contains('is-closing')) return;
+    modal.classList.remove('is-open', 'is-settled');
+    modal.classList.add('is-closing');
+
+    function finishClose() {
+        if (modal.dataset.pendingModalClosing === '1') return;
+        modal.dataset.pendingModalClosing = '1';
+        modal.classList.remove('is-closing');
+        modal.classList.add('hidden');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+        delete modal.dataset.pendingModalClosing;
+        var trigger = document.getElementById('dashboardPendingTasks');
+        if (trigger && typeof trigger.focus === 'function') {
+            try {
+                trigger.focus({ preventScroll: true });
+            } catch (e) {
+                try {
+                    trigger.focus();
+                } catch (e2) {}
+            }
+        }
+    }
+
+    if (panel) {
+        var done = false;
+        function onAnimEnd(e) {
+            if (done || e.target !== panel) return;
+            if (e.animationName !== 'calendar-day-detail-shrink') return;
+            done = true;
+            panel.removeEventListener('animationend', onAnimEnd);
+            finishClose();
+        }
+        panel.addEventListener('animationend', onAnimEnd);
+    }
+    window.setTimeout(finishClose, 280);
+}
+
+function openDashboardPendingModal() {
+    var modal = document.getElementById('dashboardPendingModal');
+    var panel = document.getElementById('dashboardPendingModalPanel');
+    var body = document.getElementById('dashboardPendingModalBody');
+    if (!modal || !panel || !body) return;
+    if (modal.classList.contains('is-open') && !modal.classList.contains('is-closing')) return;
+
+    var weekModal = document.getElementById('dashboardWeekModal');
+    if (weekModal && !weekModal.classList.contains('hidden') && typeof closeDashboardWeekModal === 'function') {
+        closeDashboardWeekModal();
+    }
+
+    prepareDashboardPendingModalContent(getPendingRoutinesToday());
+
+    modal.classList.remove('is-closing', 'is-open', 'is-settled', 'hidden');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+            modal.classList.add('is-open');
+            function onGrowEnd(e) {
+                if (e.target !== panel || e.animationName !== 'calendar-day-detail-grow') return;
+                panel.removeEventListener('animationend', onGrowEnd);
+                modal.classList.add('is-settled');
+            }
+            panel.addEventListener('animationend', onGrowEnd);
+            window.setTimeout(function () {
+                if (!modal.classList.contains('is-settled') && modal.classList.contains('is-open')) {
+                    modal.classList.add('is-settled');
+                }
+            }, 340);
+        });
+    });
+}
+
+var _dashboardPendingModalInited = false;
+function initDashboardPendingModal() {
+    if (_dashboardPendingModalInited) return;
+    _dashboardPendingModalInited = true;
+    var card = document.getElementById('dashboardPendingTasks');
+    var overlay = document.getElementById('dashboardPendingModalOverlay');
+    var closeBtn = document.getElementById('dashboardPendingModalClose');
+
+    function onOpen(e) {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        openDashboardPendingModal();
+    }
+
+    if (card) {
+        card.addEventListener('click', onOpen);
+        card.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onOpen(e);
+            }
+        });
+    }
+    if (overlay) {
+        overlay.addEventListener('click', function () {
+            closeDashboardPendingModal();
+        });
+    }
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            closeDashboardPendingModal();
+        });
+    }
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+        var modal = document.getElementById('dashboardPendingModal');
+        if (!modal || modal.classList.contains('hidden')) return;
+        closeDashboardPendingModal();
+    });
+}
+
+window.openDashboardPendingModal = openDashboardPendingModal;
+window.closeDashboardPendingModal = closeDashboardPendingModal;
+
+function buildDashboardWeekHeatmapHTML(weekData) {
+    var monthShort = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+    var weekdaysHtml = DASHBOARD_RECENT_WEEKDAY_LABELS.map(function (label) {
+        return '<div class="calendar-weekday">' + escapeHtml(label) + '</div>';
+    }).join('');
+    var daysHtml = '';
+    if (weekData.length > 0) {
+        var firstDow = new Date(weekData[0].dateStr + 'T12:00:00').getDay();
+        for (var pad = 0; pad < firstDow; pad++) {
+            daysHtml += '<div class="heatmap-square empty dashboard-week-day dashboard-week-day--pad" aria-hidden="true"></div>';
+        }
+    }
+    daysHtml += weekData.map(function (item) {
+        var d = new Date(item.dateStr + 'T12:00:00');
+        var dayNum = d.getDate();
+        var classes = getDashboardWeekDayHeatClasses(item.total, item.done);
+        var title = item.total > 0
+            ? dayNum + ' ' + monthShort[d.getMonth()] + ' — ' + item.done + '/' + item.total + ' concluídas'
+            : dayNum + ' ' + monthShort[d.getMonth()] + ' — sem rotinas';
+        return (
+            '<div class="' +
+            classes +
+            '" data-date="' +
+            escapeHtml(item.dateStr) +
+            '" title="' +
+            escapeHtml(title) +
+            '"><span class="heatmap-day-number">' +
+            String(dayNum) +
+            '</span></div>'
+        );
+    }).join('');
+    var legend =
+        '<span class="dashboard-week-heatmap-legend-item"><span class="dashboard-week-heatmap-legend-dot dashboard-week-heatmap-legend-dot--done"></span>Concluídas</span>' +
+        '<span class="dashboard-week-heatmap-legend-item"><span class="dashboard-week-heatmap-legend-dot dashboard-week-heatmap-legend-dot--pending"></span>Pendentes</span>';
+    return (
+        '<div class="dashboard-week-heatmap dashboard-week-heatmap--30d" role="img" aria-label="Últimos 30 dias — concluídas e pendentes">' +
+        '<div class="dashboard-week-heatmap-inner">' +
+        '<div class="calendar-weekdays dashboard-week-heatmap-weekdays">' +
+        weekdaysHtml +
+        '</div>' +
+        '<div class="calendar-days-grid dashboard-week-heatmap-grid">' +
+        daysHtml +
+        '</div></div>' +
+        '<div class="dashboard-week-heatmap-legend">' +
+        legend +
+        '</div></div>'
+    );
+}
+
 function getReferenceDate() {
+    // Modo debug: obter data de referência a partir dos parâmetros da URL (?mes=0-11&ano=YYYY)
     const params = new URLSearchParams(window.location.search);
     const mes = params.get('mes');
     const ano = params.get('ano');
@@ -3870,6 +5564,49 @@ function getTaskAnnotationsListForDate(task, dateStr) {
 }
 
 var ANNOTATION_TYPE_NAMES = { digitalizando: 'Digitalizando', caderno: 'Caderno', mental: 'Diagrama' };
+
+function getAnnotationTypeIcon(type) {
+    if (type === 'mental') return 'layout-grid';
+    if (type === 'caderno') return 'book-open';
+    if (type === 'digitalizando') return 'scan-line';
+    return 'folder';
+}
+
+function formatNoteCardDateTime(isoStr) {
+    if (!isoStr) return '—';
+    var d = new Date(isoStr);
+    if (isNaN(d.getTime())) return '—';
+    var day = d.getDate();
+    var month = (MONTH_NAMES[d.getMonth()] || '').slice(0, 3);
+    var year = d.getFullYear();
+    var h = String(d.getHours()).padStart(2, '0');
+    var m = String(d.getMinutes()).padStart(2, '0');
+    return day + ' ' + month + ' ' + year + ', ' + h + ':' + m;
+}
+
+/** Card de anotação (estilo note-card), cores do tema — sem acento por tipo. */
+function buildAnnotationNoteCardHtml(opts) {
+    opts = opts || {};
+    var type = opts.type || '';
+    var typeLabel = opts.typeLabel || ANNOTATION_TYPE_NAMES[type] || type || 'Anotação';
+    var title = (opts.name && String(opts.name).trim()) ? String(opts.name).trim() : typeLabel;
+    var icon = getAnnotationTypeIcon(type);
+    var meta = opts.metaText != null ? opts.metaText : formatNoteCardDateTime(opts.lastUpdated);
+    var buttonClass = 'ec-note-card' + (opts.buttonClass ? ' ' + opts.buttonClass : '');
+    var attrs = opts.attrsHtml || '';
+    var aria = opts.ariaLabel || ('Abrir: ' + title + (meta && meta !== '—' ? ' — ' + meta : ''));
+    return '<button type="button" class="' + buttonClass + '" title="Abrir anotação" aria-label="' + escapeHtml(aria) + '"' + attrs + '>' +
+        '<span class="ec-note-card__top">' +
+            '<span class="ec-note-card__icon" aria-hidden="true"><i data-lucide="' + escapeHtml(icon) + '"></i></span>' +
+            '<span class="ec-note-card__type">' + escapeHtml(typeLabel) + '</span>' +
+        '</span>' +
+        '<span class="ec-note-card__title">' + escapeHtml(title) + '</span>' +
+        '<span class="ec-note-card__meta">' +
+            '<i data-lucide="clock" aria-hidden="true"></i>' +
+            '<span class="ec-note-card__meta-text">' + escapeHtml(meta || '—') + '</span>' +
+        '</span>' +
+        '</button>';
+}
 
 var _agendaMenuDropdown = null;
 function closeAgendaTaskMenu() {
@@ -4128,11 +5865,19 @@ function createAgendaCard(routine, dateStr) {
                 var tb = b.ann.lastUpdated ? new Date(b.ann.lastUpdated).getTime() : 0;
                 return ta - tb;
             });
-            html += '<ul class="agenda-card-annotations">';
-            sortedWithIdx.forEach(function(entry, i) {
-                if (i > 0) html += '<li class="agenda-annotation-sep" role="presentation"><span class="agenda-annotation-sep-line"></span></li>';
+            html += '<ul class="agenda-card-annotations agenda-card-annotations--notes">';
+            sortedWithIdx.forEach(function(entry) {
                 var annName = (entry.ann.name && String(entry.ann.name).trim()) ? String(entry.ann.name).trim() : (ANNOTATION_TYPE_NAMES[entry.ann.type] || entry.ann.type || 'Anotação');
-                html += '<li class="agenda-card-annotation-item"><div class="agenda-annotation-folder-row"><div class="agenda-folder-bar"><button type="button" class="agenda-open-annotation" data-routine-id="' + escapeHtml(routine.id) + '" data-task-id="' + escapeHtml(task.id) + '" data-annotation-date="' + escapeHtml(dateStr) + '" data-annotation-index="' + entry.idx + '" title="Abrir anotação" aria-label="Abrir anotação"><i data-lucide="folder" class="agenda-folder-icon" aria-hidden="true"></i><span class="agenda-card-annotation-name">' + escapeHtml(annName) + '</span></button><span class="agenda-card-annotation-time" title="Horário">' + escapeHtml(formatAnnotationTime(entry.ann.lastUpdated)) + '</span></div></div></li>';
+                var attrs = ' data-routine-id="' + escapeHtml(routine.id) + '" data-task-id="' + escapeHtml(task.id) + '" data-annotation-date="' + escapeHtml(dateStr) + '" data-annotation-index="' + entry.idx + '"';
+                html += '<li class="agenda-card-annotation-item">' +
+                    buildAnnotationNoteCardHtml({
+                        name: annName,
+                        type: entry.ann.type,
+                        lastUpdated: entry.ann.lastUpdated,
+                        buttonClass: 'agenda-open-annotation',
+                        attrsHtml: attrs
+                    }) +
+                    '</li>';
             });
             html += '</ul>';
         }
@@ -4149,10 +5894,6 @@ function createRoutineCard(routine, options) {
     const planType = routine.planType || 'daily';
     let planLabel = getPlanTypeLabel(planType);
     const s = routine.schedule || {};
-    if (s.weekDays && s.weekDays.length) {
-        const dayNames = { 0: 'Dom', 1: 'Seg', 2: 'Ter', 3: 'Qua', 4: 'Qui', 5: 'Sex', 6: 'Sáb' };
-        planLabel += ' · ' + s.weekDays.sort((a, b) => a - b).map(d => dayNames[d]).join(', ');
-    }
     if (planType === 'monthly' && s.monthlyType === 'dayOfMonth' && s.dayOfMonth) {
         planLabel += ' · Dia ' + s.dayOfMonth;
     }
@@ -4327,8 +6068,9 @@ function animateHeatmapToMonth(routineId, routine, direction) {
     const targetTranslateX = currentTranslateX - (direction * slotWidth);
 
     container.style.willChange = 'transform';
-    container.style.transition = 'transform 0.6s cubic-bezier(0.45, 0, 0.55, 1)';
+    container.style.transition = HEATMAP_SNAP_TRANSITION;
     container.style.transform = `translateX(${targetTranslateX}px)`;
+    runHeatmapCenterTransitionTracking(heatmapBlock, HEATMAP_SNAP_DURATION_MS);
 
     let handled = false;
     const onTransitionEnd = () => {
@@ -4346,7 +6088,7 @@ function animateHeatmapToMonth(routineId, routine, direction) {
             container.removeEventListener('transitionend', onTransitionEnd);
             updateHeatmapForRoutine(routineId, (heatmapOffsets[routineId] ?? 0) + direction, true);
         }
-    }, 650);
+    }, HEATMAP_SNAP_DURATION_MS + 80);
 }
 
 // Aplicar posição inicial do heatmap (mês atual centralizado). Retorna true se aplicou, false se dimensões inválidas.
@@ -4427,13 +6169,37 @@ function updateCenteredMonth(heatmapBlock, translateX) {
         }
     });
 
+    if (heatmapBlock.dataset.centeredMonthIdx === String(bestIdx)) return;
+
     [...container.children].forEach((child, idx) => {
         child.classList.toggle('calendar-month--current', idx === bestIdx);
     });
+    heatmapBlock.dataset.centeredMonthIdx = String(bestIdx);
 }
 
 // Configurar arrastar/swipe no heatmap (13 meses em faixa, arrastar para mover)
 const HEATMAP_GAP = 12;
+const HEATMAP_SNAP_TRANSITION = 'transform 0.48s cubic-bezier(0.22, 1, 0.36, 1)';
+const HEATMAP_SNAP_DURATION_MS = 500;
+
+function runHeatmapCenterTransitionTracking(heatmapBlock, durationMs) {
+    if (!heatmapBlock) return;
+    if (heatmapBlock._ecCenterTrackRaf) {
+        cancelAnimationFrame(heatmapBlock._ecCenterTrackRaf);
+        heatmapBlock._ecCenterTrackRaf = 0;
+    }
+    var endAt = performance.now() + (durationMs || HEATMAP_SNAP_DURATION_MS);
+    function step() {
+        updateCenteredMonth(heatmapBlock);
+        if (performance.now() < endAt) {
+            heatmapBlock._ecCenterTrackRaf = requestAnimationFrame(step);
+        } else {
+            heatmapBlock._ecCenterTrackRaf = 0;
+            updateCenteredMonth(heatmapBlock);
+        }
+    }
+    heatmapBlock._ecCenterTrackRaf = requestAnimationFrame(step);
+}
 
 /** Limpa variáveis de clip em px (legado); em ≤900px o 1 mês legível vem do CSS width: calc(13*100%). */
 function syncCarouselClipForHeatmapBlock(heatmapBlock) {
@@ -4486,31 +6252,44 @@ function setupHeatmapDrag(heatmapBlock, routineId) {
     let startTranslateX = 0;
     let isDragging = false;
     let hasMoved = false;
+    let dragScrollMin = 0;
+    let dragScrollMax = 0;
+    let dragRafId = 0;
+    let pendingTranslateX = null;
 
     const getX = (e) => (e.touches ? e.touches[0] : e.changedTouches ? e.changedTouches[0] : e).clientX;
+
+    const flushDragTranslate = () => {
+        dragRafId = 0;
+        if (pendingTranslateX == null) return;
+        const container = heatmapBlock.querySelector('.calendar-months-container');
+        if (!container) return;
+        container.style.transform = 'translateX(' + pendingTranslateX + 'px)';
+    };
 
     const onMove = (e) => {
         if (!isDragging) return;
         if (Math.abs(getX(e) - startX) > 5) hasMoved = true;
         if (e.cancelable) e.preventDefault();
-        const container = heatmapBlock.querySelector('.calendar-months-container');
-        if (!container) return;
-        const scrollRange = getHeatmapScrollRange(container, heatmapBlock);
-        const maxTranslateX = scrollRange;
-        const minTranslateX = -scrollRange;
         const deltaX = getX(e) - startX;
-        let translateX = startTranslateX + deltaX;
-        translateX = Math.max(minTranslateX, Math.min(maxTranslateX, translateX));
-        container.style.transform = `translateX(${translateX}px)`;
-        updateCenteredMonth(heatmapBlock, translateX);
+        pendingTranslateX = Math.max(dragScrollMin, Math.min(dragScrollMax, startTranslateX + deltaX));
+        if (!dragRafId) {
+            dragRafId = requestAnimationFrame(flushDragTranslate);
+        }
     };
 
     const onEnd = () => {
         if (!isDragging) return;
+        if (dragRafId) {
+            cancelAnimationFrame(dragRafId);
+            dragRafId = 0;
+            flushDragTranslate();
+        }
         const container = heatmapBlock.querySelector('.calendar-months-container');
         if (container && container.children.length >= 13) {
             const match = container.style.transform ? container.style.transform.match(/translateX\(([^)]+)px\)/) : null;
-            const translateX = match ? parseFloat(match[1]) : 0;
+            const translateX = match ? parseFloat(match[1]) : (pendingTranslateX ?? 0);
+            pendingTranslateX = null;
             updateCenteredMonth(heatmapBlock, translateX);
             syncCarouselClipForHeatmapBlock(heatmapBlock);
 
@@ -4542,19 +6321,22 @@ function setupHeatmapDrag(heatmapBlock, routineId) {
                     const r = bestChild.getBoundingClientRect();
                     snapTarget = translateX + (viewportCenterX - (r.left + r.width / 2));
                 }
-                container.style.transition = 'transform 0.28s cubic-bezier(0.22, 0.8, 0.25, 1)';
-                requestAnimationFrame(() => {
+                container.style.transition = HEATMAP_SNAP_TRANSITION;
+                runHeatmapCenterTransitionTracking(heatmapBlock, HEATMAP_SNAP_DURATION_MS);
+                requestAnimationFrame(function () {
                     container.style.transform = 'translateX(' + snapTarget + 'px)';
-                    updateCenteredMonth(heatmapBlock, snapTarget);
                     syncCarouselClipForHeatmapBlock(heatmapBlock);
                 });
                 setTimeout(function () {
                     container.style.transition = '';
-                }, 300);
+                    updateCenteredMonth(heatmapBlock);
+                }, HEATMAP_SNAP_DURATION_MS + 40);
             }
         } else if (container) {
             container.style.transition = '';
         }
+        pendingTranslateX = null;
+        if (container) container.style.willChange = '';
         isDragging = false;
         if (hasMoved) heatmapBlock.dataset.justDragged = '1';
         setTimeout(() => delete heatmapBlock.dataset.justDragged, 50);
@@ -4576,9 +6358,16 @@ function setupHeatmapDrag(heatmapBlock, routineId) {
         const slotWidth = monthWidth + HEATMAP_GAP;
         const match = container && container.style.transform ? container.style.transform.match(/translateX\(([^)]+)px\)/) : null;
         startTranslateX = match ? parseFloat(match[1]) : -(6 * slotWidth + monthWidth / 2);
+        pendingTranslateX = startTranslateX;
+        if (container) {
+            const scrollRange = getHeatmapScrollRange(container, heatmapBlock);
+            dragScrollMin = -scrollRange;
+            dragScrollMax = scrollRange;
+            container.style.transition = 'none';
+            container.style.willChange = 'transform';
+        }
         isDragging = true;
         heatmapBlock.classList.add('dragging');
-        if (container) container.style.transition = 'none';
         document.addEventListener('mousemove', onMove);
         document.addEventListener('touchmove', onMove, { passive: false });
         document.addEventListener('mouseup', onEnd);
@@ -4652,7 +6441,7 @@ function attachHeatmapListeners(card, routine) {
 // Criar card de adicionar rotina
 function createAddRoutineCard() {
     return `
-        <div class="add-routine-card" role="link" tabindex="0" aria-label="Criar nova rotina ou tarefa" onclick="window.location.href='create.html'" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();window.location.href='create.html';}">
+        <div class="add-routine-card" role="link" tabindex="0" data-href="create.html" aria-label="Criar nova rotina ou tarefa">
             <div class="add-routine-content">
                 <div class="add-routine-icon" aria-hidden="true">+</div>
                 <div class="add-routine-text">Adicionar Rotina</div>
@@ -4661,9 +6450,32 @@ function createAddRoutineCard() {
     `;
 }
 
+function setupRoutineDeleteDelegation() {
+    const grid = document.getElementById('routinesGrid');
+    if (!grid || grid.dataset.ecDeleteDelegation === '1') return;
+    grid.dataset.ecDeleteDelegation = '1';
+    grid.addEventListener('click', function (e) {
+        const deleteBtn = e.target.closest('[data-delete-id]');
+        if (!deleteBtn || !grid.contains(deleteBtn)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const routineId = deleteBtn.getAttribute('data-delete-id');
+        if (routineId) deleteRoutine(routineId);
+    });
+}
+
+function getRoutineTitleForConfirm(routineId) {
+    const routine = (allRoutines || []).find(function (r) {
+        return String(r.id) === String(routineId);
+    });
+    const title = routine && routine.title ? String(routine.title).trim() : '';
+    return title || 'esta rotina';
+}
+
 // Deletar rotina
 async function deleteRoutine(routineId) {
-    if (!confirm('Tem certeza que deseja excluir esta rotina?')) {
+    const title = getRoutineTitleForConfirm(routineId);
+    if (!confirm('Tem certeza que deseja excluir "' + title + '"?\n\nEsta ação não pode ser desfeita.')) {
         return;
     }
 
@@ -4690,50 +6502,27 @@ async function deleteRoutine(routineId) {
     await loadRoutines();
 }
 
-// Renderizar agenda: separação por dias (Hoje, Amanhã, ...) + cards dedicados sem heatmap
+// Renderizar agenda: ação central + Anotar (sem lista de cards por dia)
 function renderAgenda() {
     const agendaView = document.getElementById('agendaView');
     if (!agendaView) return;
     const today = new Date();
-    const todayStr = getLocalDateStr(today);
     const day = today.getDate();
     const month = MONTH_NAMES[today.getMonth()];
-    const dayLabels = { 0: 'Dom', 1: 'Seg', 2: 'Ter', 3: 'Qua', 4: 'Qui', 5: 'Sex', 6: 'Sáb' };
-    let html = '<div class="agenda-day-container">';
+    let html = '<div class="agenda-day-container agenda-day-container--annotate">';
     html += '<div class="agenda-day-header">';
+    html += '<div class="agenda-day-header-copy">';
     html += '<h2 class="agenda-day-title">Agenda</h2>';
     html += '<p class="agenda-day-date">' + escapeHtml(day + ' de ' + month) + '</p>';
     html += '</div>';
-    const numDays = 7;
-    for (let i = 0; i < numDays; i++) {
-        const d = new Date(today);
-        d.setDate(d.getDate() + i);
-        const dateStr = getLocalDateStr(d);
-        const routinesOnDay = (allRoutines || []).filter(r => isRoutineDate(dateStr, r));
-        const sorted = routinesOnDay.slice().sort((a, b) => {
-            const ta = a.schedule?.time || '99:99';
-            const tb = b.schedule?.time || '99:99';
-            return ta.localeCompare(tb);
-        });
-        let sectionLabel = '';
-        if (i === 0) sectionLabel = 'Hoje';
-        else if (i === 1) sectionLabel = 'Amanhã';
-        else sectionLabel = dayLabels[d.getDay()] + ', ' + d.getDate() + ' ' + MONTH_NAMES[d.getMonth()].slice(0, 3);
-        html += '<section class="agenda-day-section" data-date="' + escapeHtml(dateStr) + '">';
-        html += '<div class="agenda-day-section-head">';
-        html += '<h3 class="agenda-day-section-title">' + escapeHtml(sectionLabel) + '</h3>';
         html += '</div>';
-        if (sorted.length === 0) {
-            html += '<p class="agenda-day-section-empty">Nenhuma rotina neste dia.</p>';
-        } else {
-            html += '<ul class="agenda-cards-list">';
-            sorted.forEach(routine => {
-                html += '<li>' + createAgendaCard(routine, dateStr) + '</li>';
-            });
-            html += '</ul>';
-        }
-        html += '</section>';
-    }
+    html += '<div class="agenda-annotate-hero">';
+    html += '<p class="agenda-annotate-lead">Escolha uma tarefa e anote do seu jeito.</p>';
+    html += '<button type="button" class="agenda-add-annotation-btn agenda-add-annotation-btn--hero" id="agendaAddAnnotationBtn" title="Nova anotação" aria-label="Nova anotação">';
+    html += '<i data-lucide="plus" aria-hidden="true"></i>';
+    html += '<span class="agenda-add-annotation-btn__label">Anotar</span>';
+    html += '</button>';
+    html += '</div>';
     html += '</div>';
     agendaView.innerHTML = html;
     const lucideLib = typeof lucide !== 'undefined' ? lucide : (typeof Lucide !== 'undefined' ? Lucide : null);
@@ -4846,6 +6635,48 @@ function getPastAgendamentos() {
     return list;
 }
 
+function buildBibliotecaAnnotationLiHtml(entry, excludeMode, excludedSet) {
+    var item = entry.item;
+    var annIdx = entry.annIdx;
+    var ann = entry.ann;
+    var mainName = (ann.name && String(ann.name).trim()) ? String(ann.name).trim() : (ANNOTATION_TYPE_NAMES[ann.type] || ann.type || 'Anotação');
+    var lastUpdated = ann.lastUpdated ? formatLastUpdate(ann.lastUpdated) : '';
+    var metaText = ann.lastUpdated ? formatNoteCardDateTime(ann.lastUpdated) : '';
+    if (!metaText && item.dateStr) {
+        var p = item.dateStr.split('-');
+        if (p.length >= 3) {
+            metaText = (new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10))).getDate() + ' ' + (MONTH_NAMES[parseInt(p[1], 10) - 1] || '').slice(0, 3);
+        }
+    }
+    if (!metaText) metaText = '—';
+    if (!lastUpdated) lastUpdated = metaText;
+    var key = bibliotecaItemKey(item.routine.id, item.task.id, item.dateStr, mainName, lastUpdated);
+    var legacyKey = bibliotecaLegacyItemKey(item.routine.id, item.task.id, item.dateStr, annIdx);
+    if (excludedSet[key] || excludedSet[legacyKey]) return '';
+    var html = '<li class="biblioteca-item biblioteca-item-row' + (excludeMode ? ' biblioteca-item-selectable' : '') + '">';
+    if (excludeMode) {
+        html += '<label class="biblioteca-select">' +
+            '<input type="checkbox" class="biblioteca-exclude-checkbox" data-routine-id="' + escapeHtml(String(item.routine.id)) + '" data-task-id="' + escapeHtml(String(item.task.id)) + '" data-date-str="' + escapeHtml(item.dateStr) + '" data-annotation-index="' + annIdx + '" data-routine-title="' + escapeHtml(item.routine.title || '') + '" data-task-text="' + escapeHtml(item.task.text || '') + '" data-ann-name="' + escapeHtml(mainName) + '" data-last-updated="' + escapeHtml(lastUpdated) + '" data-ann-key="' + escapeHtml(key) + '">' +
+            '<span class="biblioteca-select__box" aria-hidden="true">' +
+                '<svg class="biblioteca-select__check" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5l3 3 6-7"/></svg>' +
+            '</span>' +
+            '<span class="biblioteca-select__label">Selecionar</span>' +
+            '</label>';
+    }
+    html += '<div class="biblioteca-item-wrap">';
+    html += buildAnnotationNoteCardHtml({
+        name: mainName,
+        type: ann.type,
+        metaText: metaText,
+        buttonClass: 'biblioteca-item-open',
+        attrsHtml: ' data-routine-id="' + escapeHtml(String(item.routine.id)) + '" data-task-id="' + escapeHtml(String(item.task.id)) + '" data-date-str="' + escapeHtml(item.dateStr) + '" data-annotation-index="' + annIdx + '"'
+    });
+    html += '</div>';
+    if (item.task.bulletType === 'important') html += '<span class="biblioteca-item-important" title="Importante">!</span>';
+    html += '</li>';
+    return html;
+}
+
 function renderBiblioteca() {
     var container = document.getElementById('bibliotecaView');
     if (!container) return;
@@ -4911,25 +6742,7 @@ function renderBiblioteca() {
                     html += '<h5 class="biblioteca-type-title">' + escapeHtml(typeLabel) + '</h5>';
                     html += '<ul class="biblioteca-list biblioteca-list-row">';
                     byType[type].forEach(function(entry) {
-                        var item = entry.item, annIdx = entry.annIdx, ann = entry.ann;
-                        var mainName = (ann.name && String(ann.name).trim()) ? String(ann.name).trim() : (annotationTypeNames[ann.type] || ann.type || 'Anotação');
-                        var lastUpdated = ann.lastUpdated ? formatLastUpdate(ann.lastUpdated) : '';
-                        if (!lastUpdated && item.dateStr) {
-                            var p = item.dateStr.split('-');
-                            if (p.length >= 3) lastUpdated = (new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10))).getDate() + ' ' + (MONTH_NAMES[parseInt(p[1], 10) - 1] || '').slice(0, 3);
-                        }
-                        if (!lastUpdated) lastUpdated = '—';
-                        var key = bibliotecaItemKey(item.routine.id, item.task.id, item.dateStr, mainName, lastUpdated);
-                        var legacyKey = bibliotecaLegacyItemKey(item.routine.id, item.task.id, item.dateStr, annIdx);
-                        if (excludedSet[key] || excludedSet[legacyKey]) return;
-                        html += '<li class="biblioteca-item biblioteca-item-row' + (excludeMode ? ' biblioteca-item-selectable' : '') + '">';
-                        if (excludeMode) html += '<label class="biblioteca-item-checkbox-wrap"><input type="checkbox" class="biblioteca-exclude-checkbox" data-routine-id="' + escapeHtml(String(item.routine.id)) + '" data-task-id="' + escapeHtml(String(item.task.id)) + '" data-date-str="' + escapeHtml(item.dateStr) + '" data-annotation-index="' + annIdx + '" data-routine-title="' + escapeHtml(item.routine.title || '') + '" data-task-text="' + escapeHtml(item.task.text || '') + '" data-ann-name="' + escapeHtml(mainName) + '" data-last-updated="' + escapeHtml(lastUpdated) + '" data-ann-key="' + escapeHtml(key) + '"><span class="biblioteca-checkbox-label">Selecionar</span></label>';
-                        html += '<div class="biblioteca-item-wrap">';
-                        html += '<div class="biblioteca-folder-bar">';
-                        html += '<button type="button" class="biblioteca-item-open" data-routine-id="' + escapeHtml(String(item.routine.id)) + '" data-task-id="' + escapeHtml(String(item.task.id)) + '" data-date-str="' + escapeHtml(item.dateStr) + '" data-annotation-index="' + annIdx + '" title="Abrir anotação" aria-label="' + escapeHtml('Abrir: ' + mainName + ' — ' + lastUpdated) + '"><i data-lucide="folder" class="biblioteca-item-folder-icon" aria-hidden="true"></i><span class="biblioteca-item-text-stack"><span class="biblioteca-item-name">' + escapeHtml(mainName) + '</span><span class="biblioteca-item-datetime">' + escapeHtml(lastUpdated) + '</span></span></button>';
-                        html += '</div></div>';
-                        if (item.task.bulletType === 'important') html += '<span class="biblioteca-item-important" title="Importante">!</span>';
-                        html += '</li>';
+                        html += buildBibliotecaAnnotationLiHtml(entry, excludeMode, excludedSet);
                     });
                     html += '</ul></div>';
                 });
@@ -4940,25 +6753,7 @@ function renderBiblioteca() {
                     html += '<h5 class="biblioteca-type-title">' + escapeHtml(typeLabel) + '</h5>';
                     html += '<ul class="biblioteca-list biblioteca-list-row">';
                     byType[type].forEach(function(entry) {
-                        var item = entry.item, annIdx = entry.annIdx, ann = entry.ann;
-                        var mainName = (ann.name && String(ann.name).trim()) ? String(ann.name).trim() : (annotationTypeNames[ann.type] || ann.type || 'Anotação');
-                        var lastUpdated = ann.lastUpdated ? formatLastUpdate(ann.lastUpdated) : '';
-                        if (!lastUpdated && item.dateStr) {
-                            var p = item.dateStr.split('-');
-                            if (p.length >= 3) lastUpdated = (new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10))).getDate() + ' ' + (MONTH_NAMES[parseInt(p[1], 10) - 1] || '').slice(0, 3);
-                        }
-                        if (!lastUpdated) lastUpdated = '—';
-                        var key = bibliotecaItemKey(item.routine.id, item.task.id, item.dateStr, mainName, lastUpdated);
-                        var legacyKey = bibliotecaLegacyItemKey(item.routine.id, item.task.id, item.dateStr, annIdx);
-                        if (excludedSet[key] || excludedSet[legacyKey]) return;
-                        html += '<li class="biblioteca-item biblioteca-item-row' + (excludeMode ? ' biblioteca-item-selectable' : '') + '">';
-                        if (excludeMode) html += '<label class="biblioteca-item-checkbox-wrap"><input type="checkbox" class="biblioteca-exclude-checkbox" data-routine-id="' + escapeHtml(String(item.routine.id)) + '" data-task-id="' + escapeHtml(String(item.task.id)) + '" data-date-str="' + escapeHtml(item.dateStr) + '" data-annotation-index="' + annIdx + '" data-routine-title="' + escapeHtml(item.routine.title || '') + '" data-task-text="' + escapeHtml(item.task.text || '') + '" data-ann-name="' + escapeHtml(mainName) + '" data-last-updated="' + escapeHtml(lastUpdated) + '" data-ann-key="' + escapeHtml(key) + '"><span class="biblioteca-checkbox-label">Selecionar</span></label>';
-                        html += '<div class="biblioteca-item-wrap">';
-                        html += '<div class="biblioteca-folder-bar">';
-                        html += '<button type="button" class="biblioteca-item-open" data-routine-id="' + escapeHtml(String(item.routine.id)) + '" data-task-id="' + escapeHtml(String(item.task.id)) + '" data-date-str="' + escapeHtml(item.dateStr) + '" data-annotation-index="' + annIdx + '" title="Abrir anotação" aria-label="' + escapeHtml('Abrir: ' + mainName + ' — ' + lastUpdated) + '"><i data-lucide="folder" class="biblioteca-item-folder-icon" aria-hidden="true"></i><span class="biblioteca-item-text-stack"><span class="biblioteca-item-name">' + escapeHtml(mainName) + '</span><span class="biblioteca-item-datetime">' + escapeHtml(lastUpdated) + '</span></span></button>';
-                        html += '</div></div>';
-                        if (item.task.bulletType === 'important') html += '<span class="biblioteca-item-important" title="Importante">!</span>';
-                        html += '</li>';
+                        html += buildBibliotecaAnnotationLiHtml(entry, excludeMode, excludedSet);
                     });
                     html += '</ul></div>';
                 });
@@ -5030,19 +6825,26 @@ function renderBiblioteca() {
         var checked = container.querySelectorAll('.biblioteca-exclude-checkbox:checked');
         var n = checked.length;
         if (n === 0) {
-            alert('Selecione pelo menos um item para excluir.');
+            if (typeof showToast === 'function') showToast('Selecione pelo menos um item para excluir.');
             return;
         }
-        if (!confirm('Realmente deseja excluir os ' + n + ' item(ns) selecionado(s) da biblioteca?')) return;
-        var list = getBibliotecaExcluded();
-        checked.forEach(function(cb) {
-            var key = cb.dataset.annKey || bibliotecaItemKey(cb.dataset.routineId, cb.dataset.taskId, cb.dataset.dateStr, cb.dataset.annName, cb.dataset.lastUpdated);
-            if (list.some(function(x) { return x.key === key; })) return;
-            list.push({ key: key, routineTitle: cb.dataset.routineTitle || '', taskText: cb.dataset.taskText || '', dateStr: cb.dataset.dateStr || '', annName: cb.dataset.annName || '', lastUpdated: cb.dataset.lastUpdated || '' });
+        openEcConfirmModal({
+            title: 'Excluir da biblioteca?',
+            message: 'Realmente deseja excluir ' + n + ' item(ns) selecionado(s) da biblioteca?',
+            confirmLabel: 'Excluir',
+            cancelLabel: 'Cancelar'
+        }).then(function(ok) {
+            if (!ok) return;
+            var list = getBibliotecaExcluded();
+            checked.forEach(function(cb) {
+                var key = cb.dataset.annKey || bibliotecaItemKey(cb.dataset.routineId, cb.dataset.taskId, cb.dataset.dateStr, cb.dataset.annName, cb.dataset.lastUpdated);
+                if (list.some(function(x) { return x.key === key; })) return;
+                list.push({ key: key, routineTitle: cb.dataset.routineTitle || '', taskText: cb.dataset.taskText || '', dateStr: cb.dataset.dateStr || '', annName: cb.dataset.annName || '', lastUpdated: cb.dataset.lastUpdated || '' });
+            });
+            setBibliotecaExcluded(list);
+            window._bibliotecaExcludeMode = false;
+            if (typeof renderBiblioteca === 'function') renderBiblioteca();
         });
-        setBibliotecaExcluded(list);
-        window._bibliotecaExcludeMode = false;
-        if (typeof renderBiblioteca === 'function') renderBiblioteca();
     });
     var btnExcluded = document.getElementById('bibliotecaBtnExcluded');
     if (btnExcluded) btnExcluded.addEventListener('click', function(e) { e.preventDefault(); showBibliotecaExcludedModal(); });
@@ -5195,10 +6997,56 @@ function closeAnnotationViewer() {
     closeAnnotationModal();
 }
 
+var CALENDAR_MOBILE_MQ =
+    typeof window !== 'undefined' && window.matchMedia
+        ? window.matchMedia('(max-width: 768px)')
+        : null;
+
+function calendarPrefersMobileLayout() {
+    try {
+        return !!(CALENDAR_MOBILE_MQ && CALENDAR_MOBILE_MQ.matches);
+    } catch (e) {
+        return false;
+    }
+}
+
+function buildCalendarDayTasksHTML(routinesOnDay, dateStr) {
+    const allowedBulletTypes = ['reminder', 'task', 'commitment', 'important'];
+    const bulletType = (r) => (allowedBulletTypes.includes(r.bulletType) ? r.bulletType : 'task');
+    const doneForDay = (r) => isRoutineDayClosedOut(r, dateStr);
+    const allDoneToday = routinesOnDay.length > 0 && routinesOnDay.every(doneForDay);
+    let dayStateClass = '';
+    if (routinesOnDay.length > 0 && allDoneToday) {
+        dayStateClass = ' calendar-day--all-done';
+    }
+    const tasksHTML =
+        routinesOnDay.length > 0
+            ? '<div class="calendar-day-tasks">' +
+              routinesOnDay
+                  .map((r) => {
+                      const done = doneForDay(r);
+                      return (
+                          `<div class="calendar-day-task-row${done ? ' calendar-day-task-row--done' : ''}">` +
+                          `<span class="routine-card-bullet routine-card-bullet--${escapeHtml(bulletType(r))}" aria-hidden="true"></span>` +
+                          `<span class="calendar-day-task-name">${escapeHtml(r.title || 'tarefa')}</span>` +
+                          '</div>'
+                      );
+                  })
+                  .join('') +
+              '</div>'
+            : '';
+    return {
+        tasksHTML,
+        dayStateClass,
+        hasRoutines: routinesOnDay.length > 0
+    };
+}
+
 // Renderizar calendário
 function renderCalendar() {
     const calendarView = document.getElementById('calendarView');
-    // Implementação simples de calendário
+    if (!calendarView) return;
+
     const currentDate = new Date();
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -5207,50 +7055,227 @@ function renderCalendar() {
     const lastDay = new Date(year, month + 1, 0);
     const daysInMonth = lastDay.getDate();
     const startingDayOfWeek = firstDay.getDay();
+    const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    const title = firstDay.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
     
     let calendarHTML = '<div class="calendar-container">';
-    calendarHTML += `<h3 class="calendar-title">${firstDay.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</h3>`;
-    calendarHTML += '<div class="calendar-grid">';
-    
-    // Dias da semana
-    const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-    weekDays.forEach(day => {
+    calendarHTML += `<h3 class="calendar-title">${title}</h3>`;
+
+    if (calendarPrefersMobileLayout()) {
+        calendarHTML += '<div class="calendar-mobile-grid" role="list">';
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const routinesOnDay = allRoutines.filter((r) => isRoutineDate(dateStr, r));
+            const built = buildCalendarDayTasksHTML(routinesOnDay, dateStr);
+            const weekday = weekDays[new Date(year, month, day).getDay()];
+            calendarHTML +=
+                `<article class="calendar-mobile-day calendar-day${built.hasRoutines ? ' has-routines' : ''}${built.dayStateClass}" role="listitem" data-date="${dateStr}" tabindex="0">` +
+                '<header class="calendar-mobile-day-head">' +
+                `<span class="calendar-mobile-weekday">${weekday}</span>` +
+                `<span class="day-number">${day}</span>` +
+                '</header>' +
+                built.tasksHTML +
+                '</article>';
+        }
+        calendarHTML += '</div>';
+    } else {
+        calendarHTML += '<div class="calendar-grid calendar-grid--desktop">';
+        weekDays.forEach((day) => {
         calendarHTML += `<div class="calendar-day-header">${day}</div>`;
     });
-    
-    // Espaços vazios antes do primeiro dia
     for (let i = 0; i < startingDayOfWeek; i++) {
         calendarHTML += '<div class="calendar-day empty"></div>';
     }
-    
-    const allowedBulletTypes = ['reminder', 'task', 'commitment', 'important'];
-    // Dias do mês
     for (let day = 1; day <= daysInMonth; day++) {
         const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        const routinesOnDay = allRoutines.filter(r => isRoutineDate(dateStr, r));
-        const bulletType = (r) => allowedBulletTypes.includes(r.bulletType) ? r.bulletType : 'task';
-        const doneForDay = (r) => getRoutineCompletedDates(r).has(dateStr);
-        const allDoneToday = routinesOnDay.length > 0 && routinesOnDay.every(doneForDay);
-        const someDoneToday = routinesOnDay.some(doneForDay);
-        const tasksHTML = routinesOnDay.length > 0
-            ? '<div class="calendar-day-tasks">' + routinesOnDay.map(r => {
-                const done = doneForDay(r);
-                return `<div class="calendar-day-task-row${done ? ' calendar-day-task-row--done' : ''}"><span class="routine-card-bullet routine-card-bullet--${escapeHtml(bulletType(r))}" aria-hidden="true"></span><span class="calendar-day-task-name" title="${escapeHtml(r.title || '')}">${escapeHtml(r.title || 'tarefa')}</span></div>`;
-            }).join('') + '</div>'
-            : '';
-        let dayStateClass = '';
-        if (routinesOnDay.length > 0) {
-            dayStateClass = allDoneToday ? ' calendar-day--all-done' : (someDoneToday ? ' calendar-day--partial-done' : '');
-        }
-        calendarHTML += `<div class="calendar-day ${routinesOnDay.length > 0 ? 'has-routines' : ''}${dayStateClass}">`;
+            const routinesOnDay = allRoutines.filter((r) => isRoutineDate(dateStr, r));
+            const built = buildCalendarDayTasksHTML(routinesOnDay, dateStr);
+            calendarHTML += `<div class="calendar-day${built.hasRoutines ? ' has-routines' : ''}${built.dayStateClass}" data-date="${dateStr}" tabindex="0">`;
         calendarHTML += `<span class="day-number">${day}</span>`;
-        calendarHTML += tasksHTML;
+            calendarHTML += built.tasksHTML;
+            calendarHTML += '</div>';
+        }
         calendarHTML += '</div>';
     }
     
-    calendarHTML += '</div></div>';
+    calendarHTML += '</div>';
     calendarView.innerHTML = calendarHTML;
 }
+
+function getCalendarRoutinesForDate(dateStr) {
+    return (allRoutines || [])
+        .filter((r) => isRoutineDate(dateStr, r))
+        .slice()
+        .sort((a, b) => {
+            const ta = a.schedule?.time || '99:99';
+            const tb = b.schedule?.time || '99:99';
+            return ta.localeCompare(tb);
+        });
+}
+
+function formatCalendarDayDetailLabel(dateStr) {
+    const parts = String(dateStr).split('-');
+    if (parts.length !== 3) return dateStr;
+    const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    return d.toLocaleDateString('pt-BR', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+    });
+}
+
+function buildCalendarDayDetailItemHTML(routine, dateStr) {
+    const allowedBulletTypes = ['reminder', 'task', 'commitment', 'important'];
+    const bulletType = allowedBulletTypes.includes(routine.bulletType) ? routine.bulletType : 'task';
+    const done = isRoutineDayClosedOut(routine, dateStr);
+    const timeLabel = routine.schedule?.time || '';
+    const typeLabel = BULLET_TYPE_LABELS[bulletType] || 'Tarefa';
+    return (
+        `<li class="calendar-day-detail__item${done ? ' calendar-day-detail__item--done' : ''}">` +
+        `<span class="routine-card-bullet routine-card-bullet--${escapeHtml(bulletType)}" aria-hidden="true"></span>` +
+        '<div class="calendar-day-detail__item-main">' +
+        `<span class="calendar-day-detail__item-title">${escapeHtml(routine.title || 'Rotina')}</span>` +
+        '<div class="calendar-day-detail__item-meta">' +
+        `<span class="calendar-day-detail__item-status${done ? ' calendar-day-detail__item-status--done' : ' calendar-day-detail__item-status--pending'}">${done ? 'Concluída' : 'Pendente'}</span>` +
+        `<span>${escapeHtml(typeLabel)}</span>` +
+        (timeLabel ? `<span>${escapeHtml(timeLabel)}</span>` : '') +
+        '</div></div></li>'
+    );
+}
+
+function closeCalendarDayDetail() {
+    const modal = document.getElementById('calendarDayDetail');
+    if (!modal || modal.hidden || modal.classList.contains('is-closing')) return;
+    const panel = modal.querySelector('.calendar-day-detail__panel');
+    modal.classList.remove('is-open');
+    modal.classList.remove('is-settled');
+    modal.classList.add('is-closing');
+
+    function finishClose() {
+        if (modal.dataset.calDetailClosing === '1') return;
+        modal.dataset.calDetailClosing = '1';
+        modal.classList.remove('is-closing');
+        modal.hidden = true;
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('calendar-day-detail-open');
+        document.querySelectorAll('.calendar-day--selected').forEach((el) => {
+            el.classList.remove('calendar-day--selected');
+        });
+        delete modal.dataset.calDetailClosing;
+    }
+
+    if (panel) {
+        var done = false;
+        function onAnimEnd(e) {
+            if (done || e.target !== panel) return;
+            if (e.animationName !== 'calendar-day-detail-shrink') return;
+            done = true;
+            panel.removeEventListener('animationend', onAnimEnd);
+            finishClose();
+        }
+        panel.addEventListener('animationend', onAnimEnd);
+    }
+    window.setTimeout(finishClose, 380);
+}
+
+function openCalendarDayDetail(dateStr, anchorEl) {
+    const modal = document.getElementById('calendarDayDetail');
+    const titleEl = document.getElementById('calendarDayDetailTitle');
+    const summaryEl = document.getElementById('calendarDayDetailSummary');
+    const listEl = document.getElementById('calendarDayDetailList');
+    const panel = modal && modal.querySelector('.calendar-day-detail__panel');
+    if (!modal || !titleEl || !summaryEl || !listEl || !panel || !anchorEl) return;
+
+    const routinesOnDay = getCalendarRoutinesForDate(dateStr);
+    const doneCount = routinesOnDay.filter((r) => isRoutineDayClosedOut(r, dateStr)).length;
+
+    titleEl.textContent = formatCalendarDayDetailLabel(dateStr);
+    if (routinesOnDay.length === 0) {
+        summaryEl.textContent = 'Nenhuma rotina neste dia.';
+        listEl.innerHTML = '<li class="calendar-day-detail__empty">Sem rotinas agendadas.</li>';
+    } else {
+        summaryEl.textContent =
+            doneCount + ' de ' + routinesOnDay.length + ' concluída' + (routinesOnDay.length !== 1 ? 's' : '');
+        listEl.innerHTML = routinesOnDay.map((r) => buildCalendarDayDetailItemHTML(r, dateStr)).join('');
+    }
+
+    document.querySelectorAll('.calendar-day--selected').forEach((el) => {
+        el.classList.remove('calendar-day--selected');
+    });
+    anchorEl.classList.add('calendar-day--selected');
+
+    panel.style.setProperty('--cal-detail-x', '50%');
+    panel.style.setProperty('--cal-detail-y', '50%');
+    panel.style.removeProperty('transform-origin');
+
+    modal.classList.remove('is-closing', 'is-open', 'is-settled');
+    modal.hidden = false;
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('calendar-day-detail-open');
+    requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+            modal.classList.add('is-open');
+            var panelEl = modal.querySelector('.calendar-day-detail__panel');
+            if (!panelEl) return;
+            function onGrowEnd(e) {
+                if (e.target !== panelEl || e.animationName !== 'calendar-day-detail-grow') return;
+                panelEl.removeEventListener('animationend', onGrowEnd);
+                modal.classList.add('is-settled');
+            }
+            panelEl.addEventListener('animationend', onGrowEnd);
+        });
+    });
+}
+
+(function setupCalendarDayDetail() {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
+    const calendarView = document.getElementById('calendarView');
+    const modal = document.getElementById('calendarDayDetail');
+    if (!calendarView || !modal) return;
+
+    calendarView.addEventListener('click', function (e) {
+        const dayEl = e.target.closest('.calendar-day:not(.empty)');
+        if (!dayEl || !calendarView.contains(dayEl)) return;
+        const dateStr = dayEl.getAttribute('data-date');
+        if (!dateStr) return;
+        e.preventDefault();
+        openCalendarDayDetail(dateStr, dayEl);
+    });
+
+    calendarView.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const dayEl = e.target.closest('.calendar-day:not(.empty)');
+        if (!dayEl || !calendarView.contains(dayEl)) return;
+        const dateStr = dayEl.getAttribute('data-date');
+        if (!dateStr) return;
+        e.preventDefault();
+        openCalendarDayDetail(dateStr, dayEl);
+    });
+
+    modal.querySelectorAll('[data-cal-detail-close]').forEach(function (btn) {
+        btn.addEventListener('click', closeCalendarDayDetail);
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !modal.hidden) closeCalendarDayDetail();
+    });
+})();
+
+(function setupCalendarResizeListener() {
+    if (typeof window === 'undefined') return;
+    var timer;
+    window.addEventListener('resize', function () {
+        clearTimeout(timer);
+        timer = setTimeout(function () {
+            var cv = document.getElementById('calendarView');
+            if (cv && !cv.classList.contains('hidden') && typeof renderCalendar === 'function') {
+                renderCalendar();
+            }
+        }, 200);
+    });
+})();
 
 // Função auxiliar para escapar HTML (segura para null/undefined)
 function escapeHtml(text) {
@@ -5261,34 +7286,18 @@ function escapeHtml(text) {
 }
 
 // ==================== MODAL DE ANOTAÇÃO ====================
-let annotationModalContext = { routineId: null, taskId: null, task: null, type: null, annotationDate: null };
+let annotationModalContext = {
+    routineId: null,
+    taskId: null,
+    task: null,
+    type: null,
+    annotationDate: null,
+    fromAgendaWizard: false,
+    selectedPickKey: null
+};
 
-function openAnnotationModal(routineId, taskId, task, annotationDate) {
-    const dateStr = annotationDate || getLocalDateStr(new Date());
-    annotationModalContext = { routineId, taskId, task, type: null, annotationDate: dateStr, startBlank: true };
-    const modal = document.getElementById('annotationModal');
-    const previewStep = document.getElementById('annotationPreviewStep');
-    const editorStep = document.getElementById('annotationEditorStep');
-    const previewTaskName = document.getElementById('annotationPreviewTaskName');
-    if (previewTaskName) {
-        const taskLabel = (task && task.text) ? String(task.text).trim() : '';
-        previewTaskName.textContent = taskLabel || 'Tarefa';
-    }
-    const previewTitle = document.getElementById('annotationPreviewTitle');
-    if (previewTitle) {
-        const d = new Date(dateStr + 'T12:00:00');
-        previewTitle.textContent = 'Anotação para ' + d.getDate() + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
-    }
-    if (!modal || !previewStep || !editorStep) return;
-    previewStep.classList.remove('hidden');
-    editorStep.classList.add('hidden');
-    document.getElementById('annotationEditorDigitalizing').classList.add('hidden');
-    document.getElementById('annotationEditorCaderno').classList.add('hidden');
-    document.getElementById('annotationEditorMental').classList.add('hidden');
-    modal.classList.remove('hidden');
-    modal.setAttribute('aria-hidden', 'false');
-    document.body.classList.add('annotation-modal-open');
-    // Garantir que os 3 cards abram o editor ao clicar (bind direto ao abrir o modal)
+function bindAnnotationPreviewCards(modal) {
+    if (!modal) return;
     modal.querySelectorAll('.annotation-preview-card').forEach(function(btn) {
         btn.onclick = function(e) {
             e.preventDefault();
@@ -5297,6 +7306,212 @@ function openAnnotationModal(routineId, taskId, task, annotationDate) {
             if (type && typeof showAnnotationEditor === 'function') showAnnotationEditor(type);
         };
     });
+}
+
+function playAnnotationStepEnter(stepEl) {
+    if (!stepEl) return;
+    stepEl.classList.remove('is-step-enter');
+    void stepEl.offsetWidth;
+    stepEl.classList.add('is-step-enter');
+    window.setTimeout(function() {
+        stepEl.classList.remove('is-step-enter');
+    }, 320);
+}
+
+function collectAgendaAnnotatableTasks(dateStr) {
+    var routinesOnDay = (allRoutines || []).filter(function(r) {
+        return typeof isRoutineDate === 'function' && isRoutineDate(dateStr, r);
+    }).slice().sort(function(a, b) {
+        var ta = (a.schedule && a.schedule.time) || '99:99';
+        var tb = (b.schedule && b.schedule.time) || '99:99';
+        return ta.localeCompare(tb);
+    });
+    var items = [];
+    routinesOnDay.forEach(function(routine) {
+        var tasks = routine.tasks && routine.tasks.length
+            ? routine.tasks
+            : [{ id: routine.id + '-new', text: routine.title || 'Rotina', _synthetic: true }];
+        tasks.forEach(function(task) {
+            items.push({
+                key: String(routine.id) + '::' + String(task.id),
+                routineId: routine.id,
+                taskId: task.id,
+                task: task,
+                routineTitle: routine.title || 'Rotina',
+                taskText: (task && task.text) ? String(task.text).trim() : (routine.title || 'Tarefa'),
+                time: (routine.schedule && routine.schedule.time) || '',
+                icon: typeof getLucideIconName === 'function'
+                    ? getLucideIconName(routine.category && routine.category.icon)
+                    : 'circle',
+                dateStr: dateStr
+            });
+        });
+    });
+    return { items: items };
+}
+
+function getAgendaPickDayChips(selectedDateStr) {
+    var today = new Date();
+    var dayLabels = { 0: 'Hoje', 1: 'Amanhã' };
+    var weekLabels = { 0: 'Dom', 1: 'Seg', 2: 'Ter', 3: 'Qua', 4: 'Qui', 5: 'Sex', 6: 'Sáb' };
+    var chips = [];
+    for (var i = 0; i < 7; i++) {
+        var d = new Date(today);
+        d.setDate(d.getDate() + i);
+        var dateStr = getLocalDateStr(d);
+        var label = dayLabels[i] || (weekLabels[d.getDay()] + ' ' + d.getDate());
+        chips.push({
+            dateStr: dateStr,
+            label: label,
+            selected: dateStr === selectedDateStr
+        });
+    }
+    return chips;
+}
+
+function renderAnnotationTaskPickList(dateStr) {
+    var listEl = document.getElementById('annotationTaskPickList');
+    var emptyEl = document.getElementById('annotationTaskPickEmpty');
+    var continueBtn = document.getElementById('annotationTaskPickContinue');
+    var daysEl = document.getElementById('annotationTaskPickDays');
+    var descEl = document.getElementById('annotationTaskPickDesc');
+    if (!listEl) return;
+
+    var picked = collectAgendaAnnotatableTasks(dateStr);
+    if (daysEl) {
+        daysEl.innerHTML = getAgendaPickDayChips(dateStr).map(function(chip) {
+            return '<button type="button" class="annotation-task-pick-day' + (chip.selected ? ' is-selected' : '') + '" data-date="' + escapeHtml(chip.dateStr) + '" role="tab" aria-selected="' + (chip.selected ? 'true' : 'false') + '">' + escapeHtml(chip.label) + '</button>';
+        }).join('');
+    }
+
+    if (descEl) {
+        var chip = getAgendaPickDayChips(dateStr).find(function(c) { return c.selected; });
+        descEl.textContent = chip && chip.label === 'Hoje'
+            ? 'Escolha a tarefa de hoje para continuar.'
+            : 'Escolha a tarefa de ' + (chip ? chip.label : 'este dia') + ' para continuar.';
+    }
+
+    annotationModalContext.selectedPickKey = null;
+    if (continueBtn) continueBtn.disabled = true;
+
+    if (!picked.items.length) {
+        listEl.innerHTML = '';
+        if (emptyEl) emptyEl.classList.remove('hidden');
+        return;
+    }
+    if (emptyEl) emptyEl.classList.add('hidden');
+
+    listEl.innerHTML = picked.items.map(function(item) {
+        return (
+            '<button type="button" class="annotation-task-pick-item" role="option" aria-selected="false" data-pick-key="' + escapeHtml(item.key) + '"' +
+            ' data-routine-id="' + escapeHtml(item.routineId) + '"' +
+            ' data-task-id="' + escapeHtml(item.taskId) + '"' +
+            ' data-annotation-date="' + escapeHtml(item.dateStr) + '">' +
+            '<span class="annotation-task-pick-item__icon" aria-hidden="true"><i data-lucide="' + escapeHtml(item.icon) + '"></i></span>' +
+            '<span class="annotation-task-pick-item__copy">' +
+            '<span class="annotation-task-pick-item__task">' + escapeHtml(item.taskText) + '</span>' +
+            '<span class="annotation-task-pick-item__meta">' + escapeHtml(item.routineTitle) + (item.time ? ' · ' + escapeHtml(item.time) : '') + '</span>' +
+            '</span>' +
+            '<span class="annotation-task-pick-item__check" aria-hidden="true"></span>' +
+            '</button>'
+        );
+    }).join('');
+
+    var lucideLib = typeof lucide !== 'undefined' ? lucide : (typeof Lucide !== 'undefined' ? Lucide : null);
+    if (lucideLib && lucideLib.createIcons) lucideLib.createIcons();
+}
+
+function showAnnotationTaskPickStep(dateStr) {
+    var taskPickStep = document.getElementById('annotationTaskPickStep');
+    var previewStep = document.getElementById('annotationPreviewStep');
+    var editorStep = document.getElementById('annotationEditorStep');
+    if (editorStep) editorStep.classList.add('hidden');
+    if (previewStep) previewStep.classList.add('hidden');
+    if (taskPickStep) {
+        taskPickStep.classList.remove('hidden');
+        playAnnotationStepEnter(taskPickStep);
+    }
+    renderAnnotationTaskPickList(dateStr || getLocalDateStr(new Date()));
+}
+
+function showAnnotationTypePickStep() {
+    var taskPickStep = document.getElementById('annotationTaskPickStep');
+    var previewStep = document.getElementById('annotationPreviewStep');
+    var editorStep = document.getElementById('annotationEditorStep');
+    var previewTaskName = document.getElementById('annotationPreviewTaskName');
+    var previewTitle = document.getElementById('annotationPreviewTitle');
+    var dateStr = annotationModalContext.annotationDate || getLocalDateStr(new Date());
+
+    if (previewTaskName) {
+        var taskLabel = (annotationModalContext.task && annotationModalContext.task.text)
+            ? String(annotationModalContext.task.text).trim()
+            : '';
+        previewTaskName.textContent = taskLabel || 'Tarefa';
+    }
+    if (previewTitle) {
+        var d = new Date(dateStr + 'T12:00:00');
+        previewTitle.textContent = 'Escolha como anotar · ' + d.getDate() + '/' + String(d.getMonth() + 1).padStart(2, '0');
+    }
+
+    if (editorStep) editorStep.classList.add('hidden');
+    if (taskPickStep) taskPickStep.classList.add('hidden');
+    if (previewStep) {
+    previewStep.classList.remove('hidden');
+        playAnnotationStepEnter(previewStep);
+    }
+    bindAnnotationPreviewCards(document.getElementById('annotationModal'));
+}
+
+function openAgendaAnnotationWizard(preferredDateStr) {
+    var dateStr = preferredDateStr || getLocalDateStr(new Date());
+    annotationModalContext = {
+        routineId: null,
+        taskId: null,
+        task: null,
+        type: null,
+        annotationDate: dateStr,
+        fromAgendaWizard: true,
+        selectedPickKey: null,
+        startBlank: true
+    };
+    var modal = document.getElementById('annotationModal');
+    if (!modal) return;
+    modal.classList.remove('annotation-modal--mental', 'annotation-modal--caderno', 'annotation-modal--digitalizando', 'annotation-modal--view-only');
+    modal.classList.remove('hidden');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('annotation-modal-open');
+    showAnnotationTaskPickStep(dateStr);
+}
+
+function openAnnotationModal(routineId, taskId, task, annotationDate) {
+    const dateStr = annotationDate || getLocalDateStr(new Date());
+    annotationModalContext = {
+        routineId: routineId,
+        taskId: taskId,
+        task: task,
+        type: null,
+        annotationDate: dateStr,
+        fromAgendaWizard: false,
+        selectedPickKey: null,
+        startBlank: true
+    };
+    const modal = document.getElementById('annotationModal');
+    const previewStep = document.getElementById('annotationPreviewStep');
+    const editorStep = document.getElementById('annotationEditorStep');
+    const taskPickStep = document.getElementById('annotationTaskPickStep');
+    if (!modal || !previewStep || !editorStep) return;
+    if (taskPickStep) taskPickStep.classList.add('hidden');
+    var digitalizingPanel = document.getElementById('annotationEditorDigitalizing');
+    var cadernoPanel = document.getElementById('annotationEditorCaderno');
+    var mentalPanel = document.getElementById('annotationEditorMental');
+    if (digitalizingPanel) digitalizingPanel.classList.add('hidden');
+    if (cadernoPanel) cadernoPanel.classList.add('hidden');
+    if (mentalPanel) mentalPanel.classList.add('hidden');
+    editorStep.classList.add('hidden');
+    modal.classList.remove('hidden');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('annotation-modal-open');
+    showAnnotationTypePickStep();
 }
 
 function showSavedMessage(isToday) {
@@ -5318,9 +7533,84 @@ function showSavedMessage(isToday) {
     }, 2500);
 }
 
+async function prepareMentalPayloadForSave() {
+    if (window._annotationMentalUseXyflow && window.EcMentalXyflow && typeof window.EcMentalXyflow.getData === 'function') {
+        var freshXy = window.EcMentalXyflow.getData();
+        if (freshXy && Array.isArray(freshXy.nodes)) {
+            window._annotationMentalData = freshXy;
+        }
+    }
+    if (typeof waitForMentalImageUploads === 'function') await waitForMentalImageUploads();
+    if (typeof uploadLegacyBase64InMental === 'function') await uploadLegacyBase64InMental();
+    if (window._annotationMentalUseXyflow && window._annotationMentalData && window._annotationMentalData.nodes) {
+        var xyApiSave = window._annotationMentalXyflowApi || window.EcMentalXyflow;
+        if (xyApiSave && typeof xyApiSave.applyMentalNodeImages === 'function') {
+            xyApiSave.applyMentalNodeImages(window._annotationMentalData.nodes);
+        }
+    }
+    if (window._annotationMentalUseXyflow && window._annotationMentalData) {
+        return JSON.stringify(window._annotationMentalData);
+    }
+    var data = getAnnotationDataFromEditors();
+    return data != null ? data : '';
+}
+
+async function autosaveMentalDiagramOnExit() {
+    if (!annotationModalContext || annotationModalContext.viewOnly) return null;
+    if (annotationModalContext.type !== 'mental') return null;
+    if (annotationModalContext._skipAutosave) return null;
+    if (!annotationModalContext.routineId || !annotationModalContext.taskId) return null;
+
+    var dataStr = await prepareMentalPayloadForSave();
+    var payload = null;
+    try {
+        payload = typeof dataStr === 'string' ? JSON.parse(dataStr) : dataStr;
+    } catch (_) {
+        payload = window._annotationMentalData || null;
+    }
+    if (!mentalDiagramHasContentToSave(payload)) return null;
+
+    var saveName = '';
+    var isUpdating = annotationModalContext.viewItem && typeof annotationModalContext.viewAnnIndex === 'number';
+    if (isUpdating && annotationModalContext.viewItem.annotations) {
+        var ann = annotationModalContext.viewItem.annotations[annotationModalContext.viewAnnIndex];
+        if (ann && ann.name) saveName = String(ann.name).trim();
+    }
+    if (!saveName) saveName = generateRandomDiagramName();
+
+    showAnnotationSavingOverlay('Salvando automaticamente…');
+    try {
+        var result = await saveTaskAnnotation(
+            annotationModalContext.routineId,
+            annotationModalContext.taskId,
+            { type: 'mental', data: dataStr != null ? dataStr : '' },
+            saveName
+        );
+        if (result && (result.savedToServer || !result.was401)) {
+            showToast('Diagrama guardado: ' + saveName, 4000);
+        }
+        annotationModalContext._skipAutosave = true;
+        return result;
+    } finally {
+        hideAnnotationSavingOverlay();
+    }
+}
+
 function closeAnnotationModal() {
     revokeAllMentalBranchImageBlobUrls();
     if (typeof hideMentalAddPreview === 'function') hideMentalAddPreview();
+    if (window.EcMentalXyflow && typeof window.EcMentalXyflow.unmount === 'function') {
+        try { window.EcMentalXyflow.unmount(); } catch (_) {}
+    }
+    window._annotationMentalUseXyflow = false;
+    window._annotationMentalXyflowApi = null;
+    var editorMental = document.getElementById('annotationEditorMental');
+    var xyHost = document.getElementById('annotationMentalXyflowHost');
+    if (editorMental) editorMental.classList.remove('is-xyflow');
+    if (xyHost) {
+        xyHost.hidden = true;
+        xyHost.innerHTML = '';
+    }
     document.body.classList.remove('annotation-modal-open');
     hideMentalTextConfigToolbarAndSpacing();
     hideAnnotationSavingOverlay();
@@ -5333,6 +7623,10 @@ function closeAnnotationModal() {
         modal.classList.remove('annotation-modal--mental', 'annotation-modal--caderno', 'annotation-modal--digitalizando', 'annotation-modal--view-only');
         modal.classList.add('hidden');
         modal.setAttribute('aria-hidden', 'true');
+        var taskPickStep = document.getElementById('annotationTaskPickStep');
+        var previewStep = document.getElementById('annotationPreviewStep');
+        if (taskPickStep) taskPickStep.classList.add('hidden');
+        if (previewStep) previewStep.classList.add('hidden');
         var actions = modal.querySelector('.annotation-modal-actions');
         if (actions) {
             actions.querySelectorAll('.annotation-btn-cancel, .annotation-btn-save').forEach(function(b) { b.style.display = ''; });
@@ -5356,18 +7650,29 @@ function closeAnnotationModal() {
         var meta = document.getElementById('annotationModalActionsMeta');
         if (meta) meta.setAttribute('aria-hidden', 'true');
     }
-    annotationModalContext = { routineId: null, taskId: null, task: null, type: null, annotationDate: null };
+    annotationModalContext = {
+        routineId: null,
+        taskId: null,
+        task: null,
+        type: null,
+        annotationDate: null,
+        fromAgendaWizard: false,
+        selectedPickKey: null
+    };
 }
 
 function showAnnotationEditor(type) {
     if (!type) return;
     annotationModalContext.type = type;
+    const taskPickStep = document.getElementById('annotationTaskPickStep');
     const previewStep = document.getElementById('annotationPreviewStep');
     const editorStep = document.getElementById('annotationEditorStep');
     const titleEl = document.getElementById('annotationEditorTitle');
     if (!editorStep) return;
+    if (taskPickStep) taskPickStep.classList.add('hidden');
     if (previewStep) previewStep.classList.add('hidden');
     editorStep.classList.remove('hidden');
+    playAnnotationStepEnter(editorStep);
     var taskName = (annotationModalContext.task && annotationModalContext.task.text) ? String(annotationModalContext.task.text).trim() : 'Tarefa';
     if (titleEl) {
         if (type === 'mental') titleEl.textContent = 'Diagrama - ' + taskName;
@@ -5599,26 +7904,69 @@ function initAnnotationMental() {
     revokeAllMentalBranchImageBlobUrls();
     const centerEl = document.getElementById('annotationMentalCenter');
     const branchesEl = document.getElementById('annotationMentalBranches');
-    if (!centerEl || !branchesEl) return;
+    const editorMental = document.getElementById('annotationEditorMental');
+    const xyHost = document.getElementById('annotationMentalXyflowHost');
     const task = annotationModalContext.task;
     const dateStr = annotationModalContext.annotationDate;
-    centerEl.textContent = task && task.text ? task.text : 'Tarefa';
-    let data = { nodes: [{ id: 'center', label: (task && task.text) || 'Tarefa', x: 150, y: 80 }], edges: [] };
+    const taskLabel = task && task.text ? task.text : 'Tarefa';
+
+    let data = { nodes: [], edges: [] };
     if (!annotationModalContext.startBlank) {
         const annObj = getTaskAnnotationForDate(task, dateStr);
         if (annObj && annObj.type === 'mental' && annObj.data) {
             try {
                 const parsed = typeof annObj.data === 'string' ? JSON.parse(annObj.data) : annObj.data;
-                if (parsed && parsed.nodes) {
+                if (parsed && Array.isArray(parsed.nodes)) {
                     data = parsed;
                     if (!data.edges) data.edges = [];
                     data.edges.forEach(function(e) { if (!e.type) e.type = 'hierarchical'; });
+                    /* Diagrama XYFlow: sem nó automático da tarefa — só o que o usuário criou */
+                    data.nodes = data.nodes.filter(function (n) {
+                        if (!n || n.id == null) return false;
+                        if (String(n.id) !== 'center') return true;
+                        var lbl = String(n.label || '').trim();
+                        return lbl && lbl !== 'Centro' && lbl !== 'Tarefa' && lbl !== taskLabel;
+                    });
+                    var keepIds = {};
+                    data.nodes.forEach(function (n) { keepIds[String(n.id)] = true; });
+                    data.edges = (data.edges || []).filter(function (e) {
+                        return e && keepIds[String(e.from)] && keepIds[String(e.to)];
+                    });
                 }
             } catch (_) {}
         }
     }
     if (data.canvasBg && !mentalNormalizeHex6(data.canvasBg)) delete data.canvasBg;
-    var centerNode = data.nodes.find(function (n) { return n.id === 'center'; });
+
+    /* XYFlow (https://github.com/xyflow/xyflow) — editor Diagrama */
+    if (typeof window.EcMentalXyflow !== 'undefined' && window.EcMentalXyflow.mount && xyHost && editorMental) {
+        if (centerEl) centerEl.textContent = taskLabel;
+        if (branchesEl) branchesEl.innerHTML = '';
+        editorMental.classList.add('is-xyflow');
+        xyHost.hidden = false;
+        xyHost.style.pointerEvents = 'auto';
+        xyHost.style.zIndex = '5';
+        var mentalCanvas = document.getElementById('annotationMentalCanvas');
+        if (mentalCanvas) mentalCanvas.style.pointerEvents = 'auto';
+        window._annotationMentalData = data;
+        window._annotationMentalUseXyflow = true;
+        window._annotationMentalXyflowApi = window.EcMentalXyflow.mount(xyHost, {
+            data: data,
+            readOnly: !!annotationModalContext.viewOnly,
+            canvasBg: data.canvasBg || '#3a404a',
+            confirmDelete: confirmMentalDiagramDelete
+        });
+        return;
+    }
+
+    window._annotationMentalUseXyflow = false;
+    if (editorMental) editorMental.classList.remove('is-xyflow');
+    if (xyHost) {
+        xyHost.hidden = true;
+        xyHost.innerHTML = '';
+    }
+    if (!centerEl || !branchesEl) return;
+    centerEl.textContent = taskLabel;
     if (centerNode) {
         var cx = typeof centerNode.x === 'number' ? centerNode.x : 150;
         var cy = typeof centerNode.y === 'number' ? centerNode.y : 80;
@@ -5858,6 +8206,7 @@ function updateMentalSelectionUI() {
             else div.classList.remove('selected');
         });
     }
+    updateMentalRecenterButtonVisibility();
 }
 
 function setupMentalSelection() {
@@ -5940,6 +8289,32 @@ function getMentalDataContentBounds() {
     };
 }
 
+/** True se algum ramo intersecta a área visível do canvas. */
+function mentalAreBranchesInViewport() {
+    var canvas = document.getElementById('annotationMentalCanvas');
+    var branchesEl = document.getElementById('annotationMentalBranches');
+    var modal = document.getElementById('annotationModal');
+    if (!canvas || !branchesEl || !modal || modal.classList.contains('hidden') || !modal.classList.contains('annotation-modal--mental')) {
+        return true;
+    }
+    var branches = branchesEl.querySelectorAll('.annotation-mental-branch');
+    if (!branches.length) return true;
+    var cr = canvas.getBoundingClientRect();
+    if (cr.width <= 0 || cr.height <= 0) return true;
+    var pad = 14;
+    var vl = cr.left + pad;
+    var vt = cr.top + pad;
+    var vr = cr.right - pad;
+    var vb = cr.bottom - pad;
+    for (var i = 0; i < branches.length; i++) {
+        var br = branches[i].getBoundingClientRect();
+        var iw = Math.min(br.right, vr) - Math.max(br.left, vl);
+        var ih = Math.min(br.bottom, vb) - Math.max(br.top, vt);
+        if (iw > 1 && ih > 1) return true;
+    }
+    return false;
+}
+
 /** True se a caixa dos anexos não intersecta o canvas (utilizador perdeu-se ao arrastar). */
 function mentalIsContentOffScreen() {
     var canvas = document.getElementById('annotationMentalCanvas');
@@ -5981,8 +8356,14 @@ function updateMentalRecenterButtonVisibility() {
     var btn = document.getElementById('annotationMentalRecenterBtn');
     if (!btn) return;
     try {
-        if (mentalIsContentOffScreen()) btn.classList.remove('hidden');
-        else btn.classList.add('hidden');
+        var branchesEl = document.getElementById('annotationMentalBranches');
+        var branchCount = branchesEl ? branchesEl.querySelectorAll('.annotation-mental-branch').length : 0;
+        if (branchCount === 0) {
+            btn.classList.add('hidden');
+            return;
+        }
+        if (mentalAreBranchesInViewport()) btn.classList.add('hidden');
+        else btn.classList.remove('hidden');
     } catch (_) {
         btn.classList.add('hidden');
     }
@@ -6012,6 +8393,17 @@ function setupMentalRecenterButton() {
     if (!canvas.dataset.recenterBtnSetup) {
         canvas.dataset.recenterBtnSetup = '1';
         btn.addEventListener('click', function() {
+            var branchesEl = document.getElementById('annotationMentalBranches');
+            var selected = branchesEl && branchesEl.querySelector('.annotation-mental-branch.selected');
+            if (selected && selected.dataset.id) {
+                panMentalToShowNode(selected.dataset.id);
+                return;
+            }
+            var first = branchesEl && branchesEl.querySelector('.annotation-mental-branch');
+            if (first && first.dataset.id) {
+                panMentalToShowNode(first.dataset.id);
+                return;
+            }
             centerMentalPanOnContentPreserveZoom();
         });
         if (typeof ResizeObserver !== 'undefined') {
@@ -6234,6 +8626,68 @@ function setupMentalZoomControls() {
 
 var MENTAL_PALETTE_COLORS = ['#ffffff', '#f1f5f9', '#e2e8f0', '#0d0d0d', '#1e293b', '#334155', '#475569', '#64748b', '#1e3a5f', '#1e40af', '#312e81', '#4c1d95', '#701a75', '#831843', '#9f1239', '#b91c1c', '#c2410c', '#b45309', '#4d7c0f', '#166534', '#0f766e', '#155e75', '#0e7490', '#0369a1'];
 
+function setMentalBranchImageToggleLabel(toggle, open) {
+    if (!toggle) return;
+    var label = toggle.querySelector('.annotation-mental-branch-image-toggle__label');
+    if (label) label.textContent = open ? 'Ocultar imagem' : 'Ver imagem';
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    toggle.setAttribute('aria-label', open ? 'Ocultar imagem' : 'Mostrar imagem');
+    toggle.title = open ? 'Ocultar imagem' : 'Mostrar imagem';
+}
+
+function bindMentalBranchImageToggle(wrap, getSrc, nodeId) {
+    if (!wrap || wrap._mentalImgToggleBound) return;
+    wrap._mentalImgToggleBound = true;
+    wrap.addEventListener('click', function (e) {
+        var btn = e.target.closest('.annotation-mental-branch-image-toggle');
+        if (!btn || !wrap.contains(btn)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        var willOpen = !wrap.classList.contains('is-open');
+        setMentalBranchImageVisible(wrap, getSrc(), nodeId, willOpen);
+    });
+}
+
+/** Imagem do anexo: só carrega no DOM quando a setinha abre (mais leve). */
+function setMentalBranchImageVisible(wrap, src, nodeId, open) {
+    if (!wrap) return;
+    if (!src) {
+        wrap.classList.remove('has-image', 'is-open', 'is-collapsed');
+        wrap.innerHTML = '';
+        if (nodeId) revokeMentalBranchImageBlobUrl(nodeId);
+        return;
+    }
+    wrap.classList.add('has-image');
+    wrap.classList.toggle('is-open', !!open);
+    wrap.classList.toggle('is-collapsed', !open);
+    var toggle = wrap.querySelector('.annotation-mental-branch-image-toggle');
+    if (!toggle) {
+        toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.className = 'annotation-mental-branch-image-toggle';
+        toggle.innerHTML =
+            '<span class="annotation-mental-branch-image-toggle__label"></span>' +
+            '<svg class="annotation-mental-branch-image-toggle__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>';
+        wrap.insertBefore(toggle, wrap.firstChild);
+    }
+    setMentalBranchImageToggleLabel(toggle, !!open);
+    var imgEl = wrap.querySelector('.annotation-mental-branch-image-img');
+    if (open) {
+        if (!imgEl) {
+            imgEl = document.createElement('img');
+            imgEl.className = 'annotation-mental-branch-image-img';
+            imgEl.alt = '';
+            imgEl.loading = 'lazy';
+            imgEl.decoding = 'async';
+            wrap.appendChild(imgEl);
+        }
+        applySrcToMentalBranchImage(imgEl, src, nodeId);
+    } else if (imgEl) {
+        if (nodeId) revokeMentalBranchImageBlobUrl(nodeId);
+        imgEl.remove();
+    }
+}
+
 function setMentalBranchImage(branchDiv, fileOrDataUrl) {
     if (!branchDiv) return;
     var nodeId = branchDiv.dataset && branchDiv.dataset.id;
@@ -6241,15 +8695,16 @@ function setMentalBranchImage(branchDiv, fileOrDataUrl) {
     var node = data && data.nodes && nodeId ? data.nodes.find(function(n) { return n.id === nodeId; }) : null;
     var wrap = branchDiv.querySelector('.annotation-mental-branch-image');
     if (!wrap) return;
+    bindMentalBranchImageToggle(wrap, function () {
+        if (node && node.image && node.image.url) return getAttachmentFullUrl(node.image.url);
+        if (node && typeof node.imageData === 'string' && node.imageData) return node.imageData;
+        return '';
+    }, nodeId);
 
     function setImageInDom(src) {
-        wrap.innerHTML = '';
-        if (!src) return;
-        var img = document.createElement('img');
-        img.className = 'annotation-mental-branch-image-img';
-        img.alt = '';
-        wrap.appendChild(img);
-        applySrcToMentalBranchImage(img, src, nodeId);
+        // Sempre oculta; só abre se o usuário já tiver aberto a setinha
+        var keepOpen = !!(src && wrap.classList.contains('is-open'));
+        setMentalBranchImageVisible(wrap, src, nodeId, keepOpen);
     }
 
     if (fileOrDataUrl instanceof File && fileOrDataUrl.type && fileOrDataUrl.type.indexOf('image') !== -1) {
@@ -6272,15 +8727,15 @@ function setMentalBranchImage(branchDiv, fileOrDataUrl) {
                         node.image = { attachmentId: ref.attachmentId, url: ref.url };
                         if (node.imageData) delete node.imageData;
                         var imgEl = wrap.querySelector('.annotation-mental-branch-image-img');
-                        if (imgEl) {
+                        if (imgEl && wrap.classList.contains('is-open')) {
                             applySrcToMentalBranchImage(imgEl, getAttachmentFullUrl(ref.url), nodeId);
-                        } else {
+                        } else if (wrap.classList.contains('is-open')) {
                             setImageInDom(getAttachmentFullUrl(ref.url));
                         }
                     } else if (node && node.imageData) {
                         setImageInDom(node.imageData);
                     } else if (!node || !node.imageData) {
-                        wrap.innerHTML = '';
+                        setMentalBranchImageVisible(wrap, '', nodeId, false);
                     }
                     return ref;
                 })
@@ -7164,19 +9619,26 @@ function createMentalBranchNode(n, branchesEl) {
             alert('O nó central não pode ser removido.');
             return;
         }
-        if (!confirm('Quer realmente remover este ramo?')) return;
-        revokeMentalBranchImageBlobUrl(n.id);
-        var data = window._annotationMentalData;
-        var branchesEl = document.getElementById('annotationMentalBranches');
-        if (!data || !branchesEl) return;
-        if (data.nodes) data.nodes = data.nodes.filter(function(node) { return node.id !== n.id; });
-        if (data.edges) data.edges = data.edges.filter(function(edge) { return edge.from !== n.id && edge.to !== n.id; });
-        div.remove();
-        if (window._annotationMentalSelectedIds) {
-            window._annotationMentalSelectedIds = window._annotationMentalSelectedIds.filter(function(id) { return id !== n.id; });
-            updateMentalSelectionUI();
-        }
-        if (typeof drawMentalConnections === 'function') drawMentalConnections();
+        openEcConfirmModal({
+            title: 'Excluir nó?',
+            message: 'Tem certeza que deseja excluir este nó do diagrama? Esta ação não pode ser desfeita.',
+            confirmLabel: 'Excluir',
+            cancelLabel: 'Cancelar'
+        }).then(function (ok) {
+            if (!ok) return;
+            revokeMentalBranchImageBlobUrl(n.id);
+            var data = window._annotationMentalData;
+            var branchesEl = document.getElementById('annotationMentalBranches');
+            if (!data || !branchesEl) return;
+            if (data.nodes) data.nodes = data.nodes.filter(function(node) { return node.id !== n.id; });
+            if (data.edges) data.edges = data.edges.filter(function(edge) { return edge.from !== n.id && edge.to !== n.id; });
+            div.remove();
+            if (window._annotationMentalSelectedIds) {
+                window._annotationMentalSelectedIds = window._annotationMentalSelectedIds.filter(function(id) { return id !== n.id; });
+                updateMentalSelectionUI();
+            }
+            if (typeof drawMentalConnections === 'function') drawMentalConnections();
+        });
     };
     const dropdown = document.createElement('div');
     dropdown.className = 'annotation-mental-dropdown';
@@ -7241,11 +9703,13 @@ function createMentalBranchNode(n, branchesEl) {
     imageWrap.className = 'annotation-mental-branch-image';
     var imgSrc = (n.image && n.image.url) ? getAttachmentFullUrl(n.image.url) : (typeof n.imageData === 'string' && n.imageData.length > 0 ? n.imageData : '');
     if (imgSrc) {
-        var img = document.createElement('img');
-        img.className = 'annotation-mental-branch-image-img';
-        img.alt = '';
-        imageWrap.appendChild(img);
-        applySrcToMentalBranchImage(img, imgSrc, n.id);
+        // Fechado por padrão: não carrega a imagem até clicar na setinha
+        setMentalBranchImageVisible(imageWrap, imgSrc, n.id, false);
+        bindMentalBranchImageToggle(imageWrap, function () {
+            if (n.image && n.image.url) return getAttachmentFullUrl(n.image.url);
+            if (typeof n.imageData === 'string' && n.imageData) return n.imageData;
+            return imgSrc;
+        }, n.id);
     }
     div.appendChild(imageWrap);
     const descWrap = document.createElement('div');
@@ -7752,6 +10216,13 @@ function getAnnotationDataFromEditors() {
         return canvas ? canvas.toDataURL('image/png') : '';
     }
     if (type === 'mental') {
+        if (window._annotationMentalUseXyflow && window.EcMentalXyflow && typeof window.EcMentalXyflow.getData === 'function') {
+            var xyPayload = window.EcMentalXyflow.getData();
+            if (xyPayload && Array.isArray(xyPayload.nodes)) {
+                window._annotationMentalData = xyPayload;
+                return JSON.stringify(xyPayload);
+            }
+        }
         const data = window._annotationMentalData;
         if (!data) return null;
         const centerEl = document.getElementById('annotationMentalCenter');
@@ -7975,13 +10446,20 @@ async function saveTaskAnnotation(routineId, taskId, annotation, saveName) {
     return { savedToServer: false, was401: false };
 }
 
+function getDailyOnboardingSeenStorageKey() {
+    var uid = '';
+    try {
+        uid = String(localStorage.getItem('userId') || '').trim();
+    } catch (e) {}
+    return uid ? 'ecRoutineDailyOnboardingLastSeenDate_' + uid : 'ecRoutineDailyOnboardingLastSeenDate';
+}
+
 function shouldShowDailyOnboarding() {
     try {
         var overlay = document.getElementById('dailyOnboardingOverlay');
         if (!overlay) return false;
         var todayStr = getLocalDateStr(new Date());
-        var key = 'ecRoutineDailyOnboardingLastSeenDate';
-        var last = localStorage.getItem(key);
+        var last = localStorage.getItem(getDailyOnboardingSeenStorageKey());
         return last !== todayStr;
     } catch (e) {
         return false;
@@ -8005,17 +10483,211 @@ function setDailyOnboardingStep(stepNum) {
             if (isActive) d.classList.add('is-active');
             else d.classList.remove('is-active');
         });
+        if (stepNum === 3) fitDailyOnboardingTasksList();
     } catch (e) {}
 }
 
-function showDailyOnboardingOverlay() {
+function getDailyOnboardingUserFirstName() {
+    try {
+        var raw = localStorage.getItem('userName') || '';
+        raw = String(raw).trim();
+        if (!raw) return '';
+        var first = raw.split(/\s+/)[0];
+        if (!first) return '';
+        return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
+    } catch (e) {
+        return '';
+    }
+}
+
+function renderDailyOnboardingWelcomeStep() {
+    try {
+        var el = document.getElementById('dailyOnboardingWelcomeHeading');
+        if (!el) return;
+        /* Conta nova (sem rotinas): só "Seja bem-vindo" — não usa o 1º nome (ex.: "Novo"). */
+        var isNewUser = !Array.isArray(allRoutines) || allRoutines.length === 0;
+        if (isNewUser) {
+            el.textContent = 'Seja bem-vindo';
+            return;
+        }
+        var first = getDailyOnboardingUserFirstName();
+        el.textContent = first ? 'Seja bem-vindo, ' + first : 'Seja bem-vindo';
+    } catch (e) {}
+}
+
+function renderDailyOnboardingTasksStep() {
+    return new Promise(function(resolve) {
+        if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(function() {
+                renderDailyOnboardingTasksForTodayByPriority();
+                resolve();
+            });
+            return;
+        }
+        setTimeout(function() {
+            renderDailyOnboardingTasksForTodayByPriority();
+            resolve();
+        }, 16);
+    });
+}
+
+function fitDailyOnboardingTasksList() {
+    try {
+        var list = document.getElementById('dailyOnboardingTasksList');
+        if (!list) return;
+        var step = list.closest('.daily-onboarding-step--tasks');
+        if (!step) return;
+
+        list.style.maxHeight = '';
+        list.style.overflowY = '';
+        list.classList.remove('is-scrollable');
+        if (!list.querySelector('.daily-onboarding-task-row')) return;
+
+        function runFit() {
+            var heading = step.querySelector('.daily-onboarding-step2-heading');
+            var desc = step.querySelector('.daily-onboarding-step2-desc');
+            var reserved = (heading ? heading.offsetHeight : 0) + (desc ? desc.offsetHeight : 0) + 20;
+            var avail = step.clientHeight - reserved;
+            if (avail <= 0) return;
+
+            list.style.maxHeight = Math.max(120, avail) + 'px';
+            if (list.scrollHeight > list.clientHeight + 1) {
+                list.style.overflowY = 'auto';
+                list.classList.add('is-scrollable');
+            }
+        }
+
+        if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(runFit);
+        } else {
+            setTimeout(runFit, 16);
+        }
+    } catch (e) {}
+}
+
+function setDailyOnboardingOverlayBodyLock(locked) {
+    try {
+        if (locked) document.body.classList.add('daily-onboarding-overlay-open');
+        else document.body.classList.remove('daily-onboarding-overlay-open');
+        document.body.style.overflow = locked ? 'hidden' : '';
+    } catch (e) {}
+}
+
+var onboardingStepAdvanceResolver = null;
+var lastOnboardingAdvanceAt = 0;
+
+function triggerOnboardingStepAdvance() {
+    var now = Date.now();
+    if (now - lastOnboardingAdvanceAt < 450) return;
+    lastOnboardingAdvanceAt = now;
+    if (typeof onboardingStepAdvanceResolver === 'function') {
+        onboardingStepAdvanceResolver();
+    }
+}
+
+function forceHideAllOnboardingOverlays() {
+    ['dailyOnboardingOverlay', 'postLoginWelcomeOverlay'].forEach(function (id) {
+        var overlay = document.getElementById(id);
+        if (!overlay) return;
+        overlay.classList.remove('is-visible');
+        overlay.setAttribute('aria-hidden', 'true');
+        overlay.hidden = true;
+    });
+    onboardingStepAdvanceResolver = null;
+    setDailyOnboardingOverlayBodyLock(false);
+    try {
+        document.body.classList.remove('dashboard-daily-onboarding-active');
+    } catch (_) {}
+}
+
+/** Esconde overlays se o dashboard já está visível (ex.: rotinas carregaram depois do welcome). */
+function syncOnboardingOverlaysWithDashboard() {
+    try {
+        var dash = document.getElementById('dashboardOverview');
+        var dashVisible = !!(dash && !dash.classList.contains('hidden'));
+        var hasRoutines = Array.isArray(allRoutines) && allRoutines.length > 0;
+        var postLogin = document.getElementById('postLoginWelcomeOverlay');
+        var postLoginVisible = !!(postLogin && postLogin.classList.contains('is-visible'));
+        if (dashVisible && (hasRoutines || postLoginVisible)) {
+            forceHideAllOnboardingOverlays();
+        }
+    } catch (e) {}
+}
+
+function waitForOnboardingStepAdvance(ms, overlayId) {
+    return new Promise(function (resolve) {
+        var done = false;
+        var overlay = overlayId ? document.getElementById(overlayId) : null;
+
+        function finish() {
+            if (done) return;
+            done = true;
+            clearTimeout(timer);
+            if (onboardingStepAdvanceResolver === finish) onboardingStepAdvanceResolver = null;
+            resolve();
+        }
+
+        onboardingStepAdvanceResolver = finish;
+        var timer = setTimeout(finish, ms);
+    });
+}
+
+function setupDailyOnboardingOverlayInteraction() {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+    if (window._ecOnboardingOverlayBound) return;
+    window._ecOnboardingOverlayBound = true;
+
+    if (!window._ecDailyOnboardingTasksFitBound) {
+        window._ecDailyOnboardingTasksFitBound = true;
+        window.addEventListener('resize', function () {
+        var overlay = document.getElementById('dailyOnboardingOverlay');
+            if (overlay && overlay.classList.contains('is-visible')) fitDailyOnboardingTasksList();
+        });
+    }
+
+    ['dailyOnboardingOverlay', 'postLoginWelcomeOverlay'].forEach(function (id) {
+        var overlay = document.getElementById(id);
+        if (!overlay) return;
+
+        overlay.addEventListener('click', function (e) {
+            if (!overlay.classList.contains('is-visible')) return;
+            if (e.target.closest('.daily-onboarding-tasks-list')) return;
+            if (e.target.closest('[data-onboarding-advance]')) return;
+            triggerOnboardingStepAdvance();
+        });
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('[data-onboarding-advance]')) return;
+        e.preventDefault();
+        e.stopPropagation();
+        triggerOnboardingStepAdvance();
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+        var visible = document.querySelector('.daily-onboarding-overlay.is-visible');
+        if (!visible) return;
+        forceHideAllOnboardingOverlays();
+        var dash = document.getElementById('dashboardOverview');
+        var rot = document.getElementById('rotinasView');
+        if (dash && dash.classList) dash.classList.remove('hidden');
+        if (rot && rot.classList) rot.classList.remove('hidden');
+    });
+}
+
+setupDailyOnboardingOverlayInteraction();
+
+function showDailyOnboardingOverlay(initialStep) {
     try {
         var overlay = document.getElementById('dailyOnboardingOverlay');
         if (!overlay) return;
+        forceHideAllOnboardingOverlays();
+        overlay.hidden = false;
         overlay.classList.add('is-visible');
         overlay.setAttribute('aria-hidden', 'false');
-        document.body.style.overflow = 'hidden';
-        setDailyOnboardingStep(1);
+        setDailyOnboardingOverlayBodyLock(true);
+        setDailyOnboardingStep(typeof initialStep === 'number' ? initialStep : 1);
     } catch (e) {}
 }
 
@@ -8024,12 +10696,12 @@ function hideDailyOnboardingOverlay() {
         try {
             var overlay = document.getElementById('dailyOnboardingOverlay');
             if (!overlay) {
-                try { document.body.style.overflow = ''; } catch (_) {}
+                setDailyOnboardingOverlayBodyLock(false);
                 resolve();
                 return;
             }
             if (!overlay.classList.contains('is-visible')) {
-                try { document.body.style.overflow = ''; } catch (_) {}
+                setDailyOnboardingOverlayBodyLock(false);
                 resolve();
                 return;
             }
@@ -8040,7 +10712,7 @@ function hideDailyOnboardingOverlay() {
                 try {
                     overlay.removeEventListener('transitionend', onEnd);
                 } catch (_) {}
-                try { document.body.style.overflow = ''; } catch (_) {}
+                setDailyOnboardingOverlayBodyLock(false);
                 resolve();
             }
             function onEnd(e) {
@@ -8049,9 +10721,10 @@ function hideDailyOnboardingOverlay() {
             overlay.addEventListener('transitionend', onEnd);
             overlay.classList.remove('is-visible');
             overlay.setAttribute('aria-hidden', 'true');
+            overlay.hidden = true;
             setTimeout(finish, 950);
         } catch (e) {
-            try { document.body.style.overflow = ''; } catch (_) {}
+            setDailyOnboardingOverlayBodyLock(false);
             resolve();
         }
     });
@@ -8127,8 +10800,7 @@ function renderDailyOnboardingTasksForTodayByPriority() {
             return String(a.title || '').localeCompare(String(b.title || ''));
         });
 
-        var maxItems = 12;
-        var items = sorted.slice(0, maxItems);
+        var items = sorted;
 
         list.innerHTML = items.map(function(r) {
             const status = statusForDailyOnboardingRoutine(r, completedTodaySet, currentTimeMin);
@@ -8149,6 +10821,7 @@ function renderDailyOnboardingTasksForTodayByPriority() {
                 + '  <div class="daily-onboarding-badges">' + badgesHtml + '</div>'
                 + '</div>';
         }).join('');
+        fitDailyOnboardingTasksList();
     } catch (e) {}
 }
 
@@ -8165,14 +10838,19 @@ function setPostLoginWelcomeStep(stepNum) {
     } catch (e) {}
 }
 
-function showPostLoginWelcomeOverlay() {
+function showPostLoginWelcomeOverlay(initialStep) {
     try {
+        if (Array.isArray(allRoutines) && allRoutines.length > 0) {
+            forceHideAllOnboardingOverlays();
+            return;
+        }
         var overlay = document.getElementById('postLoginWelcomeOverlay');
         if (!overlay) return;
+        overlay.hidden = false;
         overlay.classList.add('is-visible');
         overlay.setAttribute('aria-hidden', 'false');
-        document.body.style.overflow = 'hidden';
-        setPostLoginWelcomeStep(1);
+        setDailyOnboardingOverlayBodyLock(true);
+        setPostLoginWelcomeStep(typeof initialStep === 'number' ? initialStep : 1);
     } catch (e) {}
 }
 
@@ -8181,16 +10859,12 @@ function hidePostLoginWelcomeOverlay() {
         try {
             var overlay = document.getElementById('postLoginWelcomeOverlay');
             if (!overlay) {
-                try {
-                    document.body.style.overflow = '';
-                } catch (_) {}
+                setDailyOnboardingOverlayBodyLock(false);
                 resolve();
                 return;
             }
             if (!overlay.classList.contains('is-visible')) {
-                try {
-                    document.body.style.overflow = '';
-                } catch (_) {}
+                setDailyOnboardingOverlayBodyLock(false);
                 resolve();
                 return;
             }
@@ -8201,9 +10875,7 @@ function hidePostLoginWelcomeOverlay() {
                 try {
                     overlay.removeEventListener('transitionend', onEnd);
                 } catch (_) {}
-                try {
-                    document.body.style.overflow = '';
-                } catch (_) {}
+                setDailyOnboardingOverlayBodyLock(false);
                 resolve();
             }
             function onEnd(e) {
@@ -8212,81 +10884,288 @@ function hidePostLoginWelcomeOverlay() {
             overlay.addEventListener('transitionend', onEnd);
             overlay.classList.remove('is-visible');
             overlay.setAttribute('aria-hidden', 'true');
+            overlay.hidden = true;
             setTimeout(finish, 950);
         } catch (e) {
-            try {
-                document.body.style.overflow = '';
-            } catch (_) {}
+            setDailyOnboardingOverlayBodyLock(false);
             resolve();
         }
     });
 }
 
-/** Após login sem rotinas: passos iguais à apresentação diária → redireciona para criar primeira tarefa */
-async function runPostLoginWelcomeOnboarding() {
+/** Após cadastro/login sem rotinas: Seja bem-vindo → Vamos criar… → /create */
+async function runNewUserWelcomeToCreateFlow(options) {
+    options = options || {};
     var dash = document.getElementById('dashboardOverview');
     var rot = document.getElementById('rotinasView');
     if (dash && dash.classList) dash.classList.add('hidden');
     if (rot && rot.classList) rot.classList.add('hidden');
 
-    var STEP_MS = 1900;
-    function sleep(ms) {
-        return new Promise(function (resolve) {
-            setTimeout(resolve, ms);
-        });
+    if (typeof window.EcEntryTransition !== 'undefined' && window.EcEntryTransition.forceHide) {
+        window.EcEntryTransition.forceHide();
     }
 
-    showPostLoginWelcomeOverlay();
-    setPostLoginWelcomeStep(1);
-    await sleep(STEP_MS);
-    setPostLoginWelcomeStep(2);
-    await sleep(STEP_MS);
+    document.body.classList.add('dashboard-daily-onboarding-active');
+    try {
+        if (Array.isArray(allRoutines) && allRoutines.length > 0) {
+            forceHideAllOnboardingOverlays();
+            return false;
+        }
+        try {
+            localStorage.setItem(getDailyOnboardingSeenStorageKey(), getLocalDateStr(new Date()));
+        } catch (eSeen) {}
 
-    await hidePostLoginWelcomeOverlay();
+        renderDailyOnboardingWelcomeStep();
+        showDailyOnboardingOverlay(2);
+        var welcomeStep = getDailyOnboardingStepEl(2);
+        if (welcomeStep) {
+            welcomeStep.classList.remove('is-active');
+            welcomeStep.classList.add('is-seq-hidden');
+        }
+        var firstCreateStep = getDailyOnboardingStepEl(4);
+        if (firstCreateStep) {
+            firstCreateStep.classList.remove('is-active');
+            firstCreateStep.classList.add('is-seq-hidden');
+        }
+
+        await runDailyOnboardingWelcomeSequence();
+        if (Array.isArray(allRoutines) && allRoutines.length > 0) {
+            await hideDailyOnboardingOverlaySequential();
+            return false;
+        }
+        await runDailyOnboardingFirstCreateSequence();
+        await hideDailyOnboardingOverlaySequential();
+
     try {
         window.location.assign('/create');
         await waitMs(700);
         var path = String(window.location.pathname || '').toLowerCase();
         var stillOnDashboard = path.indexOf('/dashboard') !== -1 || path.indexOf('dashboard.html') !== -1;
         return !stillOnDashboard;
+        } catch (eNav) {
+            return false;
+        }
+    } catch (e) {
+        await hideDailyOnboardingOverlay();
+        return false;
+    } finally {
+        document.body.classList.remove('dashboard-daily-onboarding-active');
+        document.body.classList.remove('dashboard-entry-revealing');
+        onboardingStepAdvanceResolver = null;
+    }
+}
+
+/** Após login sem rotinas: passos iguais à apresentação diária → redireciona para criar primeira tarefa */
+async function runPostLoginWelcomeOnboarding(options) {
+    return runNewUserWelcomeToCreateFlow(options || {});
+}
+
+// Revert to legacy onboarding: localStorage.setItem('ecRoutineDailyOnboardingNaogostei', 'naogostei')
+// Restore sequential V2 flow: localStorage.removeItem('ecRoutineDailyOnboardingNaogostei')
+var DAILY_ONBOARDING_LEGACY_KEY = 'ecRoutineDailyOnboardingNaogostei';
+
+function isDailyOnboardingLegacyFlow() {
+    try {
+        return localStorage.getItem(DAILY_ONBOARDING_LEGACY_KEY) === 'naogostei';
     } catch (e) {
         return false;
     }
 }
 
-async function runDailyOnboarding(forceShow) {
-    if (!forceShow && !shouldShowDailyOnboarding()) return false;
-    // Marca imediatamente para garantir "1x por dia" mesmo que a navegação/fecho aconteça antes do overlay terminar.
+function prefersReducedMotionOnboarding() {
     try {
-        localStorage.setItem('ecRoutineDailyOnboardingLastSeenDate', getLocalDateStr(new Date()));
+        return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch (e) {
+        return false;
+    }
+}
+
+function getDailyOnboardingStepEl(stepNum) {
+    try {
+        var overlay = document.getElementById('dailyOnboardingOverlay');
+        if (!overlay) return null;
+        return overlay.querySelector('.daily-onboarding-step[data-step="' + stepNum + '"]');
+    } catch (e) {
+        return null;
+    }
+}
+
+function clearDailyOnboardingSeqClasses(stepEl) {
+    if (!stepEl || !stepEl.classList) return;
+    stepEl.classList.remove('is-seq-enter', 'is-seq-exit', 'is-seq-hidden');
+}
+
+async function runDailyOnboardingWelcomeSequence() {
+    var step = getDailyOnboardingStepEl(2);
+    if (!step) return;
+    clearDailyOnboardingSeqClasses(step);
+    step.classList.remove('is-seq-hidden');
+    step.classList.add('is-active');
+    void step.offsetWidth;
+    step.classList.add('is-seq-enter');
+    if (prefersReducedMotionOnboarding()) {
+        step.classList.remove('is-seq-enter');
+        await waitMs(200);
+    } else {
+        await waitForCssAnimationEnd(step, 'dailyOnboardingSeqEnter', 830);
+        step.classList.remove('is-seq-enter');
+        await waitMs(1200);
+    }
+    step.classList.add('is-seq-exit');
+    if (prefersReducedMotionOnboarding()) {
+        await waitMs(80);
+    } else {
+        await waitForCssAnimationEnd(step, 'dailyOnboardingSeqExit', 630);
+    }
+    step.classList.remove('is-seq-exit', 'is-active');
+    step.classList.add('is-seq-hidden');
+}
+
+async function runDailyOnboardingFirstCreateSequence() {
+    var step = getDailyOnboardingStepEl(4);
+    if (!step) return;
+    clearDailyOnboardingSeqClasses(step);
+    step.classList.remove('is-seq-hidden');
+    step.classList.add('is-active');
+    void step.offsetWidth;
+    step.classList.add('is-seq-enter');
+    if (prefersReducedMotionOnboarding()) {
+        step.classList.remove('is-seq-enter');
+        await waitMs(200);
+    } else {
+        await waitForCssAnimationEnd(step, 'dailyOnboardingSeqEnter', 830);
+        step.classList.remove('is-seq-enter');
+        await waitMs(1400);
+    }
+    step.classList.add('is-seq-exit');
+    if (prefersReducedMotionOnboarding()) {
+        await waitMs(80);
+    } else {
+        await waitForCssAnimationEnd(step, 'dailyOnboardingSeqExit', 630);
+    }
+    step.classList.remove('is-seq-exit', 'is-active');
+    step.classList.add('is-seq-hidden');
+}
+
+async function runDailyOnboardingTasksEnterSequence() {
+    setDailyOnboardingStep(3);
+    await renderDailyOnboardingTasksStep();
+    var step = getDailyOnboardingStepEl(3);
+    if (!step) return;
+    clearDailyOnboardingSeqClasses(step);
+    step.classList.remove('is-active');
+    step.classList.add('is-seq-hidden');
+    void step.offsetWidth;
+    step.classList.remove('is-seq-hidden');
+    step.classList.add('is-active', 'is-seq-enter');
+    if (prefersReducedMotionOnboarding()) {
+        step.classList.remove('is-seq-enter');
+        await waitMs(80);
+    } else {
+        await waitForCssAnimationEnd(step, 'dailyOnboardingSeqEnter', 830);
+        step.classList.remove('is-seq-enter');
+    }
+}
+
+async function runDailyOnboardingTasksExitSequence() {
+    var step = getDailyOnboardingStepEl(3);
+    if (!step) return;
+    step.classList.add('is-seq-exit');
+    if (prefersReducedMotionOnboarding()) {
+        await waitMs(80);
+    } else {
+        await waitForCssAnimationEnd(step, 'dailyOnboardingSeqExit', 630);
+    }
+    step.classList.remove('is-seq-exit', 'is-active');
+    step.classList.add('is-seq-hidden');
+}
+
+async function revealDashboardAfterOnboarding(dashboardOverview) {
+    document.body.classList.remove('dashboard-daily-onboarding-active');
+    document.body.classList.add('dashboard-entry-revealing');
+    document.body.classList.add('dashboard-overview-visible');
+    if (dashboardOverview && dashboardOverview.classList) {
+        dashboardOverview.classList.remove('hidden');
+        dashboardOverview.classList.add('dashboard-overview--reveal-after-onboarding');
+        var stripReveal = function() {
+            try {
+                dashboardOverview.classList.remove('dashboard-overview--reveal-after-onboarding');
+            } catch (_) {}
+        };
+        dashboardOverview.addEventListener('animationend', stripReveal, { once: true });
+        setTimeout(stripReveal, 1000);
+    }
+    await waitMs(prefersReducedMotionOnboarding() ? 220 : 800);
+    document.body.classList.remove('dashboard-entry-revealing');
+}
+
+function hideDailyOnboardingOverlaySequential() {
+    return new Promise(function(resolve) {
+        try {
+            var overlay = document.getElementById('dailyOnboardingOverlay');
+            if (!overlay) {
+                setDailyOnboardingOverlayBodyLock(false);
+                resolve();
+                return;
+            }
+            if (!overlay.classList.contains('is-visible')) {
+                setDailyOnboardingOverlayBodyLock(false);
+                resolve();
+                return;
+            }
+            var done = false;
+            function finish() {
+                if (done) return;
+                done = true;
+                try {
+                    overlay.removeEventListener('transitionend', onEnd);
+                } catch (_) {}
+                overlay.classList.remove('is-seq-overlay-exit', 'is-visible');
+                overlay.setAttribute('aria-hidden', 'true');
+                overlay.hidden = true;
+                setDailyOnboardingOverlayBodyLock(false);
+                resolve();
+            }
+            function onEnd(e) {
+                if (e && e.target === overlay && e.propertyName === 'opacity') finish();
+            }
+            overlay.classList.add('is-seq-overlay-exit');
+            overlay.addEventListener('transitionend', onEnd);
+            setTimeout(finish, prefersReducedMotionOnboarding() ? 240 : 950);
+        } catch (e) {
+            setDailyOnboardingOverlayBodyLock(false);
+            resolve();
+        }
+    });
+}
+
+async function runDailyOnboardingLegacy(forceShow, options) {
+    options = options || {};
+    if (!forceShow && !shouldShowDailyOnboarding()) return false;
+    try {
+        localStorage.setItem(getDailyOnboardingSeenStorageKey(), getLocalDateStr(new Date()));
     } catch (e) {}
     var dashboardOverview = document.getElementById('dashboardOverview');
     var rotinasView = document.getElementById('rotinasView');
     if (dashboardOverview && dashboardOverview.classList) dashboardOverview.classList.add('hidden');
     if (rotinasView && rotinasView.classList) rotinasView.classList.add('hidden');
 
-    var STEP_MS = 2600;
-    function sleep(ms) {
-        return new Promise(function(resolve) { setTimeout(resolve, ms); });
+    if (typeof window.EcEntryTransition !== 'undefined' && window.EcEntryTransition.forceHide) {
+        window.EcEntryTransition.forceHide();
     }
 
-    showDailyOnboardingOverlay();
+    var STEP_MS = 2600;
+
+    document.body.classList.add('dashboard-daily-onboarding-active');
+    try {
+        renderDailyOnboardingWelcomeStep();
     setDailyOnboardingStep(2);
-    // Adia render pesado para o próximo frame, evitando micro-travada na troca de passo.
-    await new Promise(function(resolve) {
-        if (typeof requestAnimationFrame === 'function') {
-            requestAnimationFrame(function() {
-                renderDailyOnboardingTasksForTodayByPriority();
-                resolve();
-            });
-            return;
-        }
-        setTimeout(function() {
-            renderDailyOnboardingTasksForTodayByPriority();
-            resolve();
-        }, 16);
-    });
-    await sleep(STEP_MS);
+        showDailyOnboardingOverlay(2);
+        await waitForOnboardingStepAdvance(STEP_MS, 'dailyOnboardingOverlay');
+
+        setDailyOnboardingStep(3);
+        await renderDailyOnboardingTasksStep();
+        await waitForOnboardingStepAdvance(STEP_MS, 'dailyOnboardingOverlay');
 
     if (dashboardOverview && dashboardOverview.classList) {
         dashboardOverview.classList.remove('hidden');
@@ -8301,9 +11180,72 @@ async function runDailyOnboarding(forceShow) {
     }
     await hideDailyOnboardingOverlay();
     try {
-        localStorage.setItem('ecRoutineDailyOnboardingLastSeenDate', getLocalDateStr(new Date()));
+            localStorage.setItem(getDailyOnboardingSeenStorageKey(), getLocalDateStr(new Date()));
     } catch (e) {}
     return true;
+    } catch (e) {
+        await hideDailyOnboardingOverlay();
+        if (dashboardOverview && dashboardOverview.classList) dashboardOverview.classList.remove('hidden');
+        return false;
+    } finally {
+        document.body.classList.remove('dashboard-daily-onboarding-active');
+        onboardingStepAdvanceResolver = null;
+    }
+}
+
+async function runDailyOnboardingV2(forceShow, options) {
+    options = options || {};
+    if (!forceShow && !shouldShowDailyOnboarding()) return false;
+    try {
+        localStorage.setItem(getDailyOnboardingSeenStorageKey(), getLocalDateStr(new Date()));
+    } catch (e) {}
+    var dashboardOverview = document.getElementById('dashboardOverview');
+    var rotinasView = document.getElementById('rotinasView');
+    if (dashboardOverview && dashboardOverview.classList) dashboardOverview.classList.add('hidden');
+    if (rotinasView && rotinasView.classList) rotinasView.classList.add('hidden');
+
+    if (typeof window.EcEntryTransition !== 'undefined' && window.EcEntryTransition.forceHide) {
+        window.EcEntryTransition.forceHide();
+    }
+
+    var STEP_MS = 2600;
+
+    document.body.classList.add('dashboard-daily-onboarding-active');
+    try {
+        renderDailyOnboardingWelcomeStep();
+        showDailyOnboardingOverlay(2);
+        var welcomeStep = getDailyOnboardingStepEl(2);
+        if (welcomeStep) {
+            welcomeStep.classList.remove('is-active');
+            welcomeStep.classList.add('is-seq-hidden');
+        }
+
+        await runDailyOnboardingWelcomeSequence();
+        await runDailyOnboardingTasksEnterSequence();
+        await waitForOnboardingStepAdvance(STEP_MS, 'dailyOnboardingOverlay');
+        await runDailyOnboardingTasksExitSequence();
+        await hideDailyOnboardingOverlaySequential();
+        await revealDashboardAfterOnboarding(dashboardOverview);
+        try {
+            localStorage.setItem(getDailyOnboardingSeenStorageKey(), getLocalDateStr(new Date()));
+        } catch (e) {}
+        return true;
+    } catch (e) {
+        await hideDailyOnboardingOverlay();
+        if (dashboardOverview && dashboardOverview.classList) dashboardOverview.classList.remove('hidden');
+        return false;
+    } finally {
+        document.body.classList.remove('dashboard-daily-onboarding-active');
+        document.body.classList.remove('dashboard-entry-revealing');
+        onboardingStepAdvanceResolver = null;
+    }
+}
+
+async function runDailyOnboarding(forceShow, options) {
+    if (isDailyOnboardingLegacyFlow()) {
+        return runDailyOnboardingLegacy(forceShow, options);
+    }
+    return runDailyOnboardingV2(forceShow, options);
 }
 
 function setupAnnotationModal() {
@@ -8312,31 +11254,122 @@ function setupAnnotationModal() {
     const closeBtn = document.getElementById('annotationModalClose');
     const cancelBtn = document.getElementById('annotationBtnCancel');
     const saveBtn = document.getElementById('annotationBtnSave');
-    function confirmCloseWithoutSaving() {
-        if (!modal || modal.classList.contains('hidden')) return true;
+    async function requestCloseAnnotationModal() {
+        if (!modal || modal.classList.contains('hidden')) return;
         var editorStep = document.getElementById('annotationEditorStep');
-        if (editorStep && editorStep.classList.contains('hidden')) return true;
-        return confirm('Deseja sair sem salvar?');
+        var editorOpen = editorStep && !editorStep.classList.contains('hidden');
+        if (editorOpen && annotationModalContext.type === 'mental' && !annotationModalContext.viewOnly) {
+            try {
+                await autosaveMentalDiagramOnExit();
+            } catch (err) {
+                console.error(err);
+            }
+            closeAnnotationModal();
+            return;
+        }
+        if (editorOpen && !annotationModalContext.viewOnly) {
+            var ok = await openEcConfirmModal({
+                title: 'Sair sem salvar?',
+                message: 'As alterações desta anotação serão perdidas.',
+                confirmLabel: 'Sair',
+                cancelLabel: 'Continuar editando'
+            });
+            if (!ok) return;
+        }
+        closeAnnotationModal();
+    }
+    async function handleAnnotationHostBack() {
+        var previewStep = document.getElementById('annotationPreviewStep');
+        var taskPickStep = document.getElementById('annotationTaskPickStep');
+        var previewVisible = previewStep && !previewStep.classList.contains('hidden');
+        var pickVisible = taskPickStep && !taskPickStep.classList.contains('hidden');
+        if (previewVisible && annotationModalContext.fromAgendaWizard) {
+            showAnnotationTaskPickStep(annotationModalContext.annotationDate || getLocalDateStr(new Date()));
+            return;
+        }
+        if (previewVisible || pickVisible) {
+            closeAnnotationModal();
+            return;
+        }
+        await requestCloseAnnotationModal();
     }
     const previewBackBtn = document.getElementById('annotationPreviewBack');
-    [overlay, closeBtn, cancelBtn, previewBackBtn].forEach(el => {
+    const taskPickBackBtn = document.getElementById('annotationTaskPickBack');
+    [overlay, closeBtn, cancelBtn].forEach(el => {
         if (!el) return;
         el.addEventListener('click', function() {
-            if (!confirmCloseWithoutSaving()) return;
-            closeAnnotationModal();
+            requestCloseAnnotationModal().catch(function (err) { console.error(err); });
         });
     });
+    if (previewBackBtn) previewBackBtn.addEventListener('click', function () {
+        handleAnnotationHostBack().catch(function (err) { console.error(err); });
+    });
+    if (taskPickBackBtn) {
+        taskPickBackBtn.addEventListener('click', function() {
+            closeAnnotationModal();
+        });
+    }
+
+    var taskPickList = document.getElementById('annotationTaskPickList');
+    var taskPickDays = document.getElementById('annotationTaskPickDays');
+    var taskPickContinue = document.getElementById('annotationTaskPickContinue');
+
+    if (taskPickDays) {
+        taskPickDays.addEventListener('click', function(e) {
+            var dayBtn = e.target.closest('.annotation-task-pick-day');
+            if (!dayBtn) return;
+            var dateStr = dayBtn.getAttribute('data-date');
+            if (!dateStr) return;
+            annotationModalContext.annotationDate = dateStr;
+            renderAnnotationTaskPickList(dateStr);
+        });
+    }
+
+    if (taskPickList) {
+        taskPickList.addEventListener('click', function(e) {
+            var itemBtn = e.target.closest('.annotation-task-pick-item');
+            if (!itemBtn) return;
+            taskPickList.querySelectorAll('.annotation-task-pick-item').forEach(function(el) {
+                el.classList.remove('is-selected');
+                el.setAttribute('aria-selected', 'false');
+            });
+            itemBtn.classList.add('is-selected');
+            itemBtn.setAttribute('aria-selected', 'true');
+            annotationModalContext.selectedPickKey = itemBtn.getAttribute('data-pick-key');
+            annotationModalContext.routineId = itemBtn.getAttribute('data-routine-id');
+            annotationModalContext.taskId = itemBtn.getAttribute('data-task-id');
+            annotationModalContext.annotationDate = itemBtn.getAttribute('data-annotation-date') || annotationModalContext.annotationDate;
+            var routine = (allRoutines || []).find(function(r) { return String(r.id) === String(annotationModalContext.routineId); });
+            var task = null;
+            if (routine && routine.tasks) {
+                task = routine.tasks.find(function(t) { return String(t.id) === String(annotationModalContext.taskId); });
+            }
+            if (!task && routine && String(annotationModalContext.taskId).endsWith('-new')) {
+                task = { id: annotationModalContext.taskId, text: routine.title || 'Rotina', _synthetic: true };
+            }
+            annotationModalContext.task = task;
+            if (taskPickContinue) taskPickContinue.disabled = !task;
+        });
+    }
+
+    if (taskPickContinue) {
+        taskPickContinue.addEventListener('click', function() {
+            if (!annotationModalContext.task || !annotationModalContext.routineId) return;
+            annotationModalContext.fromAgendaWizard = true;
+            showAnnotationTypePickStep();
+        });
+    }
     if (saveBtn) {
         saveBtn.addEventListener('click', async function() {
             const type = annotationModalContext.type;
             showAnnotationSavingOverlay('Salvando…');
+            try {
+            var data;
             if (type === 'mental') {
-                // Primeiro: garante que uploads iniciados durante a edição terminaram.
-                await waitForMentalImageUploads();
-                // Segundo: migração de base64 legado (casos antigos sem referência de anexo).
-                if (typeof uploadLegacyBase64InMental === 'function') await uploadLegacyBase64InMental();
+                data = await prepareMentalPayloadForSave();
+            } else {
+                data = getAnnotationDataFromEditors();
             }
-            const data = getAnnotationDataFromEditors();
             if (!type) { closeAnnotationModal(); return; }
             var suggestedName = '';
             if (annotationModalContext.viewItem && annotationModalContext.viewItem.annotations && typeof annotationModalContext.viewAnnIndex === 'number') {
@@ -8353,19 +11386,18 @@ function setupAnnotationModal() {
             const annotationDate = annotationModalContext.annotationDate || getLocalDateStr(new Date());
             if (saveBtn) {
                 saveBtn.disabled = true;
-                var saveBtnText = saveBtn.textContent;
                 saveBtn.textContent = 'A guardar…';
             }
             var saveResult = null;
             try {
                 saveResult = await saveTaskAnnotation(annotationModalContext.routineId, annotationModalContext.taskId, { type, data: data != null ? data : '' }, saveName);
             } finally {
-                hideAnnotationSavingOverlay();
                 if (saveBtn) {
                     saveBtn.disabled = false;
                     saveBtn.textContent = 'Salvar';
                 }
             }
+            annotationModalContext._skipAutosave = true;
             const todayStr = getLocalDateStr(new Date());
             if (saveResult && saveResult.savedToServer) {
                 showSavedMessage(annotationDate === todayStr);
@@ -8375,6 +11407,9 @@ function setupAnnotationModal() {
             closeAnnotationModal();
             if (typeof showRotinasView === 'function') showRotinasView();
             if (typeof switchRotinasView === 'function') switchRotinasView('biblioteca');
+            } finally {
+                hideAnnotationSavingOverlay();
+            }
         });
     }
     if (modal) {
@@ -8391,6 +11426,10 @@ function setupAnnotationModal() {
             if (addBranchBtn) {
                 e.preventDefault();
                 e.stopPropagation();
+                if (window._annotationMentalUseXyflow && window._annotationMentalXyflowApi && typeof window._annotationMentalXyflowApi.addNode === 'function') {
+                    window._annotationMentalXyflowApi.addNode({ label: 'Novo nó' });
+                    return;
+                }
                 showMentalAddPreview();
                 return;
             }
@@ -8493,6 +11532,13 @@ function setupAnnotationModal() {
         addBranchBtn.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
+            if (window._annotationMentalUseXyflow && window.EcMentalXyflow) {
+                var xyApi = window._annotationMentalXyflowApi || window.EcMentalXyflow;
+                if (xyApi && typeof xyApi.addNode === 'function') {
+                    xyApi.addNode({ label: 'Novo nó' });
+                    return;
+                }
+            }
             showMentalAddPreview();
         });
     }
@@ -8501,6 +11547,13 @@ function setupAnnotationModal() {
         addBalloonBtn.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
+            if (window._annotationMentalUseXyflow && window.EcMentalXyflow) {
+                var xyApiBalloon = window._annotationMentalXyflowApi || window.EcMentalXyflow;
+                if (xyApiBalloon && typeof xyApiBalloon.addNode === 'function') {
+                    xyApiBalloon.addNode({ label: 'Texto', shape: 'balloon' });
+                    return;
+                }
+            }
             addMentalTextBalloon();
         });
     }

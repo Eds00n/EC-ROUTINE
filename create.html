@@ -6,6 +6,12 @@
             try {
                 if (localStorage.getItem('ecRoutineTheme') === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
                 if (localStorage.getItem('ecRoutineShowDayNumbers') === '0') document.documentElement.setAttribute('data-ec-day-numbers', 'off');
+                if (sessionStorage.getItem('ec_page_transition') === 'create') {
+                    document.documentElement.classList.add('ec-page-enter-pending');
+                }
+                if (sessionStorage.getItem('ec_nav_busy') === '1') {
+                    document.documentElement.classList.add('ec-busy-pending');
+                }
             } catch (e) {}
         })();
     </script>
@@ -16,13 +22,19 @@
     <script src="api-base.js?v=20260419deploy"></script>
     <script src="auth-guard.js?v=20260418guard"></script>
     <title>EC ROUTINE - Criar Rotina</title>
-    <link rel="stylesheet" href="dashboard.css?v=20260420profile-admin">
-    <link rel="stylesheet" href="dashboard-theme.css?v=20260420profile-admin">
-    <link rel="stylesheet" href="create.css?v=20260420create-theme">
-    <link rel="stylesheet" href="uiverse-trash-bin.css">
+    <link rel="stylesheet" href="dashboard.css?v=20260715profileTouch">
+    <link rel="stylesheet" href="dashboard-theme.css?v=20260621interbrand">
+    <link rel="stylesheet" href="create.css?v=20260715createLight2">
+    <link rel="stylesheet" href="create-step2-premium.css?v=20260715sameHeight">
+    <link rel="stylesheet" href="lib/plan-type-figma/plan-type-figma.css?v=20260715darkExitTogether">
+    <link rel="stylesheet" href="lib/ec-entry-transition.css?v=20260704cleanup">
+    <link rel="stylesheet" href="lib/ec-busy-overlay.css?v=20260614navbusy">
+    <link rel="stylesheet" href="lib/ec-create-loading.css?v=20260704cleanup">
+    <link rel="stylesheet" href="uiverse-trash-bin.css?v=20260704cleanup">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400&family=Inter:wght@200;400;900&display=swap" rel="stylesheet">
 </head>
 <body>
     <header class="header">
@@ -32,7 +44,6 @@
             <h1 class="header-title">EC ROUTINE</h1>
         </div>
         <div class="header-right">
-            <a href="financeiro/index.html" class="header-financeiro-btn" title="Orçamento e extrato (CSV Nubank)">FINANCEIRO</a>
             <button type="button" class="header-admin-btn hidden" id="headerAdminBtn" hidden aria-hidden="true" title="Painel de administrador">ADM</button>
             <button type="button" class="header-profile-trigger" id="headerProfileTrigger" aria-haspopup="dialog" aria-expanded="false" aria-controls="userProfileModal" title="Ver perfil">
                 <span class="username" id="username">USUÁRIO</span>
@@ -47,101 +58,247 @@
     <div id="notificationContainer" class="notification-container" aria-live="polite"></div>
 
     <main class="main-content">
-        <div class="create-section create-wizard">
-            <form id="createForm" class="create-form" onsubmit="return false;">
-                <!-- Passo 1: Tipo da tarefa -->
-                <div class="create-step create-step-1" data-step="1" id="wizardStep1">
-            <h2 class="create-title">Criar Nova Rotina</h2>
-                    <p class="wizard-question">Essa tarefa é?</p>
-                    <div class="wizard-options" id="planTypeOptions">
-                        <label class="wizard-option">
-                            <input type="radio" name="planType" value="daily">
-                            <span class="wizard-option-radio"></span>
-                            <span class="wizard-option-content">
-                                <span class="wizard-option-label">Diariamente</span>
-                                <span class="wizard-option-example">Ex: beber água, estudar, treinar</span>
-                            </span>
-                        </label>
-                        <label class="wizard-option">
-                            <input type="radio" name="planType" value="weekly">
-                            <span class="wizard-option-radio"></span>
-                            <span class="wizard-option-content">
-                                <span class="wizard-option-label">Semanal</span>
-                                <span class="wizard-option-example">pagar fatura, organizar finanças, revisar metas</span>
-                            </span>
-                        </label>
-                        <label class="wizard-option">
-                            <input type="radio" name="planType" value="monthly">
-                            <span class="wizard-option-radio"></span>
-                            <span class="wizard-option-content">
-                                <span class="wizard-option-label">Mensalmente</span>
-                                <span class="wizard-option-example">lavar o carro, revisar estudos</span>
-                            </span>
-                        </label>
-                    </div>
-                    <div class="wizard-step-actions">
-                        <button type="button" class="btn-continuar" id="btnContinuarStep1" disabled onclick="window.goToNextStep && window.goToNextStep(1); return false;">Continuar</button>
-                    </div>
-                </div>
+        <div id="planTypeFigmaApp" class="app" data-active="">
+            <button type="button" class="plan-type-stage-back" id="planTypeStageBackBtn" aria-label="Voltar ao dashboard">
+                <span class="plan-type-stage-back__icon" aria-hidden="true">
+                    <svg width="16" height="16" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M11.25 14.25L6 9L11.25 3.75" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </span>
+                <span class="plan-type-stage-back__label">Voltar</span>
+            </button>
+            <header class="header">
+                <h1 class="header__title">EC ROUTINE</h1>
+                <p class="header__subtitle">Como essa rotina será executada?</p>
+            </header>
 
-                <!-- Passo 2: Sobre a tarefa, Nome, Bullet journal, Categoria, Descrição -->
-                <div class="create-step create-step-2" data-step="2" id="wizardStep2" style="display: none;">
-                    <h2 class="create-title">Criar Nova Rotina</h2>
-                    <h3 class="wizard-step-heading">Sobre a tarefa</h3>
-                    <div class="form-group form-group-task-name">
-                        <label for="routineTitle" class="task-name-label">Nome da tarefa:</label>
-                        <input type="text" id="routineTitle" placeholder="Ex: Rotina Matinal, Treino, Estudos..." class="form-input form-input-task-name">
-                    </div>
-                    <div class="bullet-journal-section">
-                        <p class="bullet-journal-labels bullet-journal-label--above">Nível de importância</p>
-                        <div class="bullet-journal-options" id="bulletTypeOptions">
-                            <label class="bullet-option">
-                                <input type="radio" name="bulletType" value="reminder">
-                                <span class="bullet-option-box">
-                                    <span class="bullet-symbol bullet-symbol--reminder" aria-hidden="true"></span>
-                                    <span class="bullet-option-label">Lembretes</span>
-                                </span>
-                            </label>
-                            <label class="bullet-option">
-                                <input type="radio" name="bulletType" value="task">
-                                <span class="bullet-option-box">
-                                    <span class="bullet-symbol bullet-symbol--task" aria-hidden="true"></span>
-                                    <span class="bullet-option-label">Tarefas</span>
-                                </span>
-                            </label>
-                            <label class="bullet-option">
-                                <input type="radio" name="bulletType" value="commitment">
-                                <span class="bullet-option-box">
-                                    <span class="bullet-symbol bullet-symbol--commitment" aria-hidden="true"></span>
-                                    <span class="bullet-option-label">Compromissos</span>
-                                </span>
-                            </label>
-                            <label class="bullet-option">
-                                <input type="radio" name="bulletType" value="important">
-                                <span class="bullet-option-box">
-                                    <span class="bullet-symbol bullet-symbol--important" aria-hidden="true"></span>
-                                    <span class="bullet-option-label">Importante</span>
-                                </span>
-                            </label>
+            <main class="stage" id="planTypeStage">
+                <section class="col col--diario" data-col="diario" tabindex="0">
+                    <div class="col__shade">
+                        <div class="col__shade-header" aria-hidden="true">
+                            <h1 class="header__title">EC ROUTINE</h1>
+                            <p class="header__subtitle">Como essa rotina será executada?</p>
                         </div>
-                        <p class="bullet-journal-labels bullet-journal-label--below">método journal</p>
                     </div>
-                <div class="form-group">
-                    <label>Categoria da Rotina</label>
-                        <p class="category-hint">Selecione uma categoria (opcional)</p>
-                        <div class="category-suggestions" id="categorySuggestions"></div>
-                        <input type="hidden" id="routineCategory" name="routineCategory">
+                    <figure class="col__visual">
+                        <img src="lib/plan-type-figma/assets/images/diario.png?v=20260614bg2" alt="" draggable="false">
+                    </figure>
+                    <div class="col__body">
+                        <h2>DIARIAMENTE</h2>
+                        <p class="col__desc col__desc--inter">
+                            <span class="col__lead">Todos os dias ou Dias específicos</span>
+                            <span class="col__list">Estudar<br>Treinar<br>Beber Água</span>
+                        </p>
                     </div>
-                    <div class="wizard-step-actions wizard-step-actions--with-back">
-                        <button type="button" class="btn-voltar" data-goto="1" onclick="typeof goToStep === 'function' && goToStep(1); return false;">Voltar</button>
-                        <button type="button" class="btn-continuar" id="btnContinuarStep2" disabled onclick="typeof goToNextStep === 'function' && goToNextStep(2); return false;">Continuar</button>
+                </section>
+
+                <section class="col col--semanal" data-col="semanal" tabindex="0">
+                    <div class="col__shade">
+                        <div class="col__shade-header" aria-hidden="true">
+                            <h1 class="header__title">EC ROUTINE</h1>
+                            <p class="header__subtitle">Como essa rotina será executada?</p>
+                        </div>
+                    </div>
+                    <figure class="col__visual">
+                        <img src="lib/plan-type-figma/assets/images/semanal.png?v=20260614bg2" alt="" draggable="false">
+                    </figure>
+                    <div class="col__body">
+                        <h2>SEMANALMENTE</h2>
+                        <p class="col__desc col__desc--sans">
+                            <span class="col__lead">Planeje a semana e o ritmo.</span>
+                            <span class="col__list">Definir Metas<br>Revisar Progresso<br>Organizar Agenda</span>
+                        </p>
+                    </div>
+                </section>
+
+                <section class="col col--mensal" data-col="mensal" tabindex="0">
+                    <div class="col__shade">
+                        <div class="col__shade-header" aria-hidden="true">
+                            <h1 class="header__title">EC ROUTINE</h1>
+                            <p class="header__subtitle">Como essa rotina será executada?</p>
+                        </div>
+                    </div>
+                    <figure class="col__visual">
+                        <img src="lib/plan-type-figma/assets/images/mensal.png?v=20260614bg2" alt="" draggable="false">
+                    </figure>
+                    <div class="col__body">
+                        <h2>MENSALMENTE</h2>
+                        <p class="col__desc col__desc--sans col__desc--mensal">
+                            <span class="col__lead">Objetivos grandes.</span>
+                            <span class="col__list">Definir Metas do Mês<br>Revisar Resultados<br>Planejar Próximo Ciclo</span>
+                        </p>
+                    </div>
+                </section>
+
+                <section class="col col--tarefa" data-col="tarefa" tabindex="0">
+                    <div class="col__shade">
+                        <div class="col__shade-header" aria-hidden="true">
+                            <h1 class="header__title">EC ROUTINE</h1>
+                            <p class="header__subtitle">Como essa rotina será executada?</p>
+                        </div>
+                    </div>
+                    <figure class="col__visual">
+                        <img src="lib/plan-type-figma/assets/images/tarefa.png?v=20260614bg2" alt="" draggable="false">
+                    </figure>
+                    <div class="col__body">
+                        <h2>TAREFA RAPIDA</h2>
+                        <p class="col__desc col__desc--sans">
+                            <span class="col__lead">Pequenas ações.</span>
+                            <span class="col__list">Crie uma tarefa rápida, execute quando necessário e conclua. Após ser finalizada, ela é encerrada automaticamente e não volta a aparecer.</span>
+                        </p>
+                    </div>
+                </section>
+            </main>
+
+            <aside class="tarefa-screen" id="planTypeTarefaScreen" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="planTypeTarefaScreenTitle">
+                <div class="tarefa-screen__backdrop"></div>
+                <button class="tarefa-screen__back" type="button" id="planTypeVoltarBtn" aria-label="Voltar">
+                    <span class="tarefa-screen__back-icon" aria-hidden="true">
+                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M11.25 14.25L6 9L11.25 3.75" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
+                    <span class="tarefa-screen__back-label">VOLTAR</span>
+                </button>
+                <div class="tarefa-screen__hero">
+                    <div class="tarefa-screen__word-track" aria-hidden="true">
+                        <div class="tarefa-screen__hero-stage">
+                            <span class="tarefa-screen__word tarefa-screen__word--left"></span>
+                            <figure class="tarefa-screen__card">
+                                <img class="tarefa-screen__morph-slot" src="" alt="" draggable="false" aria-hidden="true">
+                            </figure>
+                            <span class="tarefa-screen__word tarefa-screen__word--right"></span>
+                        </div>
+                    </div>
+                </div>
+                <footer class="tarefa-screen__footer">
+                    <div class="tarefa-screen__heading">
+                        <span class="tarefa-screen__accent" aria-hidden="true"></span>
+                        <div class="tarefa-screen__heading-copy">
+                            <h2 class="tarefa-screen__title tarefa-screen__morph-slot" id="planTypeTarefaScreenTitle" aria-hidden="true"></h2>
+                            <span class="tarefa-screen__lead tarefa-screen__morph-slot" aria-hidden="true"></span>
+                        </div>
+                    </div>
+                    <p class="tarefa-screen__desc">
+                        <span class="tarefa-screen__rule" aria-hidden="true"></span>
+                        <div class="tarefa-screen__list" role="list"></div>
+                    </p>
+                    <button class="tarefa-screen__btn" type="button" id="planTypeContinuarBtn">
+                        <span class="tarefa-screen__btn-spinner" aria-hidden="true"></span>
+                        <span class="tarefa-screen__btn-label">CONTINUAR</span>
+                        <span class="tarefa-screen__btn-icon" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M6.75 3.75L12 9L6.75 14.25" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </span>
+                    </button>
+                </footer>
+            </aside>
+        </div>
+
+        <div class="create-section create-wizard" hidden>
+            <form id="createForm" class="create-form" onsubmit="return false;">
+                <div class="visually-hidden" aria-hidden="true">
+                    <input type="radio" name="planType" value="daily" id="planTypeDaily">
+                    <input type="radio" name="planType" value="weekly" id="planTypeWeekly">
+                    <input type="radio" name="planType" value="monthly" id="planTypeMonthly">
+                    <input type="radio" name="planType" value="task" id="planTypeTask">
+                </div>
+                <div id="createWizardSlides" class="create-wizard-slides">
+                <!-- Passo 1: escolha de frequência via Figma fullscreen (#planTypeFigmaApp) -->
+                <div class="create-step create-step-1 is-current" data-step="1" id="wizardStep1" hidden aria-hidden="true"></div>
+
+                <!-- Passo 2: Criar Nova Rotina (dark premium) -->
+                <div class="create-step create-step-2 create-step-2--premium" data-step="2" id="wizardStep2">
+                    <div class="step2-premium-card">
+                        <header class="step2-premium-header">
+                            <button type="button" class="step2-premium-back btn-voltar" data-goto="1" onclick="typeof goToStep === 'function' && goToStep(1); return false;" aria-label="Voltar">
+                                <i data-lucide="arrow-left" aria-hidden="true"></i>
+                                <span>Voltar</span>
+                            </button>
+                            <div class="step2-premium-hero">
+                                <h2 class="step2-premium-title">Criar Nova Tarefa</h2>
+                                <p class="step2-premium-subtitle">Construa hábitos que constroem resultados.</p>
+                            </div>
+                        </header>
+
+                        <div class="step2-top-row">
+                            <div class="form-group form-group-task-name step2-premium-field">
+                                <label for="routineTitle" class="step2-premium-label task-name-label">Nome da Tarefa</label>
+                                <div class="step2-field-wrap">
+                                    <i data-lucide="pencil" class="step2-field-wrap__icon" aria-hidden="true"></i>
+                                    <input type="text" id="routineTitle" placeholder="Ex: Rotina Matinal, Treino, Estudos..." class="form-input form-input-task-name step2-premium-input">
+                                </div>
+                            </div>
+                            <div class="bullet-journal-section step2-premium-bullets">
+                                <p class="step2-premium-label bullet-journal-label--above">Nível de Importância</p>
+                                <div class="bullet-journal-options" id="bulletTypeOptions">
+                                    <label class="bullet-option">
+                                        <input type="radio" name="bulletType" value="reminder">
+                                        <span class="bullet-option-box">
+                                            <i data-lucide="bell" class="bullet-option-icon" aria-hidden="true"></i>
+                                            <span class="bullet-option-label">Lembrete</span>
+                                            <span class="bullet-option-desc">Algo rápido e simples</span>
+                                        </span>
+                                    </label>
+                                    <label class="bullet-option">
+                                        <input type="radio" name="bulletType" value="task">
+                                        <span class="bullet-option-box">
+                                            <i data-lucide="circle" class="bullet-option-icon" aria-hidden="true"></i>
+                                            <span class="bullet-option-label">Tarefas</span>
+                                            <span class="bullet-option-desc">Parte da rotina diária</span>
+                                        </span>
+                                    </label>
+                                    <label class="bullet-option">
+                                        <input type="radio" name="bulletType" value="commitment">
+                                        <span class="bullet-option-box">
+                                            <i data-lucide="circle-dashed" class="bullet-option-icon" aria-hidden="true"></i>
+                                            <span class="bullet-option-label">Compromisso</span>
+                                            <span class="bullet-option-desc">Compromisso consigo mesmo</span>
+                                        </span>
+                                    </label>
+                                    <label class="bullet-option">
+                                        <input type="radio" name="bulletType" value="important">
+                                        <span class="bullet-option-box">
+                                            <svg class="bullet-option-icon bullet-option-icon--important" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                <circle cx="12" cy="12" r="9"></circle>
+                                            </svg>
+                                            <span class="bullet-option-label">Importante</span>
+                                            <span class="bullet-option-desc">Alta prioridade e foco</span>
+                                        </span>
+                                    </label>
+                                </div>
+                                <p class="bullet-journal-labels bullet-journal-label--below">
+                                    <i data-lucide="info" class="step2-journal-info-icon" aria-hidden="true"></i>
+                                    método journal
+                                </p>
+                            </div>
+                        </div>
+
+                        <section class="form-group step2-premium-categories">
+                            <label class="step2-premium-label">Categoria da Tarefa</label>
+                            <p class="category-hint step2-premium-hint">Selecione uma categoria (opcional)</p>
+                            <div class="category-suggestions" id="categorySuggestions"></div>
+                            <input type="hidden" id="routineCategory" name="routineCategory">
+                        </section>
+
+                        <footer class="step2-premium-footer">
+                            <p class="step2-premium-note">
+                                <i data-lucide="shield-check" aria-hidden="true"></i>
+                                Você poderá editar tudo depois.
+                            </p>
+                            <button type="button" class="step2-premium-continuar btn-continuar" id="btnContinuarStep2" disabled onclick="typeof goToNextStep === 'function' && goToNextStep(2); return false;">
+                                <span>Continuar</span>
+                                <i data-lucide="arrow-right" aria-hidden="true"></i>
+                            </button>
+                        </footer>
                     </div>
                 </div>
 
-                <!-- Passo 3: Detalhes da rotina (Descrição, Objetivo, Por quê) -->
-                <div class="create-step create-step-3" data-step="3" id="wizardStep3" style="display: none;">
-                    <h2 class="create-title">Detalhes da rotina</h2>
-                    <p class="details-subtitle">Opcional — mas ajuda você a se manter no caminho certo.</p>
+                <!-- Passo 3: Detalhes da tarefa (Descrição, Objetivo, Por quê) -->
+                <div class="create-step create-step-3" data-step="3" id="wizardStep3">
+                    <h2 class="create-title">Detalhes da tarefa</h2>
+                    <p class="details-subtitle">Opcional â€” mas ajuda você a se manter no caminho certo.</p>
                     <p class="details-intro">Essa etapa ajuda você a manter consistência e foco ao longo do tempo.</p>
 
                     <div class="detail-card">
@@ -154,7 +311,7 @@
                     <div class="details-more" id="detailsMore">
                         <button type="button" class="btn-show-more" id="btnShowMoreDetails" aria-expanded="false" aria-controls="detailsMoreContent">
                             <span class="btn-show-more-text">Mostrar mais</span>
-                            <span class="btn-show-more-icon" aria-hidden="true">▼</span>
+                            <span class="btn-show-more-icon" aria-hidden="true">â–¼</span>
                         </button>
                         <div class="details-more-content" id="detailsMoreContent" hidden>
                             <div class="detail-card">
@@ -166,14 +323,14 @@
 
                             <div class="detail-card detail-card--highlight">
                                 <label for="routineReasons" class="detail-card-label">Por que isso é importante pra você?</label>
-                                <p class="detail-card-hint">Sua motivação emocional — ela te ajuda nos dias difíceis.</p>
+                                <p class="detail-card-hint">Sua motivação emocional â€” ela te ajuda nos dias difíceis.</p>
                                 <textarea id="routineReasons" placeholder="Ex: Quero mais disciplina e saúde no dia a dia" class="form-textarea form-textarea--compact" rows="2" data-autogrow></textarea>
                                 <p class="detail-card-example" aria-hidden="true">Exemplo: Quero mais disciplina e saúde no dia a dia</p>
                             </div>
 
                             <div class="detail-card">
                                 <label for="routineContext" class="detail-card-label">Contexto</label>
-                                <p class="detail-card-hint">Ex.: @trabalho, @casa, @pessoal — para filtrar no dashboard.</p>
+                                <p class="detail-card-hint">Ex.: @trabalho, @casa, @pessoal â€” para filtrar no dashboard.</p>
                                 <input type="text" id="routineContext" placeholder="Ex: @trabalho" class="form-input" maxlength="80">
                             </div>
 
@@ -183,8 +340,10 @@
                                 <div class="tasks-preview" id="tasksPreview">
                                     <div class="tasks-list" id="tasksList"></div>
                                     <div class="add-task-container">
-                                        <input type="text" id="newTaskInput" placeholder="Ex: Separar roupa • Aquecer • Treinar" class="form-input task-input">
-                                        <button type="button" class="btn-add-task" id="addTaskBtn" aria-label="Adicionar tarefa">+</button>
+                                        <input type="text" id="newTaskInput" placeholder="Ex: Separar roupa â€¢ Aquecer â€¢ Treinar" class="form-input task-input">
+                                        <button type="button" class="btn-add-task" id="addTaskBtn" aria-label="Adicionar tarefa">
+                                            <i data-lucide="plus" aria-hidden="true"></i>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -198,77 +357,297 @@
                 </div>
 
                 <!-- Passo 4: Horário, Dias, Mensal, Submit -->
-                <div class="create-step create-step-4" data-step="4" id="wizardStep4" style="display: none;">
-                    <h2 class="create-title">Criar Nova Rotina</h2>
+                <div class="create-step create-step-4" data-step="4" id="wizardStep4">
+                    <h2 class="create-title">Criar Nova Tarefa</h2>
+                    <p class="step4-premium-subtitle">Escolha como essa tarefa acontecerá.</p>
+                    <div class="step4-premium-columns">
                     <div class="form-group form-group--centered" id="routineTimeGroup">
-                        <label class="step4-time-title">Horário</label>
-                        <p class="field-hint step4-time-subtitle">Escolha se a rotina tem horário fixo ou pode ser feita a qualquer momento</p>
+                        <div class="step4-col-heading">
+                            <div class="step4-col-icon" aria-hidden="true"><i data-lucide="clock"></i></div>
+                            <label class="step4-time-title">Horário</label>
+                            <p class="field-hint step4-time-subtitle">Escolha se a rotina tem horário fixo ou pode ser feita a qualquer momento</p>
+                        </div>
                         <div class="time-choice-options time-choice-options--step4">
-                            <label class="time-choice-option time-choice-option--card" id="labelTimeAny">
+                            <label class="time-choice-option time-choice-option--card step4-premium-option" id="labelTimeAny">
                                 <input type="radio" name="timeChoice" value="any" id="timeChoiceAny">
                                 <span class="time-choice-radio"></span>
-                                <span class="time-choice-label">Sem horário fixo</span>
-                                <span class="time-choice-subtitle">Essa rotina acontecerá todos os dias, sem horário fixo</span>
+                                <span class="step4-option-check" aria-hidden="true"><i data-lucide="check"></i></span>
+                                <span class="step4-option-icon" aria-hidden="true"><i data-lucide="calendar"></i></span>
+                                <span class="step4-option-body">
+                                    <span class="time-choice-label">Sem horário fixo</span>
+                                    <span class="time-choice-subtitle">Essa rotina pode acontecer a qualquer momento</span>
+                                </span>
                             </label>
-                            <label class="time-choice-option time-choice-option--card" id="labelDefinirHorario">
+                            <div class="step4-time-fixed-wrap">
+                            <label class="time-choice-option time-choice-option--card step4-premium-option" id="labelDefinirHorario">
                                 <input type="radio" name="timeChoice" value="fixed" id="timeChoiceFixed">
                                 <span class="time-choice-radio"></span>
-                                <span class="time-choice-label">Horário fixo diário</span>
-                                <span class="time-choice-subtitle">Acontece todos os dias no mesmo horário</span>
-                                <span class="time-choice-value" id="timeChoiceValueDisplay" aria-hidden="true"></span>
+                                <span class="step4-option-check" aria-hidden="true"><i data-lucide="check"></i></span>
+                                <span class="step4-option-icon" aria-hidden="true"><i data-lucide="clock"></i></span>
+                                <span class="step4-option-body">
+                                    <span class="time-choice-label">Com horário fixo</span>
+                                    <span class="time-choice-subtitle">Acontece sempre no mesmo horário</span>
+                                </span>
                             </label>
+                            <p class="time-choice-value time-choice-value--external" id="timeChoiceValueDisplay" aria-live="polite"></p>
+                            </div>
                         </div>
+                        <p class="step4-premium-tip">
+                            <i data-lucide="lightbulb" aria-hidden="true"></i>
+                            <span>Dica: Você poderá editar isso depois, se precisar.</span>
+                        </p>
                         <div class="time-picker-wrapper" id="timePickerWrapper">
                             <input type="time" id="routineTime" class="time-picker-input-hidden" title="Horário">
-                            <div class="time-picker-card" id="timePickerPanel" role="group" aria-label="Selecionar horário">
-                                <p class="time-picker-card-display" id="timePickerDisplayBig" aria-live="polite">--:--</p>
-                                <div class="time-picker-card-fields">
-                                    <div class="time-picker-card-row">
-                                        <label for="timePickerHour" class="time-picker-card-label">HORA</label>
-                                        <select id="timePickerHour" class="form-input time-picker-select" aria-label="Hora">
-                                            <option value="">—</option>
-                                        </select>
+                            <div id="timePickerMount">
+                            <div class="time-picker-wheel" id="timePickerPanel" role="group" aria-label="Selecionar horário">
+                                <div class="time-picker-wheel__head">
+                                    <div class="time-picker-wheel__icon" aria-hidden="true"><i data-lucide="clock"></i></div>
+                                    <h4 class="time-picker-wheel__title" id="timePickerWheelTitle">Horário Fixo</h4>
+                                    <p class="time-picker-wheel__desc">Escolha o horário em que essa rotina acontecerá.</p>
+                                </div>
+                                <p class="time-picker-wheel__display" id="timePickerDisplayBig" aria-live="polite">-- : --</p>
+                                <div class="time-picker-wheel__columns">
+                                    <div class="time-picker-wheel__col">
+                                        <button type="button" class="time-picker-wheel__arrow time-picker-wheel__arrow--up" data-wheel="hour" aria-label="Hora anterior">
+                                            <i data-lucide="chevron-up" aria-hidden="true"></i>
+                                        </button>
+                                        <div class="time-picker-wheel__mask">
+                                            <span class="time-picker-wheel__center-slot" aria-hidden="true"></span>
+                                            <ul class="time-picker-wheel__list" id="timePickerHourList" data-wheel="hour" aria-label="Hora"></ul>
+                                        </div>
+                                        <button type="button" class="time-picker-wheel__arrow time-picker-wheel__arrow--down" data-wheel="hour" aria-label="Próxima hora">
+                                            <i data-lucide="chevron-down" aria-hidden="true"></i>
+                                        </button>
                                     </div>
-                                    <div class="time-picker-card-row">
-                                        <label for="timePickerMinute" class="time-picker-card-label">MINUTO</label>
-                                        <select id="timePickerMinute" class="form-input time-picker-select" aria-label="Minuto">
-                                            <option value="">—</option>
-                                        </select>
+                                    <span class="time-picker-wheel__sep" aria-hidden="true">:</span>
+                                    <div class="time-picker-wheel__col">
+                                        <button type="button" class="time-picker-wheel__arrow time-picker-wheel__arrow--up" data-wheel="minute" aria-label="Minuto anterior">
+                                            <i data-lucide="chevron-up" aria-hidden="true"></i>
+                                        </button>
+                                        <div class="time-picker-wheel__mask">
+                                            <span class="time-picker-wheel__center-slot" aria-hidden="true"></span>
+                                            <ul class="time-picker-wheel__list" id="timePickerMinuteList" data-wheel="minute" aria-label="Minuto"></ul>
+                                        </div>
+                                        <button type="button" class="time-picker-wheel__arrow time-picker-wheel__arrow--down" data-wheel="minute" aria-label="Próximo minuto">
+                                            <i data-lucide="chevron-down" aria-hidden="true"></i>
+                                        </button>
                                     </div>
                                 </div>
+                                <div class="time-picker-preview" aria-live="polite">
+                                    <div class="time-picker-preview__icon" aria-hidden="true"><i data-lucide="calendar-clock"></i></div>
+                                    <div class="time-picker-preview__body">
+                                        <span class="time-picker-preview__label">Prévia</span>
+                                        <p class="time-picker-preview__text" id="timePickerPreviewText">Selecione hora e minuto para ver a prévia.</p>
+                                    </div>
+                                </div>
+                                <button type="button" class="time-picker-confirm" id="timePickerConfirm" disabled>
+                                    <span class="time-picker-confirm__spinner" aria-hidden="true"></span>
+                                    <span class="time-picker-confirm__label">Continuar</span>
+                                    <i data-lucide="arrow-right" aria-hidden="true"></i>
+                                </button>
+                                <select id="timePickerHour" class="time-picker-select-sr" aria-hidden="true" tabindex="-1">
+                                    <option value="">â€”</option>
+                                </select>
+                                <select id="timePickerMinute" class="time-picker-select-sr" aria-hidden="true" tabindex="-1">
+                                    <option value="">â€”</option>
+                                </select>
+                            </div>
                             </div>
                         </div>
-                        <p class="commitment-time-warning" id="commitmentTimeWarning" style="display: none;">Compromissos costumam ter horário definido. Você pode continuar assim mesmo.</p>
                     </div>
+                    <div class="step4-premium-divider" aria-hidden="true"></div>
+                    <div class="form-group step4-monthly-group" id="step4MonthlyGroup" style="display: none;">
+                        <div class="step4-col-heading">
+                            <div class="step4-col-icon" aria-hidden="true"><i data-lucide="repeat"></i></div>
+                            <label class="step4-monthly-title">Repetição mensal</label>
+                            <p class="field-hint step4-monthly-subtitle">Escolha como essa rotina se repete no mês</p>
+                        </div>
+                        <div class="monthly-type-options time-choice-options time-choice-options--step4">
+                            <label class="monthly-type-option time-choice-option time-choice-option--card step4-premium-option">
+                                <input type="radio" name="monthlyType" value="dayOfMonth" id="monthlyTypeDayOfMonth">
+                                <span class="time-choice-radio"></span>
+                                <span class="step4-option-check" aria-hidden="true"><i data-lucide="check"></i></span>
+                                <span class="step4-option-icon" aria-hidden="true"><i data-lucide="calendar"></i></span>
+                                <span class="step4-option-body">
+                                    <span class="time-choice-label">Dia fixo no mês</span>
+                                    <span class="time-choice-subtitle">Todo mês no mesmo dia (ex: dia 15)</span>
+                                </span>
+                            </label>
+                            <div class="step4-monthly-pattern-wrap">
+                            <label class="monthly-type-option time-choice-option time-choice-option--card step4-premium-option">
+                                <input type="radio" name="monthlyType" value="weekOfMonth" id="monthlyTypeWeekOfMonth">
+                                <span class="time-choice-radio"></span>
+                                <span class="step4-option-check" aria-hidden="true"><i data-lucide="check"></i></span>
+                                <span class="step4-option-icon" aria-hidden="true"><i data-lucide="calendar-days"></i></span>
+                                <span class="step4-option-body">
+                                    <span class="time-choice-label">Padrão semanal</span>
+                                    <span class="time-choice-subtitle">Ex: toda 2Âª segunda-feira do mês</span>
+                                </span>
+                            </label>
+                            <p class="monthly-choice-value time-choice-value time-choice-value--external" id="monthlyChoiceValueDisplay" aria-live="polite"></p>
+                            </div>
+                        </div>
+                        <div class="monthly-day-fixed" id="monthlyDayFixed" style="display: none;">
+                            <div id="monthlyDayFixedMount">
+                            <p class="monthly-day-fixed-label">Selecione o dia do mês</p>
+                            <div id="monthlyDayCalendar" class="monthly-day-calendar" aria-label="Selecione o dia do mês"></div>
+                            <label for="monthlyDayOfMonth" class="visually-hidden">Todo dia</label>
+                            <select id="monthlyDayOfMonth" class="form-input visually-hidden" aria-hidden="true">
+                                <option value="">â€”</option>
+                                <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+                                <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
+                                <option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option>
+                                <option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option>
+                                <option value="21">21</option><option value="22">22</option><option value="23">23</option><option value="24">24</option><option value="25">25</option>
+                                <option value="26">26</option><option value="27">27</option><option value="28">28</option><option value="29">29</option><option value="30">30</option><option value="31">31</option>
+                            </select>
+                            <span class="monthly-day-fixed-suffix visually-hidden">do mês</span>
+                            </div>
+                        </div>
+                        <div class="monthly-week-pattern" id="monthlyWeekPattern" style="display: none;">
+                            <div id="monthlyWeekPatternMount">
+                            <div class="monthly-pattern-card monthly-pattern-card--premium">
+                                <header class="monthly-pattern-header">
+                                    <div class="monthly-pattern-header__icon" aria-hidden="true"><i data-lucide="calendar-days"></i></div>
+                                    <div class="monthly-pattern-header__text">
+                                        <h4 class="monthly-pattern-header__title">Padrão Semanal</h4>
+                                        <p class="monthly-pattern-header__desc">Escolha uma combinação de semana e dia para repetir sua rotina mensalmente.</p>
+                                    </div>
+                                </header>
+                                <div class="monthly-pattern-card-fields">
+                                    <section class="monthly-pattern-section">
+                                        <h5 class="monthly-pattern-section__label">1. Em qual semana do mês?</h5>
+                                        <div class="monthly-pattern-week-grid" role="radiogroup" aria-label="Semana do mês">
+                                            <button type="button" class="monthly-pattern-week-btn" data-value="1" aria-pressed="false">
+                                                <span class="monthly-pattern-week-btn__icon" aria-hidden="true">
+                                                    <span class="monthly-pattern-mini-cal"><span class="monthly-pattern-mini-cal__bar"></span><span class="monthly-pattern-mini-cal__ord">1Âª</span></span>
+                                                </span>
+                                                <span class="monthly-pattern-week-btn__label">Primeira</span>
+                                            </button>
+                                            <button type="button" class="monthly-pattern-week-btn" data-value="2" aria-pressed="false">
+                                                <span class="monthly-pattern-week-btn__icon" aria-hidden="true">
+                                                    <span class="monthly-pattern-mini-cal"><span class="monthly-pattern-mini-cal__bar"></span><span class="monthly-pattern-mini-cal__ord">2Âª</span></span>
+                                                </span>
+                                                <span class="monthly-pattern-week-btn__label">Segunda</span>
+                                            </button>
+                                            <button type="button" class="monthly-pattern-week-btn" data-value="3" aria-pressed="false">
+                                                <span class="monthly-pattern-week-btn__icon" aria-hidden="true">
+                                                    <span class="monthly-pattern-mini-cal"><span class="monthly-pattern-mini-cal__bar"></span><span class="monthly-pattern-mini-cal__ord">3Âª</span></span>
+                                                </span>
+                                                <span class="monthly-pattern-week-btn__label">Terceira</span>
+                                            </button>
+                                            <button type="button" class="monthly-pattern-week-btn" data-value="4" aria-pressed="false">
+                                                <span class="monthly-pattern-week-btn__icon" aria-hidden="true">
+                                                    <span class="monthly-pattern-mini-cal"><span class="monthly-pattern-mini-cal__bar"></span><span class="monthly-pattern-mini-cal__ord">4Âª</span></span>
+                                                </span>
+                                                <span class="monthly-pattern-week-btn__label">Quarta</span>
+                                            </button>
+                                            <button type="button" class="monthly-pattern-week-btn" data-value="last" aria-pressed="false">
+                                                <span class="monthly-pattern-week-btn__icon" aria-hidden="true">
+                                                    <span class="monthly-pattern-mini-cal monthly-pattern-mini-cal--last"><span class="monthly-pattern-mini-cal__bar"></span><span class="monthly-pattern-mini-cal__ord">Ãšlt</span></span>
+                                                </span>
+                                                <span class="monthly-pattern-week-btn__label">Ãšltima</span>
+                                            </button>
+                                        </div>
+                                    </section>
+                                    <section class="monthly-pattern-section">
+                                        <h5 class="monthly-pattern-section__label">2. Em qual dia da semana?</h5>
+                                        <div class="monthly-pattern-day-grid" role="radiogroup" aria-label="Dia da semana">
+                                            <button type="button" class="monthly-pattern-day-btn" data-value="1" aria-pressed="false">
+                                                <span class="monthly-pattern-day-btn__abbr">SEG</span>
+                                                <span class="monthly-pattern-day-btn__name">Segunda</span>
+                                            </button>
+                                            <button type="button" class="monthly-pattern-day-btn" data-value="2" aria-pressed="false">
+                                                <span class="monthly-pattern-day-btn__abbr">TER</span>
+                                                <span class="monthly-pattern-day-btn__name">Terça</span>
+                                            </button>
+                                            <button type="button" class="monthly-pattern-day-btn" data-value="3" aria-pressed="false">
+                                                <span class="monthly-pattern-day-btn__abbr">QUA</span>
+                                                <span class="monthly-pattern-day-btn__name">Quarta</span>
+                                            </button>
+                                            <button type="button" class="monthly-pattern-day-btn" data-value="4" aria-pressed="false">
+                                                <span class="monthly-pattern-day-btn__abbr">QUI</span>
+                                                <span class="monthly-pattern-day-btn__name">Quinta</span>
+                                            </button>
+                                            <button type="button" class="monthly-pattern-day-btn" data-value="5" aria-pressed="false">
+                                                <span class="monthly-pattern-day-btn__abbr">SEX</span>
+                                                <span class="monthly-pattern-day-btn__name">Sexta</span>
+                                            </button>
+                                            <button type="button" class="monthly-pattern-day-btn" data-value="6" aria-pressed="false">
+                                                <span class="monthly-pattern-day-btn__abbr">SÁB</span>
+                                                <span class="monthly-pattern-day-btn__name">Sábado</span>
+                                            </button>
+                                            <button type="button" class="monthly-pattern-day-btn" data-value="0" aria-pressed="false">
+                                                <span class="monthly-pattern-day-btn__abbr">DOM</span>
+                                                <span class="monthly-pattern-day-btn__name">Domingo</span>
+                                            </button>
+                                        </div>
+                                    </section>
+                                    <div class="monthly-pattern-preview" aria-live="polite">
+                                        <div class="monthly-pattern-preview__body">
+                                            <span class="monthly-pattern-preview__label">Pré-visualização</span>
+                                            <p class="monthly-pattern-preview__text" id="monthlyPatternPreviewText">Selecione a semana e o dia para ver a pré-visualização.</p>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="monthly-pattern-confirm" id="monthlyPatternConfirm" disabled>
+                                        <span>Confirmar</span>
+                                        <i data-lucide="arrow-right" aria-hidden="true"></i>
+                                    </button>
+                                </div>
+                                <select id="monthlyWeekOfMonth" class="form-input monthly-pattern-select monthly-pattern-select--sr" aria-hidden="true" tabindex="-1">
+                                    <option value="">â€”</option>
+                                    <option value="1">1Âª</option>
+                                    <option value="2">2Âª</option>
+                                    <option value="3">3Âª</option>
+                                    <option value="4">4Âª</option>
+                                    <option value="last">última</option>
+                                </select>
+                                <select id="monthlyDayOfWeek" class="form-input monthly-pattern-select monthly-pattern-select--sr" aria-hidden="true" tabindex="-1">
+                                    <option value="">â€”</option>
+                                    <option value="0">domingo</option>
+                                    <option value="1">segunda</option>
+                                    <option value="2">terça</option>
+                                    <option value="3">quarta</option>
+                                    <option value="4">quinta</option>
+                                    <option value="5">sexta</option>
+                                    <option value="6">sábado</option>
+                                </select>
+                            </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="step4-premium-divider" aria-hidden="true"></div>
                     <div class="form-group step4-weekdays-group" id="step4WeekdaysGroup" style="display: none;">
-                        <!-- Diário: 2 cards (Todos os dias / Dias específicos) -->
+                        <div class="step4-col-heading">
+                            <div class="step4-col-icon" aria-hidden="true"><i data-lucide="calendar-days"></i></div>
+                            <label class="step4-weekdays-title" id="step4WeekdaysColTitle">Em quais dias?</label>
+                            <p class="field-hint step4-weekdays-subtitle" id="step4WeekdaysColSubtitle">Escolha se a rotina é todos os dias ou em dias específicos</p>
+                        </div>
+                        <div class="step4-weekdays-body">
                         <div class="step4-daily-days-wrap" id="step4DailyDaysWrap" style="display: none;">
-                            <label class="step4-daily-days-title">Em quais dias?</label>
-                            <p class="field-hint step4-daily-days-subtitle">Escolha se a rotina é todos os dias ou em dias específicos</p>
                             <div class="daily-day-type-options time-choice-options time-choice-options--step4" id="dailyDayTypeOptions">
-                                <label class="time-choice-option time-choice-option--card daily-day-type-option" id="labelDailyAll">
+                                <label class="time-choice-option time-choice-option--card daily-day-type-option step4-premium-option" id="labelDailyAll">
                                     <input type="radio" name="dailyDayType" value="all" id="dailyDayTypeAll">
                                     <span class="time-choice-radio"></span>
-                                    <span class="time-choice-label">Todos os dias</span>
-                                    <span class="time-choice-subtitle">A rotina acontece todos os dias da semana</span>
+                                    <span class="step4-option-check" aria-hidden="true"><i data-lucide="check"></i></span>
+                                    <span class="step4-option-icon" aria-hidden="true"><i data-lucide="calendar-range"></i></span>
+                                    <span class="step4-option-body">
+                                        <span class="time-choice-label">Todos os dias</span>
+                                        <span class="time-choice-subtitle">A rotina acontece todos os dias da semana</span>
+                                    </span>
                                 </label>
-                                <label class="time-choice-option time-choice-option--card daily-day-type-option" id="labelDailySpecific">
+                                <label class="time-choice-option time-choice-option--card daily-day-type-option step4-premium-option" id="labelDailySpecific">
                                     <input type="radio" name="dailyDayType" value="specific" id="dailyDayTypeSpecific">
                                     <span class="time-choice-radio"></span>
-                                    <span class="time-choice-label">Dias específicos</span>
-                                    <span class="time-choice-subtitle">Escolha em quais dias da semana</span>
+                                    <span class="step4-option-check" aria-hidden="true"><i data-lucide="check"></i></span>
+                                    <span class="step4-option-icon" aria-hidden="true"><i data-lucide="calendar-days"></i></span>
+                                    <span class="step4-option-body">
+                                        <span class="time-choice-label">Dias específicos</span>
+                                        <span class="time-choice-subtitle">Escolha em quais dias da semana</span>
+                                    </span>
                                 </label>
                             </div>
-                            <div class="daily-specific-days" id="dailySpecificDays" style="display: none;">
-                                <p class="field-hint daily-specific-days-hint">Selecione os dias em que essa rotina acontece</p>
-                            </div>
                         </div>
-                        <!-- Semanal: só título + chips -->
-                        <div class="step4-weekly-days-wrap" id="step4WeeklyDaysWrap" style="display: none;">
-                            <label class="weekdays-group-label">Dias da semana</label>
-                            <p class="field-hint weekdays-group-hint">Selecione os dias da semana</p>
-                        </div>
-                        <!-- Chips de dias (usados em diário "específicos" e em semanal) -->
                         <div class="weekdays-checkboxes-wrap" id="weekdaysCheckboxesWrap" style="display: none;">
                             <div class="weekdays-checkboxes" id="weekdaysCheckboxes">
                                 <label class="weekday-chip"><input type="checkbox" name="weekDay" value="1"><span>Seg</span></label>
@@ -279,79 +658,165 @@
                                 <label class="weekday-chip"><input type="checkbox" name="weekDay" value="6"><span>Sáb</span></label>
                                 <label class="weekday-chip"><input type="checkbox" name="weekDay" value="0"><span>Dom</span></label>
                             </div>
+                            <p class="weekdays-choice-value" id="weekdaysChoiceValueDisplay" aria-live="polite"></p>
                             <p class="weekdays-hint-empty" id="weekdaysHintEmpty" style="display: none;">Selecione pelo menos um dia</p>
+                            <button type="button" class="step4-weekdays-back" id="step4WeekdaysBack" aria-label="Voltar para opções de dias">
+                                <i data-lucide="arrow-left" aria-hidden="true"></i>
+                                <span>Voltar</span>
+                            </button>
+                        </div>
                         </div>
                     </div>
-                    <div class="form-group step4-monthly-group" id="step4MonthlyGroup" style="display: none;">
-                        <label class="step4-monthly-title">REPETIÇÃO MENSAL</label>
-                        <p class="field-hint step4-monthly-subtitle">COMO ESSA ROTINA ACONTECE NO MÊS</p>
-                        <div class="monthly-type-options time-choice-options time-choice-options--step4">
-                            <label class="monthly-type-option time-choice-option time-choice-option--card">
-                                <input type="radio" name="monthlyType" value="dayOfMonth" id="monthlyTypeDayOfMonth">
-                                <span class="time-choice-radio"></span>
-                                <span class="time-choice-label">Dia fixo no mês</span>
-                                <span class="time-choice-subtitle">Todo mês no mesmo dia (ex: dia 15)</span>
-                            </label>
-                            <label class="monthly-type-option time-choice-option time-choice-option--card">
-                                <input type="radio" name="monthlyType" value="weekOfMonth" id="monthlyTypeWeekOfMonth">
-                                <span class="time-choice-radio"></span>
-                                <span class="time-choice-label">Padrão semanal</span>
-                                <span class="time-choice-subtitle">Ex: toda 2ª segunda-feira do mês</span>
-                            </label>
+                    <div class="form-group step4-task-group" id="step4TaskGroup" style="display: none;">
+                        <div class="step4-col-heading">
+                            <div class="step4-col-icon" aria-hidden="true"><i data-lucide="zap"></i></div>
+                            <label class="step4-task-title">Tarefa rápida</label>
+                            <p class="field-hint step4-task-subtitle">Execute quando quiser â€” sem repetição programada</p>
                         </div>
-                        <div class="monthly-day-fixed" id="monthlyDayFixed" style="display: none;">
-                            <p class="monthly-day-fixed-label">Selecione o dia do mês</p>
-                            <div id="monthlyDayCalendar" class="monthly-day-calendar" aria-label="Selecione o dia do mês"></div>
-                            <label for="monthlyDayOfMonth" class="visually-hidden">Todo dia</label>
-                            <select id="monthlyDayOfMonth" class="form-input visually-hidden" aria-hidden="true">
-                                <option value="">—</option>
-                                <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
-                                <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
-                                <option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option>
-                                <option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option>
-                                <option value="21">21</option><option value="22">22</option><option value="23">23</option><option value="24">24</option><option value="25">25</option>
-                                <option value="26">26</option><option value="27">27</option><option value="28">28</option><option value="29">29</option><option value="30">30</option><option value="31">31</option>
-                            </select>
-                            <span class="monthly-day-fixed-suffix visually-hidden">do mês</span>
+                        <div class="step4-task-shell" id="step4TaskShell" aria-live="polite">
+                            <p class="step4-task-placeholder">Área reservada para opções da tarefa rápida.</p>
                         </div>
-                        <div class="monthly-week-pattern" id="monthlyWeekPattern" style="display: none;">
-                            <div class="monthly-pattern-card">
-                                <p class="monthly-pattern-card-title">Quando no mês?</p>
-                                <p class="monthly-pattern-card-hint">Escolha em qual semana do mês e em qual dia da semana a rotina acontece (ex.: toda 2ª segunda-feira).</p>
-                                <div class="monthly-pattern-card-fields">
-                                    <div class="monthly-pattern-row">
-                                        <label for="monthlyWeekOfMonth" class="monthly-pattern-label">Semana do mês</label>
-                                        <select id="monthlyWeekOfMonth" class="form-input monthly-pattern-select">
-                                            <option value="">—</option>
-                                            <option value="1">1ª</option>
-                                            <option value="2">2ª</option>
-                                            <option value="3">3ª</option>
-                                            <option value="4">4ª</option>
-                                            <option value="last">última</option>
-                                        </select>
+                    </div>
+                    <div class="step4-premium-divider step4-study-goal-divider" id="step4StudyGoalDivider" style="display: none;" aria-hidden="true"></div>
+                    <div class="form-group step4-study-goal-group" id="step4StudyGoalGroup" style="display: none;">
+                        <div class="step4-col-heading">
+                            <div class="step4-col-icon" aria-hidden="true"><i data-lucide="target"></i></div>
+                            <label class="step4-study-goal-title">Meta diária de estudo</label>
+                            <p class="field-hint step4-study-goal-subtitle">Ao atingir a meta, a rotina é concluída automaticamente no dia</p>
+                        </div>
+                        <div class="study-goal-type-toggle time-choice-options time-choice-options--step4">
+                            <div class="step4-study-cards">
+                            <label class="time-choice-option time-choice-option--card step4-premium-option study-goal-type-option" id="labelStudyGoalMeta">
+                                <input type="radio" name="studyGoalType" value="time">
+                                <span class="time-choice-radio"></span>
+                                <span class="step4-option-check" aria-hidden="true"><i data-lucide="check"></i></span>
+                                <span class="step4-option-icon" aria-hidden="true"><i data-lucide="clock"></i></span>
+                                <span class="step4-option-body">
+                                    <span class="time-choice-label">Selecionar meta</span>
+                                    <span class="time-choice-subtitle">Quanto tempo quer estudar por dia</span>
+                                </span>
+                            </label>
+                            <label class="time-choice-option time-choice-option--card step4-premium-option study-goal-type-option" id="labelStudyGoalStart">
+                                <input type="radio" name="studyGoalType" value="startTime">
+                                <span class="time-choice-radio"></span>
+                                <span class="step4-option-check" aria-hidden="true"><i data-lucide="check"></i></span>
+                                <span class="step4-option-icon" aria-hidden="true"><i data-lucide="clock"></i></span>
+                                <span class="step4-option-body">
+                                    <span class="time-choice-label">Horário de início</span>
+                                    <span class="time-choice-subtitle">Quando você costuma começar a estudar</span>
+                                </span>
+                            </label>
+                            </div>
+                            <p class="time-choice-value time-choice-value--external" id="studyGoalMetaValueDisplay" aria-live="polite"></p>
+                            <p class="time-choice-value time-choice-value--external" id="studyGoalStartValueDisplay" aria-live="polite"></p>
+                        </div>
+                        <div class="study-goal-picker-wrapper" id="studyGoalMetaPickerWrapper" style="display: none;" aria-hidden="true">
+                            <div id="studyGoalMetaPickerMount">
+                                <div class="study-goal-targets study-goal-picker-wrap" id="studyGoalMetaPicker">
+                                    <div class="study-goal-picker study-goal-picker__card study-goal-picker--modal" role="group" aria-label="Duração diária de estudo">
+                                        <div class="study-goal-picker__wheels time-picker-wheel__columns">
+                                            <div class="time-picker-wheel__col">
+                                                <span class="time-picker-wheel__col-label">Horas</span>
+                                                <button type="button" class="time-picker-wheel__arrow time-picker-wheel__arrow--up" data-study-picker="meta" data-wheel="hour" aria-label="Hora anterior">
+                                                    <i data-lucide="chevron-up" aria-hidden="true"></i>
+                                                </button>
+                                                <div class="time-picker-wheel__mask">
+                                                    <span class="time-picker-wheel__center-slot" aria-hidden="true"></span>
+                                                    <ul class="time-picker-wheel__list" id="studyGoalMetaHourList" data-wheel="hour" aria-label="Horas de meta"></ul>
+                                                </div>
+                                                <button type="button" class="time-picker-wheel__arrow time-picker-wheel__arrow--down" data-study-picker="meta" data-wheel="hour" aria-label="Próxima hora">
+                                                    <i data-lucide="chevron-down" aria-hidden="true"></i>
+                                                </button>
+                                            </div>
+                                            <span class="time-picker-wheel__sep" aria-hidden="true">:</span>
+                                            <div class="time-picker-wheel__col">
+                                                <span class="time-picker-wheel__col-label">Min</span>
+                                                <button type="button" class="time-picker-wheel__arrow time-picker-wheel__arrow--up" data-study-picker="meta" data-wheel="minute" aria-label="Minuto anterior">
+                                                    <i data-lucide="chevron-up" aria-hidden="true"></i>
+                                                </button>
+                                                <div class="time-picker-wheel__mask">
+                                                    <span class="time-picker-wheel__center-slot" aria-hidden="true"></span>
+                                                    <ul class="time-picker-wheel__list" id="studyGoalMetaMinuteList" data-wheel="minute" aria-label="Minutos de meta"></ul>
+                                                </div>
+                                                <button type="button" class="time-picker-wheel__arrow time-picker-wheel__arrow--down" data-study-picker="meta" data-wheel="minute" aria-label="Próximo minuto">
+                                                    <i data-lucide="chevron-down" aria-hidden="true"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="study-goal-picker__footer">
+                                            <p class="field-hint study-goal-targets-label">Meta diária</p>
+                                            <p class="study-goal-picker__display" id="studyGoalMetaDisplay" aria-live="polite">-- : --</p>
+                                            <button type="button" class="time-picker-confirm study-goal-meta-confirm" id="studyGoalMetaConfirm" disabled>
+                                                <span class="time-picker-confirm__spinner" aria-hidden="true"></span>
+                                                <span>Continuar</span>
+                                                <i data-lucide="arrow-right" aria-hidden="true"></i>
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div class="monthly-pattern-row">
-                                        <label for="monthlyDayOfWeek" class="monthly-pattern-label">Dia da semana</label>
-                                        <select id="monthlyDayOfWeek" class="form-input monthly-pattern-select">
-                                            <option value="">—</option>
-                                            <option value="0">domingo</option>
-                                            <option value="1">segunda</option>
-                                            <option value="2">terça</option>
-                                            <option value="3">quarta</option>
-                                            <option value="4">quinta</option>
-                                            <option value="5">sexta</option>
-                                            <option value="6">sábado</option>
-                                        </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="study-goal-picker-wrapper" id="studyGoalStartPickerWrapper" style="display: none;" aria-hidden="true">
+                            <div id="studyGoalStartPickerMount">
+                                <div class="study-goal-targets study-goal-picker-wrap" id="studyGoalStartPicker">
+                                    <div class="study-goal-picker study-goal-picker__card study-goal-picker--modal" role="group" aria-label="Horário de início dos estudos">
+                                        <div class="study-goal-picker__wheels time-picker-wheel__columns">
+                                            <div class="time-picker-wheel__col">
+                                                <span class="time-picker-wheel__col-label">Horas</span>
+                                                <button type="button" class="time-picker-wheel__arrow time-picker-wheel__arrow--up" data-study-picker="start" data-wheel="hour" aria-label="Hora anterior">
+                                                    <i data-lucide="chevron-up" aria-hidden="true"></i>
+                                                </button>
+                                                <div class="time-picker-wheel__mask">
+                                                    <span class="time-picker-wheel__center-slot" aria-hidden="true"></span>
+                                                    <ul class="time-picker-wheel__list" id="studyStartHourList" data-wheel="hour" aria-label="Hora de início"></ul>
+                                                </div>
+                                                <button type="button" class="time-picker-wheel__arrow time-picker-wheel__arrow--down" data-study-picker="start" data-wheel="hour" aria-label="Próxima hora">
+                                                    <i data-lucide="chevron-down" aria-hidden="true"></i>
+                                                </button>
+                                            </div>
+                                            <span class="time-picker-wheel__sep" aria-hidden="true">:</span>
+                                            <div class="time-picker-wheel__col">
+                                                <span class="time-picker-wheel__col-label">Min</span>
+                                                <button type="button" class="time-picker-wheel__arrow time-picker-wheel__arrow--up" data-study-picker="start" data-wheel="minute" aria-label="Minuto anterior">
+                                                    <i data-lucide="chevron-up" aria-hidden="true"></i>
+                                                </button>
+                                                <div class="time-picker-wheel__mask">
+                                                    <span class="time-picker-wheel__center-slot" aria-hidden="true"></span>
+                                                    <ul class="time-picker-wheel__list" id="studyStartMinuteList" data-wheel="minute" aria-label="Minuto de início"></ul>
+                                                </div>
+                                                <button type="button" class="time-picker-wheel__arrow time-picker-wheel__arrow--down" data-study-picker="start" data-wheel="minute" aria-label="Próximo minuto">
+                                                    <i data-lucide="chevron-down" aria-hidden="true"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="study-goal-picker__footer">
+                                            <p class="field-hint study-goal-targets-label">Horário de início</p>
+                                            <p class="study-goal-picker__display" id="studyGoalStartDisplay" aria-live="polite">-- : --</p>
+                                            <button type="button" class="time-picker-confirm study-goal-start-confirm" id="studyGoalStartConfirm" disabled>
+                                                <span class="time-picker-confirm__spinner" aria-hidden="true"></span>
+                                                <span>Continuar</span>
+                                                <i data-lucide="arrow-right" aria-hidden="true"></i>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
+                    </div>
                     <p class="schedule-preview" id="schedulePreview" aria-live="polite"></p>
-                    <div class="wizard-step-actions wizard-step-actions--with-back form-actions">
-                        <button type="button" class="btn-voltar" data-goto="3" onclick="typeof goToStep === 'function' && goToStep(3); return false;">Voltar</button>
+                    <div class="wizard-step-actions wizard-step-actions--with-back form-actions step4-premium-footer">
+                        <button type="button" class="btn-voltar step4-premium-btn-back" data-goto="3" onclick="typeof goToStep === 'function' && goToStep(3); return false;">
+                            <i data-lucide="arrow-left" aria-hidden="true"></i>
+                            <span>Voltar</span>
+                        </button>
                         <button type="button" class="btn-cancel" onclick="window.location.href='dashboard.html'">Cancelar</button>
-                        <button type="button" class="btn-create" id="btnCreateRoutine" onclick="window.createRoutine && window.createRoutine(); return false;">Criar Rotina</button>
+                        <button type="button" class="btn-create step4-premium-btn-create" id="btnCreateRoutine">
+                            <span class="step4-premium-btn-create__spinner" aria-hidden="true"></span>
+                            <span class="step4-premium-btn-create__label">Criar Rotina</span>
+                            <i data-lucide="arrow-right" aria-hidden="true"></i>
+                        </button>
+                    </div>
                 </div>
                 </div>
             </form>
@@ -371,6 +836,70 @@
             </div>
         </div>
     </main>
+
+    <!-- Modal centralizado â€” pickers do passo 4 -->
+    <div class="step4-picker-modal hidden" id="step4PickerModal" role="dialog" aria-modal="true" aria-labelledby="step4PickerModalIntroTitle" aria-hidden="true">
+        <div class="step4-picker-modal__overlay" id="step4PickerModalOverlay"></div>
+        <div class="step4-picker-modal__card">
+            <button type="button" class="step4-picker-modal__close" id="step4PickerModalClose" aria-label="Fechar">Ã—</button>
+            <div class="step4-picker-modal__intro hidden" id="step4PickerModalIntro">
+                <div class="step4-picker-modal__intro-icon" id="step4PickerModalIntroIconHost" aria-hidden="true"></div>
+                <h3 class="step4-picker-modal__intro-title" id="step4PickerModalIntroTitle"></h3>
+                <p class="step4-picker-modal__intro-desc" id="step4PickerModalIntroDesc"></p>
+                <div class="step4-picker-modal__example" id="step4PickerModalExample">
+                    <div class="step4-picker-modal__example-icon" id="step4PickerModalExampleIconHost" aria-hidden="true"></div>
+                    <div class="step4-picker-modal__example-text">
+                        <span class="step4-picker-modal__example-label">Exemplo</span>
+                        <span class="step4-picker-modal__example-value" id="step4PickerModalExampleValue"></span>
+                    </div>
+                </div>
+                <p class="step4-picker-modal__perfect-label">Perfeito para</p>
+                <div class="step4-picker-modal__tags" id="step4PickerModalTags"></div>
+                <div class="step4-picker-modal__tip">
+                    <i data-lucide="lightbulb" aria-hidden="true"></i>
+                    <span id="step4PickerModalIntroTip"></span>
+                </div>
+                <button type="button" class="step4-picker-modal__continue" id="step4PickerModalContinue">
+                    <span class="step4-picker-modal__continue-spinner" aria-hidden="true"></span>
+                    <span>Continuar</span>
+                    <i data-lucide="arrow-right" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="step4-picker-modal__picker hidden" id="step4PickerModalPicker">
+                <h3 class="step4-picker-modal__title" id="step4PickerModalTitle"></h3>
+                <p class="step4-picker-modal__subtitle" id="step4PickerModalSubtitle" hidden></p>
+                <div class="step4-picker-modal__body" id="step4PickerModalBody"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmação antes de criar/salvar rotina (passo 4) -->
+    <div class="step4-create-loading hidden" id="step4CreateLoading" aria-hidden="true" aria-live="polite" aria-busy="false">
+        <div class="step4-create-loading__backdrop" aria-hidden="true"></div>
+        <div class="step4-create-loading__inner">
+            <div class="step4-create-loading__spinner" aria-hidden="true"></div>
+            <p class="step4-create-loading__title" id="step4CreateLoadingTitle">Criando sua rotinaâ€¦</p>
+            <p class="step4-create-loading__subtitle" id="step4CreateLoadingSubtitle">Aguarde um instante</p>
+        </div>
+    </div>
+
+    <div class="step4-create-confirm-modal hidden" id="createRoutineConfirmModal" role="dialog" aria-modal="true" aria-labelledby="createRoutineConfirmTitle" aria-hidden="true">
+        <div class="step4-create-confirm-modal__overlay" id="createRoutineConfirmOverlay"></div>
+        <div class="step4-create-confirm-modal__card" id="createRoutineConfirmCard">
+            <div class="step4-create-confirm-modal__icon" aria-hidden="true"><i data-lucide="circle-check"></i></div>
+            <h3 class="step4-create-confirm-modal__title" id="createRoutineConfirmTitle">Confirmar rotina</h3>
+            <p class="step4-create-confirm-modal__lead">Sua rotina ficará assim:</p>
+            <p class="step4-create-confirm-modal__name" id="createRoutineConfirmName"></p>
+            <p class="step4-create-confirm-modal__schedule" id="createRoutineConfirmSchedule"></p>
+            <div class="step4-create-confirm-modal__actions">
+                <button type="button" class="step4-create-confirm-modal__cancel" id="createRoutineConfirmCancel">Voltar</button>
+                <button type="button" class="step4-create-confirm-modal__submit" id="createRoutineConfirmSubmit">
+                    <span id="createRoutineConfirmSubmitLabel">Criar tarefa</span>
+                    <i data-lucide="arrow-right" aria-hidden="true"></i>
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Modal de perfil (antes dos scripts que o inicializam) -->
     <div class="user-profile-modal hidden" id="userProfileModal" role="dialog" aria-modal="true" aria-labelledby="userProfileModalTitle" aria-hidden="true">
@@ -393,21 +922,21 @@
                     </button>
                 </div>
             </div>
-            <button type="button" class="user-profile-close" id="userProfileClose" aria-label="Fechar perfil">×</button>
+            <button type="button" class="user-profile-close" id="userProfileClose" aria-label="Fechar perfil">Ã—</button>
             <div class="user-profile-head">
                 <div class="user-profile-avatar-block">
                     <img id="profileModalAvatar" class="user-profile-avatar-img hidden" alt="" width="76" height="76" decoding="async" />
                     <div id="profileModalAvatarFall" class="user-profile-avatar-fallback" aria-hidden="true"></div>
                 </div>
                 <p class="user-profile-eyebrow">Perfil</p>
-                <h2 class="user-profile-display-name" id="userProfileModalTitle">—</h2>
+                <h2 class="user-profile-display-name" id="userProfileModalTitle">â€”</h2>
                 <p class="user-profile-email" id="profileModalEmail"></p>
             </div>
             <div class="user-profile-body" id="userProfileViewMode">
                 <dl class="user-profile-dl">
-                    <dt>Nome</dt><dd id="profileViewName">—</dd>
-                    <dt>Gênero</dt><dd id="profileViewSexuality">—</dd>
-                    <dt>Idade</dt><dd id="profileViewAge">—</dd>
+                    <dt>Nome</dt><dd id="profileViewName">â€”</dd>
+                    <dt>Gênero</dt><dd id="profileViewSexuality">â€”</dd>
+                    <dt>Idade</dt><dd id="profileViewAge">â€”</dd>
                 </dl>
                 <div class="user-profile-stats" aria-label="Estatísticas">
                     <div class="user-profile-stat">
@@ -477,14 +1006,21 @@
         var planType = planTypeEl ? planTypeEl.value : 'daily';
         var weekdaysGroup = document.getElementById('step4WeekdaysGroup');
         var monthlyGroup = document.getElementById('step4MonthlyGroup');
-        if (weekdaysGroup) weekdaysGroup.style.display = planType === 'weekly' ? 'block' : 'none';
+        if (weekdaysGroup) weekdaysGroup.style.display = (planType === 'daily' || planType === 'weekly') ? 'block' : 'none';
         if (monthlyGroup) monthlyGroup.style.display = planType === 'monthly' ? 'block' : 'none';
       }
       function showStep(step) {
+        if (typeof window.showWizardStep === 'function') {
+          window.showWizardStep(step, { instant: true });
+          if (step === 4) updateStep4Visibility();
+          return;
+        }
         var steps = document.querySelectorAll('.create-step');
         if (!steps.length) return;
         for (var i = 0; i < steps.length; i++) {
-          steps[i].style.display = steps[i].getAttribute('data-step') === String(step) ? 'block' : 'none';
+          var isOn = steps[i].getAttribute('data-step') === String(step);
+          steps[i].style.display = isOn ? 'block' : 'none';
+          steps[i].classList.toggle('is-current', isOn);
         }
         if (step === 4) updateStep4Visibility();
       }
@@ -507,25 +1043,27 @@
             return;
           }
         }
-        window.__wizardStep = fromStep + 1;
-        showStep(window.__wizardStep);
-        updateProgress(window.__wizardStep);
+        var target = fromStep + 1;
+        window.__wizardStep = target;
+        if (typeof window.goToNextStep === 'function' && window.goToNextStep !== nextStep) {
+          window.goToNextStep(fromStep);
+        } else {
+          showStep(target);
+          updateProgress(target);
+        }
       }
-      window.goToNextStep = nextStep;
-      function goToStep(step) {
+      function goToStepFallback(step) {
         var s = parseInt(step, 10);
         if (s < 1 || s > 4) return;
         window.__wizardStep = s;
-        showStep(s);
-        updateProgress(s);
+        if (typeof window.goToStep === 'function' && window.goToStep !== goToStepFallback) {
+          window.goToStep(s);
+        } else {
+          showStep(s);
+          updateProgress(s);
+        }
       }
-      window.goToStep = goToStep;
-      var b1 = document.getElementById('btnContinuarStep1');
-      var b2 = document.getElementById('btnContinuarStep2');
-      var b3 = document.getElementById('btnContinuarStep3');
-      if (b1) b1.addEventListener('click', function(e) { e.preventDefault(); nextStep(1); }, true);
-      if (b2) b2.addEventListener('click', function(e) { e.preventDefault(); nextStep(2); }, true);
-      if (b3) b3.addEventListener('click', function(e) { e.preventDefault(); nextStep(3); }, true);
+      window.goToStep = goToStepFallback;
       function showRoutineToastInline(msg) {
         var c = document.getElementById('notificationContainer');
         if (!c) return;
@@ -580,7 +1118,7 @@
       function createRoutineFallback() {
         var titleEl = document.getElementById('routineTitle');
         var title = titleEl ? titleEl.value.trim() : '';
-        if (!title) { alert('Por favor, preencha o nome da tarefa no passo 2.'); return; }
+        if (!title) title = 'Sem t\u00edtulo';
         var planTypeEl = document.querySelector('input[name="planType"]:checked');
         var planType = planTypeEl ? planTypeEl.value : 'daily';
         var bulletEl = document.querySelector('input[name="bulletType"]:checked');
@@ -650,8 +1188,12 @@
       };
     })();
     </script>
-    <script src="trash-bin-button.js"></script>
-    <script src="create.js?v=20260420create-theme"></script>
+    <script src="trash-bin-button.js?v=20260704cleanup"></script>
+    <script src="lib/ec-entry-transition.js?v=20260704cleanup"></script>
+    <script src="lib/ec-busy-overlay.js?v=20260614navbusy"></script>
+    <script src="lib/ec-create-loading.js?v=20260715createLight2"></script>
+    <script src="lib/plan-type-figma/plan-type-figma.js?v=20260715darkExitTogether"></script>
+    <script src="create.js?v=20260715confirmAnim"></script>
     <script src="user-profile-modal-setup.js?v=20260420profile-admin-race"></script>
 </body>
 </html>

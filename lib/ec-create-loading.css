@@ -1,0 +1,128 @@
+/* Overlay de carregamento — create wizard (mobile + desktop) */
+
+html.step4-create-loading-open {
+    overflow: hidden;
+}
+
+html.step4-create-loading-over #planTypeFigmaApp,
+html.step4-create-loading-over .main-content.is-plan-type-dissolve,
+html.step4-create-loading-over .create-section.create-wizard.is-dissolve-enter,
+html.step4-create-loading-over .create-section.create-wizard.is-dissolve-enter.is-active,
+html.step4-create-loading-over .step4-picker-modal:not(.hidden),
+html.step4-create-loading-over .create-wizard-slides,
+html.step4-create-loading-over .create-wizard-slides.is-changing,
+html.step4-create-loading-over #timePickerWrapper,
+html.step4-create-loading-over #timePickerPanel {
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+html.is-plan-type-dissolve-active .step4-create-loading.is-active,
+html.step4-picker-modal-open .step4-create-loading.is-active,
+html.step4-create-loading-open .step4-create-loading.is-active {
+    z-index: 2147483000;
+}
+
+.step4-create-loading {
+    position: fixed;
+    inset: 0;
+    z-index: 2147483000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left));
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.22s ease, visibility 0s linear 0.22s;
+}
+
+.step4-create-loading.is-active {
+    pointer-events: all;
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.22s ease, visibility 0s linear 0s;
+}
+
+.step4-create-loading.is-over-transition,
+.step4-create-loading.is-over-transition.is-active {
+    transition: none !important;
+    opacity: 1;
+    visibility: visible;
+}
+
+.step4-create-loading.hidden {
+    display: flex;
+}
+
+.step4-create-loading__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.88);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+.step4-create-loading.is-over-transition .step4-create-loading__backdrop {
+    background: #0a0a0a;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+.step4-create-loading__inner {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(12px, 2.5dvh, 16px);
+    width: min(100%, 320px);
+    text-align: center;
+}
+
+.step4-create-loading__spinner {
+    width: clamp(42px, 10vw, 52px);
+    height: clamp(42px, 10vw, 52px);
+    border-radius: 50%;
+    border: 3px solid rgba(255, 255, 255, 0.12);
+    border-top-color: #ffffff;
+    animation: step4CreateLoadingSpin 0.75s linear infinite;
+}
+
+.step4-create-loading__title {
+    margin: 0;
+    font-family: Inter, sans-serif;
+    font-size: clamp(0.95rem, 4vw, 1.08rem);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: rgba(255, 255, 255, 0.95);
+    line-height: 1.3;
+}
+
+.step4-create-loading__subtitle {
+    margin: 0;
+    font-family: Inter, sans-serif;
+    font-size: clamp(0.72rem, 3.2vw, 0.82rem);
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.48);
+    line-height: 1.4;
+}
+
+@keyframes step4CreateLoadingSpin {
+    to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .step4-create-loading__spinner {
+        animation: none;
+        border-top-color: rgba(255, 255, 255, 0.55);
+    }
+}
+
+@media (max-width: 768px) {
+    .step4-create-loading:not(.is-over-transition) .step4-create-loading__backdrop {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+}

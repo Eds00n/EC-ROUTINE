@@ -1,0 +1,695 @@
+.ec-xy-root {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 280px;
+}
+
+.ec-xy-root .react-flow {
+  width: 100%;
+  height: 100%;
+}
+
+/* Pan / arraste: menos work de pintura (grid + sombras + tooltips) */
+.ec-xy-root.is-interacting .react-flow__background {
+  opacity: 0;
+  transition: none;
+}
+.ec-xy-root.is-interacting .react-flow__viewport {
+  will-change: transform;
+}
+.ec-xy-root.is-interacting .ec-xy-node,
+.ec-xy-root.is-interacting .ec-xy-node.is-selected {
+  box-shadow: none !important;
+}
+.ec-xy-root.is-interacting .react-flow__minimap,
+.ec-xy-root.is-interacting .ec-xy-panel,
+.ec-xy-root.is-interacting .react-flow__controls {
+  pointer-events: none !important;
+}
+.ec-xy-root.is-interacting .react-flow__minimap {
+  visibility: hidden;
+}
+/* Esconde de vez — visibility só não impedia o RF de recalcular posição a cada frame */
+.ec-xy-root.is-interacting .react-flow__node-toolbar,
+.ec-xy-root.is-interacting .react-flow__edge-toolbar,
+.ec-xy-root.is-interacting .react-flow__resize-control,
+.ec-xy-root.is-interacting .ec-xy-edge-label {
+  display: none !important;
+}
+.ec-xy-root.is-interacting [data-tip]::after {
+  display: none !important;
+}
+
+.ec-xy-node.is-dragging {
+  box-shadow: none !important;
+  cursor: grabbing;
+  will-change: transform;
+  opacity: 0.96;
+}
+
+/* Resize só no hover — senão as 8 alças “roubam” o arraste do cartão */
+.ec-xy-root .react-flow__resize-control {
+  opacity: 0;
+  pointer-events: none;
+}
+.ec-xy-root .react-flow__node:hover .react-flow__resize-control {
+  opacity: 1;
+  pointer-events: all;
+}
+.ec-xy-root.is-interacting .ec-xy-handle,
+.ec-xy-root .react-flow__node.dragging .ec-xy-handle {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+.ec-xy-root.is-interacting .ec-xy-node__desc-add,
+.ec-xy-root.is-interacting .ec-xy-node__img-add {
+  pointer-events: none;
+}
+
+/* Portal do viewport não deve capturar cliques dos nós */
+#annotationMentalXyflowHost .react-flow__viewport-portal,
+#annotationMentalXyflowHost .react-flow__edgelabel-renderer,
+.ec-xy-root .react-flow__viewport-portal,
+.ec-xy-root .react-flow__edgelabel-renderer {
+  pointer-events: none !important;
+}
+
+#annotationMentalXyflowHost .react-flow__viewport-portal > *,
+#annotationMentalXyflowHost .react-flow__edgelabel-renderer > *,
+#annotationMentalXyflowHost .react-flow__node-toolbar,
+#annotationMentalXyflowHost .react-flow__edge-toolbar,
+.ec-xy-root .react-flow__viewport-portal > *,
+.ec-xy-root .react-flow__edgelabel-renderer > *,
+.ec-xy-root .react-flow__node-toolbar,
+.ec-xy-root .react-flow__edge-toolbar,
+.ec-xy-root .ec-xy-edge-label,
+.ec-xy-root .ec-xy-node-toolbar,
+.ec-xy-root .ec-xy-edge-toolbar {
+  pointer-events: auto !important;
+}
+
+.ec-xy-node {
+  position: relative;
+  min-width: 120px;
+  max-width: 320px;
+  min-height: 44px;
+  height: 100%;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(20, 22, 26, 0.92);
+  color: #f4f4f5;
+  /* Sombra leve — shadows grandes em muitos nós travam o paint */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
+  font-family: 'Rajdhani', system-ui, sans-serif;
+  box-sizing: border-box;
+  cursor: grab;
+  text-align: center;
+  contain: layout style;
+}
+
+.ec-xy-node:active {
+  cursor: grabbing;
+}
+
+.ec-xy-node__body {
+  min-width: 0;
+}
+
+.ec-xy-node--center {
+  border-radius: 999px;
+  text-align: center;
+  font-weight: 700;
+  background: #0a0a0a;
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.ec-xy-node.is-selected {
+  border-color: rgba(255, 255, 255, 0.55);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2), 0 4px 14px rgba(0, 0, 0, 0.3);
+}
+
+.ec-xy-node.is-intersecting {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.4);
+}
+
+.ec-xy-node--balloon {
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #111;
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+.ec-xy-node__title {
+  font-size: 0.98rem;
+  font-weight: 650;
+  line-height: 1.25;
+  word-break: break-word;
+  text-align: center;
+}
+
+.ec-xy-node__title-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 auto;
+  padding: 4px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  color: inherit;
+  font: inherit;
+  font-size: 0.98rem;
+  font-weight: 650;
+  line-height: 1.25;
+  outline: none;
+  caret-color: currentColor;
+  text-align: center;
+}
+
+.ec-xy-node--balloon .ec-xy-node__title-input {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(0, 0, 0, 0.2);
+  color: #111;
+}
+
+.ec-xy-node.is-editing {
+  z-index: 8;
+}
+
+.ec-xy-node__desc {
+  margin-top: 6px;
+  font-size: 0.78rem;
+  opacity: 0.78;
+  line-height: 1.35;
+  word-break: break-word;
+  text-align: center;
+}
+
+.ec-xy-node__desc-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 6px;
+  padding: 6px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  color: inherit;
+  font: inherit;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  resize: vertical;
+  min-height: 44px;
+  text-align: center;
+  outline: none;
+}
+
+.ec-xy-node--balloon .ec-xy-node__desc-input {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(0, 0, 0, 0.2);
+  color: #111;
+}
+
+.ec-xy-node__desc-add {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 4px 6px;
+  border: 1px dashed rgba(255, 255, 255, 0.28);
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  font: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+  text-align: center;
+}
+
+.ec-xy-node--balloon .ec-xy-node__desc-add {
+  border-color: rgba(0, 0, 0, 0.2);
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.ec-xy-node__desc-add:hover {
+  color: rgba(255, 255, 255, 0.85);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+.ec-xy-node--balloon .ec-xy-node__desc-add:hover {
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.ec-xy-node__file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ec-xy-node__img-panel {
+  margin-top: 8px;
+  width: 100%;
+}
+
+.ec-xy-node__img-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 0 8px;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.72);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-sizing: border-box;
+  pointer-events: none;
+  transition:
+    opacity 0.16s ease,
+    max-height 0.16s ease,
+    padding 0.16s ease,
+    border-color 0.16s ease,
+    background 0.16s ease,
+    color 0.16s ease;
+}
+
+.ec-xy-node:hover .ec-xy-node__img-toggle,
+.ec-xy-node.is-selected .ec-xy-node__img-toggle,
+.ec-xy-node__img-toggle:focus-visible {
+  max-height: 40px;
+  opacity: 1;
+  padding: 6px 8px;
+  border-color: rgba(255, 255, 255, 0.14);
+  pointer-events: auto;
+}
+
+.ec-xy-node--balloon .ec-xy-node__img-toggle {
+  background: rgba(0, 0, 0, 0.04);
+  color: rgba(24, 24, 27, 0.65);
+}
+
+.ec-xy-node--balloon:hover .ec-xy-node__img-toggle,
+.ec-xy-node--balloon.is-selected .ec-xy-node__img-toggle,
+.ec-xy-node--balloon .ec-xy-node__img-toggle:focus-visible {
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+.ec-xy-node__img-toggle:hover {
+  color: rgba(255, 255, 255, 0.95);
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.ec-xy-node--balloon .ec-xy-node__img-toggle:hover {
+  color: rgba(24, 24, 27, 0.9);
+  border-color: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.ec-xy-node__img-toggle-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ec-xy-node__img-toggle-chevron {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.ec-xy-node__img-panel.is-open .ec-xy-node__img-toggle-chevron {
+  transform: rotate(180deg);
+}
+
+.ec-xy-node__img-wrap {
+  position: relative;
+  margin-top: 8px;
+}
+
+.ec-xy-node__img {
+  display: block;
+  width: 100%;
+  max-height: 140px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.ec-xy-node__img-add {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px 6px;
+  border: 1px dashed rgba(255, 255, 255, 0.28);
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  font: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+  text-align: center;
+  position: relative;
+}
+
+.ec-xy-node--balloon .ec-xy-node__img-add {
+  border-color: rgba(0, 0, 0, 0.2);
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.ec-xy-node__img-add:hover {
+  color: rgba(255, 255, 255, 0.85);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+.ec-xy-node--balloon .ec-xy-node__img-add:hover {
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.ec-xy-node__img-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.ec-xy-node__img-actions .ec-xy-tb-btn {
+  min-height: 28px;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+}
+
+.ec-xy-handle {
+  width: 10px !important;
+  height: 10px !important;
+  background: #fff !important;
+  border: 2px solid #111 !important;
+  opacity: 0;
+  pointer-events: auto !important;
+}
+
+.ec-xy-node:hover .ec-xy-handle,
+.ec-xy-node.is-selected .ec-xy-handle,
+.react-flow__node:hover .ec-xy-handle,
+.react-flow.connecting .ec-xy-handle {
+  opacity: 1;
+}
+
+.ec-xy-handle--target {
+  background: #93c5fd !important;
+}
+
+.ec-xy-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: min(92vw, 560px);
+  pointer-events: auto !important;
+  z-index: 20;
+}
+
+.ec-xy-panel__btn,
+.ec-xy-tb-btn {
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 650;
+  cursor: pointer;
+  pointer-events: auto !important;
+}
+
+.ec-xy-panel__btn:hover,
+.ec-xy-tb-btn:hover {
+  background: rgba(0, 0, 0, 0.88);
+}
+
+.ec-xy-tb-btn--danger {
+  border-color: rgba(248, 113, 113, 0.5);
+  color: #fecaca;
+}
+
+/* Hover tip — nome da função */
+.ec-xy-root [data-tip] {
+  position: relative;
+}
+
+.ec-xy-root [data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%) translateY(4px);
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: rgba(12, 14, 18, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #f3f4f6;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  line-height: 1.2;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 80;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.ec-xy-root [data-tip]:hover::after,
+.ec-xy-root [data-tip]:focus-visible::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Controles do React Flow: tip à direita */
+.ec-xy-root .react-flow__controls [data-tip]::after {
+  bottom: auto;
+  top: 50%;
+  left: calc(100% + 10px);
+  transform: translateY(-50%) translateX(-4px);
+}
+
+.ec-xy-root .react-flow__controls [data-tip]:hover::after,
+.ec-xy-root .react-flow__controls [data-tip]:focus-visible::after {
+  transform: translateY(-50%) translateX(0);
+}
+
+.ec-xy-node-toolbar,
+.ec-xy-edge-toolbar {
+  display: flex;
+  gap: 6px;
+}
+
+.ec-xy-edge {
+  stroke: rgba(255, 255, 255, 0.7) !important;
+  stroke-width: 2 !important;
+}
+
+.ec-xy-edge.is-selected {
+  stroke: #93c5fd !important;
+  stroke-width: 2.5 !important;
+}
+
+.ec-xy-temp-edge {
+  stroke: #fbbf24 !important;
+  stroke-dasharray: 5 4 !important;
+}
+
+.ec-xy-edge-label {
+  position: absolute;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 11px;
+  font-family: 'Rajdhani', system-ui, sans-serif;
+  font-weight: 650;
+}
+
+.ec-xy-status {
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #e2e8f0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.ec-xy-status--ok {
+  border-color: rgba(74, 222, 128, 0.45);
+}
+
+.ec-xy-status--warn {
+  border-color: rgba(251, 191, 36, 0.5);
+}
+
+.ec-xy-context-menu {
+  position: absolute;
+  z-index: 30;
+  min-width: 160px;
+  padding: 6px;
+  border-radius: 12px;
+  background: rgba(12, 12, 14, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ec-xy-context-menu button {
+  text-align: left;
+  border: 0;
+  background: transparent;
+  color: #f4f4f5;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.ec-xy-context-menu button:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.ec-xy-context-menu__danger {
+  color: #fca5a5 !important;
+}
+
+.ec-xy-resize-handle {
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 2px !important;
+  background: #fff !important;
+  border: 1px solid #111 !important;
+}
+
+.ec-xy-resize-line {
+  border-color: rgba(147, 197, 253, 0.7) !important;
+}
+
+.ec-xy-connection {
+  stroke-dasharray: 4 3;
+}
+
+/* Host / canvas: liberar cliques no modal mental (sem forçar * nos portals) */
+.annotation-modal--mental #annotationEditorMental.is-xyflow #annotationMentalCanvas,
+#annotationEditorMental.is-xyflow #annotationMentalXyflowHost {
+  pointer-events: auto !important;
+}
+
+#annotationEditorMental.is-xyflow #annotationMentalXyflowHost .react-flow__viewport-portal,
+#annotationEditorMental.is-xyflow #annotationMentalXyflowHost .react-flow__edgelabel-renderer {
+  pointer-events: none !important;
+}
+
+#annotationMentalXyflowHost {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  width: 100%;
+  height: 100%;
+}
+
+#annotationEditorMental.is-xyflow .annotation-mental-text-config-toolbar,
+#annotationEditorMental.is-xyflow .annotation-mental-text-spacing-panel,
+#annotationEditorMental.is-xyflow #annotationMentalPanLayer,
+#annotationEditorMental.is-xyflow #annotationMentalZoomWrap,
+#annotationEditorMental.is-xyflow #annotationMentalRecenterBtn,
+#annotationEditorMental.is-xyflow .annotation-mental-add-preview,
+#annotationEditorMental.is-xyflow .annotation-mental-connection-tip,
+#annotationEditorMental.is-xyflow .annotation-mental-toolbar {
+  display: none !important;
+}
+
+/* Controles padrão do React Flow */
+.ec-xy-root .react-flow__controls {
+  z-index: 10;
+  pointer-events: auto !important;
+  box-shadow: 0 0 2px 1px rgba(0, 0, 0, 0.08);
+}
+
+.ec-xy-root .react-flow__controls-button {
+  pointer-events: auto !important;
+}
+
+.ec-xy-ctrl-label {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  font-family: inherit;
+}
+
+.ec-xy-ctrl-label--sm {
+  font-size: 13px;
+}
+
+/* Amostra de cor clicável (evita ▣ que parece “salvar” + input escondido) */
+.ec-xy-bg-control {
+  position: relative !important;
+  overflow: hidden !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+}
+
+.ec-xy-bg-swatch {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1.5px solid rgba(255, 255, 255, 0.65);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+.ec-xy-bg-input-hit {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0.001;
+  cursor: pointer;
+  pointer-events: auto !important;
+}
+
+#annotationEditorMental.is-xyflow #annotationMentalCanvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
+  z-index: 0;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+}

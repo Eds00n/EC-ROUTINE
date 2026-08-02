@@ -158,17 +158,21 @@
     fill: #b91c1c;
 }
 
-/* Cabeçalho “Excluir” ao lado de “Editar” — mesma moldura que .action-btn (routine-detail) */
-.uiverse-trash-btn--routine-header.uiverse-trash-btn--labeled {
+/* Cabeçalho “Excluir” ao lado de “Editar” — mesma moldura, tamanho e cor (.action-btn) */
+.routine-detail-container .routine-actions > .uiverse-trash-btn--routine-header.uiverse-trash-btn--labeled {
     width: auto;
-    min-width: auto;
+    min-width: 0;
+    max-width: none;
     height: auto;
     min-height: 0;
+    flex: 1 1 0;
+    box-sizing: border-box;
     border-radius: 8px;
-    padding: 10px 20px;
-    gap: 10px;
+    padding: 10px 16px;
+    gap: 8px;
     flex-direction: row;
     align-items: center;
+    justify-content: center;
     background: #eeeeee;
     border: 2px solid #000000;
     color: #000000;
@@ -176,32 +180,71 @@
     font-family: 'Rajdhani', sans-serif;
     font-size: 0.9rem;
     font-weight: 600;
+    overflow: visible;
 }
 
-.uiverse-trash-btn--routine-header .uiverse-trash-btn__label {
-    font-size: 0.9rem;
-    font-weight: 600;
+.routine-detail-container .uiverse-trash-btn--routine-header .uiverse-trash-btn__label {
+    font-size: inherit;
+    font-weight: inherit;
+    color: inherit;
+}
+
+.routine-detail-container .uiverse-trash-btn--routine-header .svgIcon {
+    width: 11px;
+    flex-shrink: 0;
+}
+
+.routine-detail-container .uiverse-trash-btn--routine-header .svgIcon path {
+    fill: currentColor !important;
+}
+
+.routine-detail-container .uiverse-trash-btn--routine-header .bin-top {
+    transform-origin: bottom right;
+    transition: transform 0.5s ease;
+}
+
+.routine-detail-container .uiverse-trash-btn--routine-header.uiverse-trash-btn:hover {
+    background: #eeeeee;
+    border: 2px solid #000000;
     color: #000000;
-}
-
-.uiverse-trash-btn--routine-header .svgIcon path {
-    fill: #000000;
-}
-
-.uiverse-trash-btn--routine-header.uiverse-trash-btn--labeled:hover {
-    background: #000000;
-    color: #ffffff;
-    border-color: #000000;
-    gap: 10px;
+    gap: 8px;
     align-items: center;
 }
 
-.uiverse-trash-btn--routine-header.uiverse-trash-btn--labeled:hover .uiverse-trash-btn__label {
+.routine-detail-container .uiverse-trash-btn--routine-header.uiverse-trash-btn--labeled:hover {
+    background: #000000;
+    color: #ffffff;
+    border-color: #000000;
+    gap: 8px;
+    transform: none;
+}
+
+.routine-detail-container .uiverse-trash-btn--routine-header.uiverse-trash-btn--labeled:hover .uiverse-trash-btn__icons {
+    gap: 0;
+}
+
+.routine-detail-container .uiverse-trash-btn--routine-header.uiverse-trash-btn--labeled:hover .uiverse-trash-btn__label {
+    color: inherit;
+}
+
+.routine-detail-container .uiverse-trash-btn--routine-header.uiverse-trash-btn--labeled:hover .svgIcon path {
+    fill: currentColor;
+}
+
+.routine-detail-container .uiverse-trash-btn--routine-header:hover .bin-top {
+    transform: rotate(160deg);
+}
+
+.routine-detail-container .delete-btn.uiverse-trash-btn--routine-header.uiverse-trash-btn--labeled:hover {
+    background: #ff4444;
+    border-color: #ff4444;
     color: #ffffff;
 }
 
-.uiverse-trash-btn--routine-header.uiverse-trash-btn--labeled:hover .svgIcon path {
-    fill: #ffffff;
+@media (prefers-reduced-motion: reduce) {
+    .routine-detail-container .uiverse-trash-btn--routine-header:hover .bin-top {
+        transform: none;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {

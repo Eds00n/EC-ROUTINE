@@ -7,6 +7,23 @@
 
     var EC_ROUTINE_THEME_KEY = 'ecRoutineTheme';
     var EC_ROUTINE_DAY_NUMBERS_KEY = 'ecRoutineShowDayNumbers';
+    var EC_PROFILE_PICTURE_KEY = 'ecProfilePicture';
+
+    function cacheEcProfilePicture(picture) {
+        try {
+            var p = picture && String(picture).trim();
+            if (p) localStorage.setItem(EC_PROFILE_PICTURE_KEY, p);
+            else localStorage.removeItem(EC_PROFILE_PICTURE_KEY);
+        } catch (e) {}
+    }
+
+    function getCachedEcProfilePicture() {
+        try {
+            return localStorage.getItem(EC_PROFILE_PICTURE_KEY) || '';
+        } catch (e) {
+            return '';
+        }
+    }
     var API_URL =
         (typeof window !== 'undefined' && window.__EC_API_BASE__) ||
         'https://ec-routine-api.onrender.com/api';
@@ -144,9 +161,58 @@
         return getApiBaseUrl() + (url.indexOf('/') === 0 ? '' : '/') + url;
     }
 
-    function getAvatarImageUrl(raw) {
+    function normalizeProfilePictureRef(raw) {
         if (!raw || typeof raw !== 'string') return '';
         var u = raw.trim();
+        if (!u) return '';
+        if (u.indexOf('data:') === 0) return u;
+        var low = u.toLowerCase();
+        var attMarker = '/api/attachments/';
+        if (low.indexOf(attMarker) !== -1) {
+            var idPart = u.slice(u.indexOf(attMarker) + attMarker.length).split(/[?#]/)[0];
+            if (idPart && idPart.indexOf('..') === -1 && idPart.indexOf('/') === -1 && idPart.indexOf('\\') === -1) {
+                try {
+                    idPart = decodeURIComponent(idPart);
+                } catch (e) {}
+                return attMarker + encodeURIComponent(idPart);
+            }
+            return '';
+        }
+        if (low.indexOf('attachments/') === 0 || low.indexOf('/attachments/') !== -1) {
+            var tail = u.replace(/^\/+/, '');
+            if (tail.indexOf('attachments/') === 0) return '/api/' + tail.split(/[?#]/)[0];
+        }
+        if (!/[\\/]/.test(u) && u.indexOf('://') === -1) {
+            if (/^[a-zA-Z0-9._-]+\.(png|jpe?g|webp|gif|svg)$/i.test(u)) {
+                return attMarker + encodeURIComponent(u);
+            }
+            return '';
+        }
+        if (low.indexOf('http://') === 0 || low.indexOf('https://') === 0) {
+            try {
+                var parsed = new URL(u);
+                var host = (parsed.hostname || '').toLowerCase();
+                var isOurApi =
+                    host === 'localhost' || host === '127.0.0.1' || host.slice(-12) === '.onrender.com';
+                var base = (parsed.pathname || '').split('/').filter(Boolean).pop() || '';
+                if (
+                    isOurApi &&
+                    base &&
+                    /^[a-zA-Z0-9._-]+\.(png|jpe?g|webp|gif|svg)$/i.test(base) &&
+                    (parsed.pathname || '').indexOf(attMarker) === -1
+                ) {
+                    return attMarker + encodeURIComponent(base);
+                }
+                if ((parsed.pathname || '').indexOf('/api/') === -1) return u;
+            } catch (e) {
+                return '';
+            }
+        }
+        return '';
+    }
+
+    function getAvatarImageUrl(raw) {
+        var u = normalizeProfilePictureRef(raw);
         if (!u) return '';
         var low = u.toLowerCase();
         if (low.indexOf('/api/profile') !== -1) return '';
@@ -155,13 +221,10 @@
         if (low.indexOf('/api/register') !== -1) return '';
         if (low.indexOf('/api/routines') !== -1) return '';
         if (low.indexOf('/api/') !== -1 && low.indexOf('/api/attachments/') === -1) return '';
-        var isAbsolute = low.indexOf('http://') === 0 || low.indexOf('https://') === 0 || low.indexOf('data:') === 0;
-        var hasAttachmentPath =
-            low.indexOf('/api/attachments/') !== -1 ||
-            low.indexOf('/attachments/') !== -1 ||
-            low.indexOf('attachments/') === 0;
-        var looksLikeImageFile = /\.(png|jpe?g|webp|gif|svg)(\?.*)?$/i.test(u);
-        if (!isAbsolute && !hasAttachmentPath && !looksLikeImageFile) return '';
+        if (low.indexOf('http://') === 0 || low.indexOf('https://') === 0 || low.indexOf('data:') === 0) {
+            return u;
+        }
+        if (low.indexOf('/api/attachments/') === -1) return '';
         return getAttachmentFullUrl(u);
     }
 
@@ -234,7 +297,14 @@
         var avatarFetchOpts = { headers: { Authorization: 'Bearer ' + tok } };
         fetch(full, avatarFetchOpts)
             .then(function (res) {
-                if (!res.ok) throw new Error('avatar');
+                if (!res.ok) {
+                    if (res.status === 404) {
+                        try {
+                            localStorage.removeItem(EC_PROFILE_PICTURE_KEY);
+                        } catch (e) {}
+                    }
+                    throw new Error('avatar');
+                }
                 return res.blob();
             })
             .then(function (blob) {
@@ -331,9 +401,11 @@
     function openUserProfileModal() {
         var modal = document.getElementById('userProfileModal');
         var trig = document.getElementById('headerProfileTrigger');
-        if (!modal) return;
+        var panel = document.getElementById('userProfilePanel');
+        if (!modal || !panel) return;
+        if (modal.classList.contains('is-open') && !modal.classList.contains('is-closing')) return;
         closeUserProfileSettingsMenu();
-        modal.classList.remove('hidden');
+        modal.classList.remove('is-closing', 'is-open', 'is-settled', 'hidden');
         modal.setAttribute('aria-hidden', 'false');
         if (trig) trig.setAttribute('aria-expanded', 'true');
         _profileState.open = true;
@@ -341,20 +413,67 @@
         syncEcRoutineThemeToggle();
         syncUserProfileDayNumbersToggle();
         loadUserProfileIntoModal();
+        requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+                modal.classList.add('is-open');
+                function onGrowEnd(e) {
+                    if (e.target !== panel || e.animationName !== 'calendar-day-detail-grow') return;
+                    panel.removeEventListener('animationend', onGrowEnd);
+                    modal.classList.add('is-settled');
+                }
+                panel.addEventListener('animationend', onGrowEnd);
+            });
+        });
     }
 
     function closeUserProfileModal() {
         var modal = document.getElementById('userProfileModal');
         var trig = document.getElementById('headerProfileTrigger');
+        var panel = document.getElementById('userProfilePanel');
         if (!modal) return;
+        if (modal.classList.contains('hidden') || modal.classList.contains('is-closing')) return;
         closeUserProfileSettingsMenu();
-        modal.classList.add('hidden');
-        modal.setAttribute('aria-hidden', 'true');
-        if (trig) trig.setAttribute('aria-expanded', 'false');
         _profileState.open = false;
         _profileState.edit = false;
         setProfileModalMode(false);
-        document.body.style.overflow = '';
+        modal.classList.remove('is-open', 'is-settled');
+        modal.classList.add('is-closing');
+
+        function finishClose() {
+            if (modal.dataset.profileClosing === '1') return;
+            modal.dataset.profileClosing = '1';
+            modal.classList.remove('is-closing');
+            modal.classList.add('hidden');
+            modal.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+            if (trig) trig.setAttribute('aria-expanded', 'false');
+            var active = document.activeElement;
+            if (active && modal.contains(active)) {
+                if (trig && typeof trig.focus === 'function') {
+                    try {
+                        trig.focus();
+                    } catch (e) {}
+                } else if (typeof active.blur === 'function') {
+                    try {
+                        active.blur();
+                    } catch (e2) {}
+                }
+            }
+            delete modal.dataset.profileClosing;
+        }
+
+        if (panel) {
+            var done = false;
+            function onAnimEnd(e) {
+                if (done || e.target !== panel) return;
+                if (e.animationName !== 'calendar-day-detail-shrink') return;
+                done = true;
+                panel.removeEventListener('animationend', onAnimEnd);
+                finishClose();
+            }
+            panel.addEventListener('animationend', onAnimEnd);
+        }
+        window.setTimeout(finishClose, 380);
     }
 
     function setProfileModalMode(edit) {
@@ -407,6 +526,7 @@
         setProfileStatValue(document.getElementById('profileStatRoutines'), s.routinesCount);
         setProfileStatValue(document.getElementById('profileStatSeqActive'), s.activeSequences);
         setProfileStatValue(document.getElementById('profileStatSeqMax'), s.maxStreak);
+        if (u.picture) cacheEcProfilePicture(u.picture);
         setModalAvatar(u.picture);
         var en = document.getElementById('profileEditName');
         if (en) en.value = u.name || '';
@@ -472,6 +592,8 @@
             }
             return;
         }
+        var cachedPic = getCachedEcProfilePicture();
+        if (cachedPic) setHeaderAvatar(cachedPic);
         try {
             var data = await ecApiRequest('/verify');
             if (data && data.user) {
@@ -479,11 +601,12 @@
                 try {
                     localStorage.setItem('userName', data.user.name);
                 } catch (e) {}
+                cacheEcProfilePicture(data.user.picture || '');
                 setHeaderAvatar(data.user.picture);
                 syncProfileAdminButton(data.user);
             }
         } catch (e) {
-            setHeaderAvatar('');
+            setHeaderAvatar(getCachedEcProfilePicture());
             if (nameEl) {
                 var n2 = localStorage.getItem('userName');
                 if (n2) nameEl.textContent = String(n2).toUpperCase();
@@ -594,6 +717,7 @@
                     if (out.user) {
                         if (!_profileState.last) _profileState.last = {};
                         _profileState.last.user = Object.assign({}, _profileState.last.user || {}, out.user);
+                        if (out.user.picture) cacheEcProfilePicture(out.user.picture);
                         var nameEl = document.getElementById('username');
                         if (nameEl && out.user.name) nameEl.textContent = out.user.name.toUpperCase();
                         try {
@@ -616,6 +740,7 @@
                     localStorage.removeItem('token');
                     localStorage.removeItem('userName');
                     localStorage.removeItem('userId');
+                    localStorage.removeItem(EC_PROFILE_PICTURE_KEY);
                     localStorage.removeItem('ecRoutineSyncQueue');
                 } catch (e) {}
                 try {
@@ -624,10 +749,27 @@
                 window.location.replace('auth.html?view=login');
             });
         }
-        if (btnPhoto && inputPhoto) {
-            btnPhoto.addEventListener('click', function () {
-                inputPhoto.click();
+        function openProfilePhotoPicker() {
+            if (inputPhoto) inputPhoto.click();
+        }
+
+        var avatarBlock = document.querySelector('.user-profile-avatar-block');
+        if (avatarBlock && inputPhoto) {
+            avatarBlock.style.cursor = 'pointer';
+            avatarBlock.setAttribute('role', 'button');
+            avatarBlock.setAttribute('tabindex', '0');
+            avatarBlock.setAttribute('aria-label', 'Mudar foto de perfil');
+            avatarBlock.addEventListener('click', openProfilePhotoPicker);
+            avatarBlock.addEventListener('keydown', function (ev) {
+                if (ev.key === 'Enter' || ev.key === ' ') {
+                    ev.preventDefault();
+                    openProfilePhotoPicker();
+                }
             });
+        }
+
+        if (btnPhoto && inputPhoto) {
+            btnPhoto.addEventListener('click', openProfilePhotoPicker);
             inputPhoto.addEventListener('change', async function () {
                 var f = inputPhoto.files && inputPhoto.files[0];
                 inputPhoto.value = '';
@@ -638,6 +780,7 @@
                 }
                 var tok2 = localStorage.getItem('token');
                 if (!tok2) return;
+                var photoSaveGen = ++_profileState.loadGeneration;
                 try {
                     var fd = new FormData();
                     fd.append('file', f);
@@ -661,15 +804,19 @@
                         method: 'PUT',
                         body: JSON.stringify({ picture: urlPath })
                     });
+                    if (photoSaveGen !== _profileState.loadGeneration) return;
                     if (out2.user) {
-                        if (!_profileState.last) _profileState.last = {};
+                        cacheEcProfilePicture(out2.user.picture || urlPath);
+                        if (!_profileState.last) _profileState.last = { stats: {} };
                         _profileState.last.user = Object.assign({}, _profileState.last.user || {}, out2.user);
+                        applyProfileModalData(_profileState.last, null);
                         setHeaderAvatar(out2.user.picture);
-                        setModalAvatar(out2.user.picture);
                     }
                     showToast('Foto atualizada', 3000);
                 } catch (err) {
-                    showToast(String((err && err.message) || 'Erro ao enviar foto'), 5000);
+                    if (photoSaveGen === _profileState.loadGeneration) {
+                        showToast(String((err && err.message) || 'Erro ao enviar foto'), 5000);
+                    }
                 }
             });
         }

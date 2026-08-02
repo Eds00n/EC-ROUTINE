@@ -16,7 +16,7 @@ async function renderPainelHtml(raw) {
   const geradoEm = raw.extrato?.syncedAt
     ? new Date(raw.extrato.syncedAt).toLocaleString("pt-BR")
     : new Date().toLocaleString("pt-BR");
-  return buildHtmlPage(ctx, geradoEm, escapeHtml, fmtMoneyBR);
+  return buildHtmlPage(ctx, geradoEm, escapeHtml, fmtMoneyBR, { standalone: false });
 }
 
 module.exports = { renderPainelHtml };

@@ -17,10 +17,304 @@
     padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px));
 }
 
+/* Transição slideshow (swup demo) entre passos do wizard */
+.create-wizard-slides {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+}
+
+.create-wizard-slides .create-step {
+    grid-row: 1;
+    grid-column: 1;
+    min-width: 0;
+    width: 100%;
+    will-change: transform;
+}
+
+.create-wizard-slides:not(.is-changing) .create-step:not(.is-current) {
+    display: none !important;
+}
+
+.create-wizard-slides.is-changing .create-step.transition-slide {
+    display: block !important;
+    transition: transform 0.26s cubic-bezier(0.5, 0, 0.15, 1);
+}
+
+.create-wizard-slides.is-changing .create-step.create-step-4.transition-slide {
+    display: grid !important;
+}
+
+.create-wizard-slides .create-step.transition-slide.is-next-container {
+    transform: translateX(100%);
+}
+
+.create-wizard-slides .create-step.transition-slide.is-previous-container {
+    transform: translateX(-100%);
+}
+
+.create-wizard-slides.is-changing.to-left .create-step.transition-slide.is-next-container {
+    transform: translateX(-100%);
+}
+
+.create-wizard-slides.is-changing.to-left .create-step.transition-slide.is-previous-container {
+    transform: translateX(100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .create-wizard-slides.is-changing .create-step.transition-slide {
+        transition: none !important;
+    }
+}
+
 /* Margens verticais profissionais no passo 2 */
 .create-step-2 {
     padding-top: 2.5rem;
     padding-bottom: 2.5rem;
+}
+
+/* Passo 2 compacto: tela única sem scroll externo */
+html.create-wizard-step2-active .main-content {
+    min-height: calc(100dvh - 80px);
+    max-height: calc(100dvh - 80px);
+    overflow: hidden;
+    padding-top: 14px;
+    padding-bottom: 10px;
+}
+
+html.create-wizard-step2-active .create-section.create-wizard {
+    padding: 16px 18px 12px;
+    max-height: calc(100dvh - 80px - 24px);
+    overflow: hidden;
+}
+
+html.create-wizard-step2-active .create-wizard {
+    padding-bottom: 40px;
+}
+
+html.create-wizard-step2-active .create-form {
+    gap: 10px;
+}
+
+html.create-wizard-step2-active .create-step-2 {
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+html.create-wizard-step2-active .create-step-2 .create-title {
+    font-size: 1.125rem;
+    margin-bottom: 2px;
+}
+
+html.create-wizard-step2-active .wizard-step-heading {
+    font-size: 0.8rem;
+    margin-bottom: 8px;
+}
+
+html.create-wizard-step2-active .step2-top-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    align-items: start;
+}
+
+html.create-wizard-step2-active .step2-top-row .form-group-task-name {
+    gap: 6px;
+    min-width: 0;
+}
+
+html.create-wizard-step2-active .step2-top-row .bullet-journal-section {
+    margin-top: 0;
+    margin-bottom: 0;
+    align-items: flex-start;
+}
+
+html.create-wizard-step2-active .step2-top-row .bullet-journal-label--above {
+    text-align: left;
+    width: 100%;
+}
+
+html.create-wizard-step2-active .step2-top-row .bullet-journal-label--below {
+    margin-top: 4px;
+    font-size: 0.65rem;
+}
+
+html.create-wizard-step2-active .step2-top-row .bullet-journal-options {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+html.create-wizard-step2-active .form-group-task-name {
+    gap: 6px;
+}
+
+html.create-wizard-step2-active .task-name-label {
+    font-size: 0.82rem;
+}
+
+html.create-wizard-step2-active .form-input-task-name {
+    padding: 10px 12px;
+    min-height: 40px;
+    font-size: 0.9rem;
+}
+
+html.create-wizard-step2-active .bullet-journal-section {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+html.create-wizard-step2-active .bullet-journal-label--above {
+    margin-bottom: 6px;
+    font-size: 0.78rem;
+}
+
+html.create-wizard-step2-active .bullet-journal-label--below {
+    margin-top: 6px;
+    font-size: 0.72rem;
+}
+
+html.create-wizard-step2-active .bullet-journal-options {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    width: 100%;
+}
+
+html.create-wizard-step2-active .bullet-option {
+    flex: none;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+}
+
+html.create-wizard-step2-active .bullet-option-box {
+    gap: 4px;
+    padding: 8px 4px;
+    border-radius: 6px;
+}
+
+html.create-wizard-step2-active .bullet-option-label {
+    font-size: 0.68rem;
+    line-height: 1.15;
+    text-align: center;
+}
+
+html.create-wizard-step2-active .bullet-symbol--reminder {
+    width: 18px;
+}
+
+html.create-wizard-step2-active .bullet-symbol--task,
+html.create-wizard-step2-active .bullet-symbol--commitment,
+html.create-wizard-step2-active .bullet-symbol--important {
+    width: 11px;
+    height: 11px;
+}
+
+html.create-wizard-step2-active .create-step-2 > .form-group {
+    gap: 6px;
+}
+
+html.create-wizard-step2-active .create-step-2 > .form-group > label {
+    font-size: 0.82rem;
+}
+
+html.create-wizard-step2-active .category-hint {
+    font-size: 0.72rem;
+    margin-bottom: 6px;
+}
+
+html.create-wizard-step2-active .category-suggestions {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 5px;
+}
+
+html.create-wizard-step2-active .category-chip {
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    padding: 5px 4px;
+    font-size: 0.62rem;
+    line-height: 1.15;
+    text-align: center;
+    border-width: 1px;
+    border-radius: 6px;
+}
+
+html.create-wizard-step2-active .category-chip .chip-icon {
+    width: 14px;
+    height: 14px;
+}
+
+html.create-wizard-step2-active .category-chip .chip-icon svg,
+html.create-wizard-step2-active .category-chip .chip-icon .lucide {
+    width: 14px;
+    height: 14px;
+}
+
+html.create-wizard-step2-active .wizard-step-actions {
+    margin-top: 10px;
+}
+
+html.create-wizard-step2-active .btn-continuar,
+html.create-wizard-step2-active .btn-voltar {
+    padding: 8px 16px;
+    min-height: 38px;
+    font-size: 0.82rem;
+}
+
+@media (max-width: 768px) {
+    html.create-wizard-step2-active .category-suggestions {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 639px) {
+    html.create-wizard-step2-active .step2-top-row {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    html.create-wizard-step2-active .step2-top-row .form-group-task-name,
+    html.create-wizard-step2-active .step2-top-row .bullet-journal-section {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    html.create-wizard-step2-active .step2-top-row .bullet-journal-section {
+        align-items: stretch;
+    }
+
+    html.create-wizard-step2-active .step2-top-row .bullet-journal-label--above {
+        text-align: left;
+    }
+
+    html.create-wizard-step2-active .step2-top-row .bullet-journal-options {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: clamp(4px, 1.2vw, 8px);
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    html.create-wizard-step2-active .main-content {
+        padding-top: 10px;
+        padding-bottom: 8px;
+    }
+
+    html.create-wizard-step2-active .create-section.create-wizard {
+        padding: 12px 12px 10px;
+    }
+
+    html.create-wizard-step2-active .category-suggestions {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 4px;
+    }
+
+    html.create-wizard-step2-active .step2-top-row .bullet-journal-options {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
 }
 
 .create-title {
@@ -40,120 +334,215 @@
     text-align: center;
 }
 
-.wizard-options {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-    justify-content: center;
-    margin-bottom: 28px;
+/* Passo 1: picker Figma fullscreen (#planTypeFigmaApp) */
+html.create-wizard-step1-active body > .header {
+    visibility: hidden;
+    pointer-events: none;
 }
 
-.wizard-option {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 10px;
-    padding: 16px 20px;
-    background: transparent;
+html.create-wizard-step1-active .main-content {
+    padding: 0;
+    max-width: none;
+    min-height: 100dvh;
+    background: var(--ec-body-bg, #fff);
+}
+
+/* Evita estilos do dashboard.css no header interno do Figma */
+#planTypeFigmaApp > .header {
+    display: block;
+    grid-template-columns: unset;
+    padding: 0;
     border: none;
-    border-radius: 12px;
-    cursor: pointer;
-    transition: background 0.18s ease;
-    flex: 1;
-    min-width: 160px;
-    max-width: 220px;
-}
-
-.wizard-option:hover {
-    background: rgba(0, 0, 0, 0.03);
-}
-
-.wizard-option input[type="radio"] {
-    position: absolute;
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-.wizard-option input[type="radio"]:checked + .wizard-option-radio {
-    border-color: #000000;
+    box-shadow: none;
     background: transparent;
 }
 
-.wizard-option input[type="radio"]:checked + .wizard-option-radio::before,
-.wizard-option input[type="radio"]:checked + .wizard-option-radio::after {
-    content: '';
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    width: 2px;
-    height: 10px;
-    background: #000000;
+html.create-wizard-step1-active .notification-container {
+    z-index: 200;
 }
 
-.wizard-option input[type="radio"]:checked + .wizard-option-radio::before {
-    transform: translate(-50%, -50%) rotate(45deg);
+/* Transição passo 1 (Figma) ↔ passo 2 (wizard): dissolve sequencial escuro */
+:root {
+    --plan-type-exit-ms: 300ms;
+    --plan-type-enter-ms: 350ms;
+    --plan-type-dissolve-ms: 350ms;
+    --plan-type-dissolve-ease: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.wizard-option input[type="radio"]:checked + .wizard-option-radio::after {
-    transform: translate(-50%, -50%) rotate(-45deg);
+html.is-plan-type-dissolve-active .main-content.is-plan-type-dissolve {
+    background: #000;
 }
 
-.wizard-option-radio {
-    flex-shrink: 0;
-    width: 22px;
-    height: 22px;
-    border: 2px solid #666666;
-    border-radius: 50%;
+html.is-plan-type-dissolve-active.is-plan-type-dissolve-exit.create-wizard-step1-active .main-content.is-plan-type-dissolve {
+    padding: 0;
+    max-width: none;
+    min-height: 100dvh;
+}
+
+html.is-plan-type-dissolve-active.is-plan-type-dissolve-enter .main-content.is-plan-type-dissolve {
+    padding-top: 30px;
+    padding-right: max(20px, env(safe-area-inset-right, 0px));
+    padding-bottom: max(30px, calc(20px + env(safe-area-inset-bottom, 0px)));
+    padding-left: max(20px, env(safe-area-inset-left, 0px));
+    max-width: 1400px;
+    margin: 0 auto;
+    min-height: calc(100vh - 80px);
+    background: #0a0a0a;
+}
+
+html.is-plan-type-dissolve-active.is-plan-type-dissolve-exit #planTypeFigmaApp > .header {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease;
+}
+
+html.is-plan-type-dissolve-active.is-plan-type-dissolve-enter body > .header {
+    visibility: visible;
+    pointer-events: auto;
+    opacity: 1;
+    transition: opacity 200ms ease;
+}
+
+html.is-plan-type-dissolve-active.is-plan-type-dissolve-header-visible body > .header {
+    opacity: 1;
+}
+
+.main-content.is-plan-type-dissolve {
     position: relative;
-    transition: border-color 0.2s ease, background 0.2s ease, transform 0.25s ease;
+    min-height: 100dvh;
+    overflow: hidden;
 }
 
-.wizard-option-radio.wizard-option-radio--selected {
-    animation: wizard-option-pulse 0.4s ease;
+/* Durante dissolve: picker alinhado ao main-content (centralizado com o wizard) */
+html.is-plan-type-dissolve-active .main-content.is-plan-type-dissolve #planTypeFigmaApp {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    z-index: 130;
 }
 
-@keyframes wizard-option-pulse {
-    0% {
-        transform: scale(1);
-    }
-    50% {
-        transform: scale(1.2);
-    }
-    100% {
-        transform: scale(1);
+#planTypeFigmaApp.is-dissolve-exit,
+#planTypeFigmaApp.is-dissolve-return {
+    transition: opacity var(--plan-type-exit-ms) var(--plan-type-dissolve-ease);
+    will-change: opacity;
+    background: #000000 !important;
+}
+
+#planTypeFigmaApp.is-dissolve-return {
+    transition-duration: var(--plan-type-enter-ms);
+}
+
+#planTypeFigmaApp.is-dissolve-exit {
+    pointer-events: none;
+}
+
+#planTypeFigmaApp.is-dissolve-exit.is-active {
+    opacity: 0;
+}
+
+#planTypeFigmaApp.is-dissolve-return {
+    opacity: 0;
+}
+
+#planTypeFigmaApp.is-dissolve-return.is-active {
+    opacity: 1;
+}
+
+.create-section.create-wizard.is-dissolve-enter,
+.create-section.create-wizard.is-dissolve-leave {
+    transition: opacity var(--plan-type-enter-ms) var(--plan-type-dissolve-ease);
+    will-change: opacity;
+}
+
+.create-section.create-wizard.is-dissolve-leave {
+    transition-duration: var(--plan-type-exit-ms);
+}
+
+.create-section.create-wizard.is-dissolve-enter {
+    opacity: 0;
+}
+
+.create-section.create-wizard.is-dissolve-enter.is-active {
+    opacity: 1;
+}
+
+.create-section.create-wizard.is-dissolve-leave {
+    opacity: 0;
+}
+
+.create-section.create-wizard.is-dissolve-leave.is-active {
+    opacity: 1;
+}
+
+#planTypeFigmaApp .tarefa-screen.is-confirm-exiting .tarefa-screen__btn,
+#planTypeFigmaApp .tarefa-screen.is-confirm-exiting .tarefa-screen__back,
+#planTypeFigmaApp .tarefa-screen.is-confirm-exiting .tarefa-screen__list,
+#planTypeFigmaApp .tarefa-screen.is-confirm-exiting .tarefa-screen__hero,
+#planTypeFigmaApp .tarefa-screen.is-confirm-exiting .tarefa-screen__title,
+#planTypeFigmaApp .tarefa-screen.is-confirm-exiting .tarefa-screen__lead,
+#planTypeFigmaApp .tarefa-screen.is-confirm-exiting .tarefa-screen__word-track,
+#planTypeFigmaApp .tarefa-screen.is-confirm-exiting .tarefa-screen__word,
+#planTypeFigmaApp .tarefa-screen.is-confirm-exiting .tarefa-screen__feature,
+#planTypeFigmaApp .tarefa-screen.is-confirm-exiting .tarefa-screen__accent,
+#planTypeFigmaApp .tarefa-screen.is-confirm-exiting .tarefa-screen__rule,
+#planTypeFigmaApp .tarefa-screen.is-confirm-exiting .tarefa-screen__card {
+    opacity: 0;
+    transition: opacity 0.22s ease;
+    pointer-events: none;
+}
+
+#planTypeFigmaApp.app.is-mobile-stack .plan-type-mobile-img-layer.is-confirm-exiting > img {
+    opacity: 0 !important;
+    transition: opacity 0.22s ease !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #planTypeFigmaApp.is-dissolve-exit,
+    #planTypeFigmaApp.is-dissolve-return,
+    .create-section.create-wizard.is-dissolve-enter,
+    .create-section.create-wizard.is-dissolve-leave {
+        transition: none !important;
+        transform: none !important;
+        opacity: 1 !important;
     }
 }
 
-.wizard-option-content {
+.create-form {
+    position: relative;
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    align-items: center;
+    gap: 28px;
 }
 
-.wizard-option-label {
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: #000000;
+/* Passo 4: reveal ao trocar planType */
+.step4-panel--reveal > * {
+    animation: step4ContentEnter 0.22s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    opacity: 0;
 }
 
-.wizard-option-example {
-    font-size: 0.85rem;
-    color: #888888;
-    line-height: 1.3;
-}
+.step4-panel--reveal > *:nth-child(2) { animation-delay: 0.02s; }
+.step4-panel--reveal > *:nth-child(3) { animation-delay: 0.04s; }
+.step4-panel--reveal > *:nth-child(4) { animation-delay: 0.06s; }
+.step4-panel--reveal > *:nth-child(n+5) { animation-delay: 0.08s; }
 
 .wizard-step-actions {
     display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
     justify-content: center;
-    gap: 12px;
+    gap: 10px;
     margin-top: 20px;
 }
 
 .wizard-step-actions--with-back {
-    justify-content: space-between;
+    justify-content: flex-end;
+}
+
+.wizard-step-actions--with-back .btn-voltar {
+    margin-right: auto;
 }
 
 .btn-continuar,
@@ -287,37 +676,43 @@
 /* Última bolinha pisca para o verde (só cor; o quique segue suave) no hover do botão Criar Rotina */
 .wizard-progress.wizard-progress--create-hover .wizard-progress-dots .circle:nth-child(4) {
     animation: wizard-dot-bounce 0.5s alternate infinite ease, wizard-dot-pulse-green 1.4s ease-in-out infinite;
+    animation-delay: 0.45s, 0s;
 }
 
 .wizard-progress.wizard-progress--create-hover .wizard-progress-dots .circle:nth-child(4).done {
     animation: wizard-dot-bounce 0.5s alternate infinite ease, wizard-dot-pulse-green-done 1.4s ease-in-out infinite;
+    animation-delay: 0.45s, 0s;
 }
 
-/* Branca → verde → branca (não mexe em transform para não cortar o quique) */
+/* Branca → verde → branca — só a bolinha, sem halo */
 @keyframes wizard-dot-pulse-green {
     0%, 100% {
+        opacity: 1;
         background-color: #fff;
         border-color: #e5e7eb;
         box-shadow: none;
     }
     50% {
+        opacity: 1;
         background-color: #22c55e;
         border-color: #22c55e;
-        box-shadow: 0 2px 8px rgba(34, 197, 94, 0.35);
+        box-shadow: none;
     }
 }
 
-/* Já verde: só intensifica e volta (não mexe em transform) */
+/* Já verde: pisca a bolinha inteira */
 @keyframes wizard-dot-pulse-green-done {
     0%, 100% {
+        opacity: 0.45;
         background-color: #22c55e;
         border-color: #22c55e;
-        box-shadow: 0 0 8px #22c55e;
+        box-shadow: none;
     }
     50% {
-        background-color: #5dff3d;
-        border-color: #5dff3d;
-        box-shadow: 0 2px 8px rgba(34, 197, 94, 0.4);
+        opacity: 1;
+        background-color: #22c55e;
+        border-color: #22c55e;
+        box-shadow: none;
     }
 }
 
@@ -485,12 +880,6 @@
     color: #000000;
 }
 
-.create-form {
-    display: flex;
-    flex-direction: column;
-    gap: 28px;
-}
-
 .form-group {
     display: flex;
     flex-direction: column;
@@ -555,6 +944,22 @@
 
 .category-chip:active {
     transform: scale(0.98);
+}
+
+.category-chip.category-chip--pulse {
+    animation: categoryChipPulse 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes categoryChipPulse {
+    0% {
+        transform: scale(1);
+    }
+    40% {
+        transform: scale(1.06);
+    }
+    100% {
+        transform: scale(1);
+    }
 }
 
 .category-chip.selected {
@@ -652,11 +1057,13 @@
 }
 
 .btn-show-more {
-    display: flex;
+    display: inline-flex;
+    flex-direction: row;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+    justify-content: center;
+    gap: 8px;
     width: 100%;
+    max-width: 100%;
     padding: 12px 20px;
     font-size: 0.9rem;
     font-weight: 500;
@@ -671,9 +1078,8 @@
 }
 
 .btn-show-more-text {
-    flex: 1;
-    min-width: 0;
-    text-align: left;
+    flex: 0 0 auto;
+    text-align: center;
 }
 
 .btn-show-more:hover {
@@ -769,13 +1175,15 @@
     margin: 0 0 8px 0;
 }
 
-/* Passo 4: duas colunas (Horário | Dias), alinhadas ao topo e cartões com mesma geometria */
+/* Passo 4: duas colunas (Horário | Dias), cartões com mesma geometria */
 .create-step-4 {
+    --step4-card-w: 240px;
+    --step4-card-h: 132px;
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     column-gap: clamp(20px, 4vw, 40px);
     row-gap: 0;
-    align-items: stretch;
+    align-items: start;
     justify-items: center;
 }
 
@@ -806,13 +1214,13 @@
 
 /* Mesma “caixa” de título + subtítulo nas duas colunas (textos com comprimentos diferentes) */
 .create-step-4 #routineTimeGroup > .step4-time-title,
-.create-step-4 #step4DailyDaysWrap > .step4-daily-days-title {
+.create-step-4 #routineTimeGroup .step4-time-title {
     width: 100%;
     min-height: 1.35em;
 }
 
 .create-step-4 #routineTimeGroup > .field-hint.step4-time-subtitle,
-.create-step-4 #step4DailyDaysWrap > .field-hint.step4-daily-days-subtitle {
+.create-step-4 #routineTimeGroup .field-hint.step4-time-subtitle {
     width: 100%;
     min-height: 4.75em;
     margin-top: 0;
@@ -821,25 +1229,63 @@
     box-sizing: border-box;
 }
 
-.create-step-4 #step4DailyDaysWrap > .field-hint.step4-daily-days-subtitle {
-    color: #374151;
+.create-step-4 #step4DailyDaysWrap {
+    width: 100%;
+    max-width: 280px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
-/* Cartões: mesma largura, altura mínima e espaçamento entre si */
+/* Cartões: mesma largura, altura fixa, centralizados nas duas colunas */
 .create-step-4 .time-choice-options--step4,
-.create-step-4 #step4WeekdaysGroup .daily-day-type-options {
+.create-step-4 #step4WeekdaysGroup .daily-day-type-options,
+.create-step-4 #step4MonthlyGroup .monthly-type-options {
     gap: 12px;
     margin-bottom: 0;
+    width: 100%;
+    max-width: var(--step4-card-w);
+    margin-left: auto;
+    margin-right: auto;
+    align-items: stretch;
 }
 
 .create-step-4 .time-choice-option--card,
-.create-step-4 #step4WeekdaysGroup .daily-day-type-option.time-choice-option--card {
-    width: 240px;
-    min-width: 240px;
-    max-width: 240px;
-    min-height: 132px;
+.create-step-4 #step4WeekdaysGroup .daily-day-type-option.time-choice-option--card,
+.create-step-4 #step4MonthlyGroup .monthly-type-option.time-choice-option--card,
+.create-step-4 #step4StudyGoalGroup .study-goal-type-option.time-choice-option--card {
+    width: 100%;
+    min-width: 0;
+    max-width: var(--step4-card-w);
+    height: var(--step4-card-h);
+    min-height: var(--step4-card-h);
+    max-height: var(--step4-card-h);
+    margin-left: auto;
+    margin-right: auto;
+    padding: 14px;
     justify-content: center;
+    align-items: center;
     box-sizing: border-box;
+}
+
+.create-step-4 .time-choice-option--card .time-choice-label,
+.create-step-4 .time-choice-option--card .time-choice-subtitle {
+    text-align: center;
+    width: 100%;
+    max-width: 100%;
+}
+
+.create-step-4 .time-choice-option--card .time-choice-subtitle {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    margin: 0;
+}
+
+.create-step-4 .time-choice-option--card:hover {
+    transform: none;
 }
 
 .create-step-4 #step4MonthlyGroup {
@@ -861,17 +1307,6 @@
     text-align: center;
     margin: 0 0 16px 0;
     line-height: 1.4;
-}
-
-@media (max-width: 640px) {
-    .create-step-4 {
-        grid-template-columns: 1fr;
-    }
-    .create-step-4 #routineTimeGroup,
-    .create-step-4 #step4WeekdaysGroup,
-    .create-step-4 #step4MonthlyGroup {
-        grid-column: 1;
-    }
 }
 
 /* Horário: bloco centralizado */
@@ -913,40 +1348,21 @@
     margin-top: 28px;
 }
 
-/* Diário: dois cards como no mensal (Todos os dias / Dias específicos) */
-.step4-daily-days-title {
-    display: block;
-    font-size: 1rem;
-    font-weight: 700;
-    color: #000;
-    text-align: center;
-    margin: 0 0 4px 0;
+.create-step-4 #step4WeekdaysGroup .daily-day-type-option {
     width: 100%;
-}
-.step4-daily-days-subtitle {
-    font-size: 0.85rem;
-    color: #6b7280;
-    text-align: center;
-    margin: 0 0 16px 0;
-    width: 100%;
-}
-.create-step-4 #step4WeekdaysGroup .daily-day-type-options {
-    flex-direction: column;
-    gap: 12px;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
+    min-width: 0;
+    max-width: var(--step4-card-w);
+    height: var(--step4-card-h);
+    min-height: var(--step4-card-h);
+    max-height: var(--step4-card-h);
 }
 
-.create-step-4 #step4WeekdaysGroup .daily-day-type-option {
-    width: 240px;
-    min-width: 240px;
-    max-width: 240px;
-}
+.create-step-4 #step4StudyGoalGroup .study-goal-type-option.time-choice-option--card:not(:has(input:checked)),
 #step4WeekdaysGroup .daily-day-type-option:not(:has(input:checked)) {
-    opacity: 0.65;
-    background: #f3f4f6;
+    opacity: 1;
+    background: #ffffff;
     border-color: #e5e7eb;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
 }
 #step4WeekdaysGroup .daily-day-type-option:not(:has(input:checked)) .time-choice-label,
 #step4WeekdaysGroup .daily-day-type-option:not(:has(input:checked)) .time-choice-subtitle {
@@ -973,8 +1389,9 @@
     content: none;
 }
 #step4WeekdaysGroup .daily-day-type-option:not(:has(input:checked)):hover {
-    opacity: 0.9;
-    background: #e5e7eb;
+    background: #f9fafb;
+    opacity: 1;
+    border-color: #d1d5db;
 }
 #step4WeekdaysGroup .daily-day-type-option:has(input:checked):hover {
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
@@ -1004,7 +1421,7 @@
 .wizard-step-4-visible #routineTimeGroup .step4-time-title,
 .wizard-step-4-visible #routineTimeGroup .step4-time-subtitle,
 .wizard-step-4-visible #routineTimeGroup .time-choice-options {
-    animation: step4ContentEnter 0.4s ease forwards;
+    animation: step4ContentEnter 0.22s ease forwards;
 }
 
 .wizard-step-4-visible #routineTimeGroup .time-choice-options {
@@ -1012,13 +1429,13 @@
     opacity: 0;
 }
 
-.wizard-step-4-visible #step4MonthlyGroup .step4-monthly-title,
-.wizard-step-4-visible #step4MonthlyGroup .step4-monthly-subtitle,
-.wizard-step-4-visible #step4MonthlyGroup .monthly-type-options {
-    animation: step4ContentEnter 0.4s ease forwards;
+.create-step-4--plan-monthly.wizard-step-4-visible #step4MonthlyGroup .step4-monthly-title,
+.create-step-4--plan-monthly.wizard-step-4-visible #step4MonthlyGroup .step4-monthly-subtitle,
+.create-step-4--plan-monthly.wizard-step-4-visible #step4MonthlyGroup .monthly-type-options {
+    animation: step4ContentEnter 0.22s ease forwards;
 }
 
-.wizard-step-4-visible #step4MonthlyGroup .monthly-type-options {
+.create-step-4--plan-monthly.wizard-step-4-visible #step4MonthlyGroup .monthly-type-options {
     animation-delay: 0.08s;
     opacity: 0;
 }
@@ -1195,13 +1612,6 @@
     font-size: 0.9rem;
     font-weight: 500;
     color: #374151;
-}
-
-.commitment-time-warning {
-    font-size: 0.85rem;
-    color: #b45309;
-    margin: 10px 0 0 0;
-    text-align: center;
 }
 
 /* Seletor de horário: card abaixo dos options quando "Horário fixo diário" está selecionado */
@@ -1440,14 +1850,20 @@
     font-family: inherit;
 }
 
-.form-actions {
+.form-actions,
+.wizard-step-actions.form-actions {
     display: flex;
+    flex-direction: row;
     flex-wrap: wrap;
     gap: 10px;
     margin-top: 20px;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     max-width: 100%;
+}
+
+.wizard-step-actions.form-actions .btn-voltar {
+    margin-right: auto;
 }
 
 .btn-cancel,
@@ -1631,7 +2047,7 @@
 .create-step-4 #routineTimeGroup .time-choice-options--step4,
 .create-step-4 #step4WeekdaysGroup .daily-day-type-options {
     width: 100%;
-    max-width: 240px;
+    max-width: var(--step4-card-w);
 }
 
 #routineTimeGroup,
@@ -1640,14 +2056,8 @@
     margin-bottom: 8px;
 }
 
-.step4-weekdays-group {
-    margin-top: 4px;
-}
-
-.weekdays-group-label {
-    font-size: 1rem;
-    font-weight: 600;
-    color: #000;
+.create-step-4 .step4-weekdays-group {
+    margin-top: 0;
 }
 
 .weekdays-group-hint {
@@ -1714,13 +2124,15 @@
 }
 
 .monthly-type-option.time-choice-option--card {
-    width: 240px;
-    min-width: 240px;
-    max-width: 240px;
-    min-height: 120px;
+    width: 100%;
+    min-width: 0;
+    max-width: var(--step4-card-w, 240px);
+    height: var(--step4-card-h, 132px);
+    min-height: var(--step4-card-h, 132px);
+    max-height: var(--step4-card-h, 132px);
     box-sizing: border-box;
-    padding: 16px;
-    gap: 8px;
+    padding: 28px 14px 12px;
+    gap: 6px;
 }
 
 #step4MonthlyGroup .monthly-type-option {
@@ -1990,27 +2402,15 @@
         font-size: 1.25rem;
     }
 
-    .wizard-options {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .wizard-option {
-        min-width: 0;
-        max-width: none;
-    }
-
     .wizard-progress {
         left: 20px;
         bottom: 12px;
     }
 
-    .wizard-step-actions--with-back.form-actions {
-        flex-wrap: wrap;
-    }
-
+    .wizard-step-actions--with-back.form-actions,
     .form-actions {
-        flex-direction: column;
+        flex-direction: row;
+        flex-wrap: wrap;
     }
 }
 
@@ -2029,17 +2429,6 @@
     .wizard-question {
         font-size: 1.15rem;
         margin-bottom: 20px;
-    }
-
-    .wizard-options {
-        gap: 14px;
-        margin-bottom: 20px;
-    }
-
-    .wizard-option {
-        padding: 14px 14px;
-        min-width: 0;
-        max-width: none;
     }
 }
 
@@ -2070,8 +2459,10 @@
     .wizard-step-actions .btn-continuar,
     .wizard-step-actions .btn-cancel,
     .wizard-step-actions .btn-voltar {
-        width: 100%;
-        max-width: 100%;
+        width: auto;
+        min-width: 5.5rem;
+        max-width: none;
+        flex: 0 1 auto;
     }
 }
 
@@ -2082,12 +2473,75 @@
         border-radius: 14px;
     }
 
-    .time-choice-option--card,
-    .create-step-4 .time-choice-option--card,
-    .create-step-4 #step4WeekdaysGroup .daily-day-type-option.time-choice-option--card,
-    .create-step-4 #step4WeekdaysGroup .daily-day-type-option {
+    .time-choice-option--card {
         width: 100%;
         min-width: 0;
         max-width: 100%;
+        height: auto;
+        min-height: var(--step4-card-h, 132px);
+        max-height: none;
     }
+}
+
+.step4-study-goal-group {
+    margin-top: 1rem;
+}
+
+.study-goal-targets {
+    margin-top: 1.25rem;
+}
+
+.study-goal-targets-label {
+    margin-bottom: 0.5rem;
+}
+
+.study-goal-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.study-goal-chip {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.study-goal-chip input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.study-goal-chip span {
+    display: inline-block;
+    padding: 0.45rem 0.85rem;
+    border-radius: 999px;
+    border: 1px solid var(--ec-border, #d1d5db);
+    background: var(--ec-surface-1, #fff);
+    font-size: 0.875rem;
+    transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.study-goal-chip input:checked + span {
+    border-color: #0a0a0a;
+    background: #0a0a0a;
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.study-goal-chip--disabled span {
+    opacity: 0.35;
+}
+
+html[data-theme="dark"] .study-goal-chip span {
+    background: var(--ec-surface-2, #1f1f23);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.88);
+}
+
+html[data-theme="dark"] .study-goal-chip input:checked + span {
+    background: #ffffff;
+    border-color: transparent;
+    color: #0a0a0a;
 }

@@ -6,9 +6,27 @@
         'https://ec-routine-api.onrender.com/api';
     var MAX_UPLOAD = 20 * 1024 * 1024;
     var DASHBOARD_CARDS_URL = 'dashboard.html?view=cards';
+    var DASHBOARD_WELCOME_URL = 'dashboard.html';
 
     function getApiBaseUrl() {
         return String(API_BASE || '').replace(/\/api\/?$/, '') || '';
+    }
+
+    /** Ativa Seja bem-vindo → Vamos criar sua primeira tarefa → /create no dashboard. */
+    function setWelcomeThenCreateFlags() {
+        try {
+            sessionStorage.setItem('ec_entry_transition_mode', 'register');
+            sessionStorage.setItem('ec_show_login_boot_loader', '1');
+            sessionStorage.setItem('ec_force_daily_onboarding', '1');
+            sessionStorage.setItem('ec_post_login_welcome', '1');
+            /* Garante que o splash do dia não bloqueia o fluxo de 1ª tarefa. */
+            localStorage.removeItem('ec_entry_splash_day');
+        } catch (e) {}
+    }
+
+    function goWelcomeThenCreate() {
+        setWelcomeThenCreateFlags();
+        window.location.replace(DASHBOARD_WELCOME_URL);
     }
 
     function showErr(msg) {
@@ -102,7 +120,7 @@
             localStorage.removeItem('userName');
             localStorage.removeItem('userId');
         } catch (e) {}
-        window.location.replace('auth.html?view=login');
+        window.location.replace('/auth.html?view=login');
     }
 
     function showOfflinePanel() {
@@ -126,12 +144,6 @@
         var token = localStorage.getItem('token');
         if (!token) {
             goAuth();
-            return;
-        }
-
-        var uid = localStorage.getItem('userId');
-        if (readSkip(uid)) {
-            goDashboard();
             return;
         }
 
@@ -165,6 +177,14 @@
         if (profileComplete(user)) {
             goDashboard();
             return;
+        }
+
+        var uid = localStorage.getItem('userId');
+        if (readSkip(uid)) {
+            /* Perfil ainda incompleto: ignorar skip antigo e mostrar formulário (evita loop com dashboard). */
+            try {
+                if (uid) localStorage.removeItem('ec_profile_onboarding_skip_' + uid);
+            } catch (eSkip) {}
         }
 
         if (loading) loading.classList.add('hidden');
@@ -213,6 +233,9 @@
                         showErrPhoto(profileSaveErrorMessage(putPic));
                         return;
                     }
+                    try {
+                        localStorage.setItem('ecProfilePicture', picUrl);
+                    } catch (ePic) {}
                     showErrPhoto('');
                     goDashboard();
                 } catch (err) {
@@ -237,12 +260,10 @@
                 showErr('Indique o nome.');
                 return;
             }
-            if (!birth) {
-                showErr('Indique a data de nascimento.');
-                return;
-            }
             try {
-                var out = await putProfile({ name: name, sexuality: sex, birthDate: birth });
+                var body = { name: name, sexuality: sex };
+                if (birth) body.birthDate = birth;
+                var out = await putProfile(body);
                 if (!out.ok) {
                     var hint =
                         out.status === 404
@@ -252,7 +273,13 @@
                     return;
                 }
                 localStorage.setItem('userName', name);
-                showPhotoStepAfterSave();
+                /* Sem data completa o dashboard ainda pediria este ecrã — marcar skip. */
+                if (!birth || String(birth).length < 10) {
+                    try {
+                        if (uid) localStorage.setItem('ec_profile_onboarding_skip_' + uid, '1');
+                    } catch (eSkipSave) {}
+                }
+                goWelcomeThenCreate();
             } catch (err) {
                 showErr(String((err && err.message) || 'Erro de rede ao guardar.'));
             }
@@ -262,7 +289,7 @@
             try {
                 if (uid) localStorage.setItem('ec_profile_onboarding_skip_' + uid, '1');
             } catch (e2) {}
-            goDashboard();
+            goWelcomeThenCreate();
         });
     });
 })();
