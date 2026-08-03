@@ -7,7 +7,7 @@
 
   const API_BASE =
     (typeof window !== "undefined" && window.__EC_API_BASE__) ||
-    "https://ec-routine-api.onrender.com/api";
+    "/api";
 
   function applyEcTheme() {
     try {

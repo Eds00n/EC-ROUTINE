@@ -5,7 +5,7 @@
         if (typeof window !== 'undefined' && window.__EC_API_BASE__) {
             return window.__EC_API_BASE__;
         }
-        return 'https://ec-routine-api.onrender.com/api';
+        return '/api';
     }
     var MIN_PASSWORD = 8;
 

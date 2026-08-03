@@ -3,7 +3,7 @@
 
   var API_BASE =
     (typeof window !== "undefined" && window.__EC_API_BASE__) ||
-    "https://ec-routine-api.onrender.com/api";
+    "/api";
 
   var fileInput = document.getElementById("csv-file");
   var fileNameEl = document.getElementById("csv-file-name");
@@ -123,7 +123,7 @@
           var msg = json.error || "Não foi possível importar (" + res.status + ").";
           if (res.status === 404) {
             msg =
-              "Serviço indisponível (404). Atualize a API na Render e tente de novo.";
+              "Serviço indisponível (404). Inicie o servidor com npm start e tente de novo.";
           }
           setLoading(false);
           setStatus(msg, "err");

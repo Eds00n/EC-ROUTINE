@@ -3,7 +3,7 @@
 
     var API_BASE =
         (typeof window !== 'undefined' && window.__EC_API_BASE__) ||
-        'https://ec-routine-api.onrender.com/api';
+        '/api';
     var MAX_UPLOAD = 20 * 1024 * 1024;
     var DASHBOARD_CARDS_URL = 'dashboard.html?view=cards';
     var DASHBOARD_WELCOME_URL = 'dashboard.html';
@@ -102,7 +102,7 @@
             if (d) {
                 return String(d);
             }
-            return 'O servidor devolveu 404 em /api/profile (rota em falta ou URL da API errada). Confirme o deploy na Render com GET e PUT /api/profile, ou o URL em api-base / meta ec-api-base.';
+            return 'O servidor devolveu 404 em /api/profile. Confirme que `npm start` está a correr e que a rota existe no server.js.';
         }
         if (st === 401 || st === 403) {
             return 'Sessão inválida ou expirada. Volte ao login.';

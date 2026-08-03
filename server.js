@@ -1081,17 +1081,12 @@ app.use(express.static('.'));
 
 function validateProductionEnvOrExit() {
     const isProduction = process.env.NODE_ENV === 'production';
-    const hasDatabase = Boolean(String(process.env.DATABASE_URL || '').trim());
     const badJwt =
         !process.env.JWT_SECRET || process.env.JWT_SECRET === 'dev-only-secret-change-me';
 
-    if (isProduction && !hasDatabase) {
-        console.error('EC ROUTINE: em produção defina DATABASE_URL (PostgreSQL).');
-        process.exit(1);
-    }
-    if (badJwt && (isProduction || hasDatabase)) {
+    if (isProduction && badJwt) {
         console.error(
-            'EC ROUTINE: defina JWT_SECRET com um valor forte e único (obrigatório em produção ou quando usar DATABASE_URL).'
+            'EC ROUTINE: defina JWT_SECRET com um valor forte e único (obrigatório em produção).'
         );
         process.exit(1);
     }

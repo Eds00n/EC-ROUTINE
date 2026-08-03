@@ -1,7 +1,7 @@
 // Configuração da API (api-base.js define window.__EC_API_BASE__ em localhost:3000 com node server.js)
 const API_URL =
     (typeof window !== 'undefined' && window.__EC_API_BASE__) ||
-    'https://ec-routine-api.onrender.com/api';
+    '/api';
 
 /** Redirecionamentos para o dashboard na grelha de cards (não na visão geral). */
 const DASHBOARD_CARDS_URL = 'dashboard.html?view=cards';

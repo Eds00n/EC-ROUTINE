@@ -1,7 +1,7 @@
 // Configuração da API (api-base.js define window.__EC_API_BASE__ em localhost:3000 com node server.js)
 const API_URL =
     (typeof window !== 'undefined' && window.__EC_API_BASE__) ||
-    'https://ec-routine-api.onrender.com/api';
+    '/api';
 const MAX_UPLOAD_FILE_SIZE = 20 * 1024 * 1024; // 20 MB (igual ao servidor)
 
 function getApiBaseUrl() {
@@ -493,7 +493,7 @@ function normalizeProfilePictureRef(raw) {
             var parsed = new URL(u);
             var host = (parsed.hostname || '').toLowerCase();
             var isOurApi =
-                host === 'localhost' || host === '127.0.0.1' || host.slice(-12) === '.onrender.com';
+                host === 'localhost' || host === '127.0.0.1';
             var base = (parsed.pathname || '').split('/').filter(Boolean).pop() || '';
             if (
                 isOurApi &&

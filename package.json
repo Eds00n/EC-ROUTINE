@@ -36,6 +36,7 @@
     "next": "^14.2.28",
     "axios": "^1.6.0",
     "basic-ftp": "^5.3.1",
+    "bcryptjs": "^2.4.3",
     "chartist": "^1.5.0",
     "cors": "^2.8.5",
     "express": "^4.18.2",
@@ -43,7 +44,6 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.1.1",
-    "pg": "^8.13.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "supertest": "^7.2.2"
