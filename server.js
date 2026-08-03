@@ -1109,7 +1109,7 @@ async function startServer() {
     await initializeBackend();
 
     app.listen(PORT, () => {
-        const backend = store.usingPostgres() ? 'PostgreSQL' : 'ficheiros JSON (data/)';
+        const backend = store.getStorageLabel();
         console.log(`Servidor na porta ${PORT} · armazenamento: ${backend}`);
         if (process.env.NODE_ENV !== 'production' || process.env.ALLOW_DEV_LOGIN === '1') {
             console.log('Modo local: POST /api/dev/login + botão "Entrar em modo local" em auth.html');

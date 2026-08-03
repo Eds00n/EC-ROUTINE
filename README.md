@@ -1,6 +1,6 @@
 # EC ROUTINE
 
-Sistema de rotinas e tarefas com autenticação (JWT), API REST em Node/Express e armazenamento em **PostgreSQL** (produção) ou ficheiros JSON em `data/` (desenvolvimento sem `DATABASE_URL`).
+Sistema de rotinas e tarefas com autenticação (JWT), API REST em Node/Express e armazenamento em **SQLite local** (`data/ec-routine.db`, predefinição) ou **PostgreSQL** (produção com `DATABASE_URL`).
 
 **Publicação / produção:** ver o guia [DEPLOY.md](DEPLOY.md) (modelos de alojamento, CORS, meta `ec-api-base`, anexos e checklist).
 
@@ -11,13 +11,21 @@ npm install
 npm start
 ```
 
-Abrir `http://localhost:3000` (servidor estático + API no mesmo processo).
+Abrir `http://localhost:3000` (servidor estático + API no mesmo processo). Requer **Node.js 22.5+** (SQLite nativo via `node:sqlite`).
 
-Testes automatizados (API em memória com ficheiros em `data/`):
+Testes automatizados (API com SQLite em memória):
 
 ```bash
 npm test
 ```
+
+## Banco local (SQLite)
+
+Sem `DATABASE_URL`, o servidor usa **SQLite** em `data/ec-routine.db` (ou o caminho em `SQLITE_PATH`).
+
+- Tabelas: `users`, `routines`, `attachments` — ver [migrations/sqlite/001_initial.sql](migrations/sqlite/001_initial.sql)
+- Na primeira execução com DB vazio, importa automaticamente `data/users.json` e `data/routines.json` se existirem
+- Anexos continuam em `data/attachments/`; metadados na tabela `attachments`
 
 ## Estrutura principal
 
@@ -28,7 +36,7 @@ npm test
 | [dashboard.html](dashboard.html) / [dashboard.js](dashboard.js) | Painel principal |
 | [create.html](create.html), [routine-detail.html](routine-detail.html) | Criar/editar rotinas |
 | [profile-setup.html](profile-setup.html) | Onboarding de perfil |
-| [lib/store.js](lib/store.js) | Postgres (`store-pg.js`) ou JSON (`store-files.js`) |
+| [lib/store.js](lib/store.js) | SQLite local (`store-sqlite.js`) ou PostgreSQL (`store-pg.js`) |
 | [termos.html](termos.html), [privacidade.html](privacidade.html) | Documentos legais (links no registo e no app) |
 
 ## Variáveis de ambiente (produção)
@@ -64,7 +72,8 @@ Se o site estático estiver na **Hostinger** (ou outro domínio) e a API na **Re
 ## Backup
 
 - **PostgreSQL:** backups conforme o plano do fornecedor (ex.: Render).
-- **Modo ficheiros (`data/`):** copie regularmente `data/users.json`, `data/routines.json`, `data/attachments/` e `data/attachments-index.json`.
+- **SQLite (`data/ec-routine.db`):** copie o ficheiro `.db` (e opcionalmente `-wal`/`-shm` se existirem).
+- **Modo ficheiros JSON legado (`data/`):** só relevante se ainda tiver `users.json` / `routines.json` por migrar; o SQLite importa-os na primeira execução.
 
 ## Operação (Render gratuito)
 

@@ -7,6 +7,7 @@ const request = require('supertest');
 process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret-at-least-32-characters-long';
 delete process.env.DATABASE_URL;
+process.env.SQLITE_PATH = ':memory:';
 process.env.ADMIN_EMAILS = `admin_${Date.now()}_${Math.random().toString(36).slice(2, 10)}@test.local`;
 
 const { app, initializeBackend } = require('../server.js');

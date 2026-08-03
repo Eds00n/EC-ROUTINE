@@ -3,6 +3,9 @@ node_modules/
 out/
 .env.local
 data/
+*.db
+*.db-wal
+*.db-shm
 .env
 *.log
 
