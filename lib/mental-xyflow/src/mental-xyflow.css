@@ -9,11 +9,12 @@
 .ec-xy-root .react-flow {
   width: 100%;
   height: 100%;
+  background-color: var(--ec-xy-canvas-bg, #3a404a) !important;
 }
 
-/* Pan / arraste: menos work de pintura (grid + sombras + tooltips) */
+/* Pan / arraste: menos work de pintura (sombras + tooltips), mas mantém o grid de bolinhas */
 .ec-xy-root.is-interacting .react-flow__background {
-  opacity: 0;
+  opacity: 1;
   transition: none;
 }
 .ec-xy-root.is-interacting .react-flow__viewport {
@@ -47,6 +48,38 @@
   cursor: grabbing;
   will-change: transform;
   opacity: 0.96;
+  contain: layout style;
+  pointer-events: none;
+}
+
+.ec-xy-node.is-dragging .ec-xy-node__img-panel.is-open {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.ec-xy-node.is-dragging .ec-xy-node__img-wrap {
+  display: flex !important;
+  flex: 1 1 24px;
+  min-height: 24px;
+}
+
+.ec-xy-node.is-dragging .ec-xy-node__img-toggle,
+.ec-xy-node.is-dragging .ec-xy-node__img-actions,
+.ec-xy-node.is-dragging .ec-xy-node__img-add,
+.ec-xy-node.is-dragging .ec-xy-node__desc-add {
+  display: none !important;
+}
+
+.ec-xy-root.is-interacting .react-flow__edge {
+  pointer-events: none;
+}
+
+.ec-xy-root.is-interacting .ec-xy-node__img-toggle,
+.ec-xy-root.is-interacting .ec-xy-node__img-actions,
+.ec-xy-root.is-interacting .ec-xy-node__img-add,
+.ec-xy-root.is-interacting .ec-xy-node__desc-add {
+  display: none !important;
 }
 
 /* Resize só no hover — senão as 8 alças “roubam” o arraste do cartão */
@@ -93,7 +126,8 @@
 .ec-xy-node {
   position: relative;
   min-width: 120px;
-  max-width: 320px;
+  max-width: none;
+  width: 100%;
   min-height: 44px;
   height: 100%;
   padding: 14px 16px;
@@ -107,7 +141,20 @@
   box-sizing: border-box;
   cursor: grab;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
   contain: layout style;
+  container-type: size;
+}
+
+.ec-xy-root .react-flow__node .ec-xy-node {
+  width: 100%;
+  height: 100%;
+}
+
+.ec-xy-root .react-flow__node {
+  overflow: visible !important;
 }
 
 .ec-xy-node:active {
@@ -116,6 +163,21 @@
 
 .ec-xy-node__body {
   min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ec-xy-node__title,
+.ec-xy-node__title-input,
+.ec-xy-node__desc,
+.ec-xy-node__desc-input,
+.ec-xy-node__desc-add,
+.ec-xy-node__img-toggle,
+.ec-xy-node__img-actions {
+  flex-shrink: 0;
 }
 
 .ec-xy-node--center {
@@ -149,6 +211,14 @@
   line-height: 1.25;
   word-break: break-word;
   text-align: center;
+}
+
+.ec-xy-node__title.nodrag {
+  cursor: text;
+}
+
+.ec-xy-node__desc.nodrag {
+  cursor: text;
 }
 
 .ec-xy-node__title-input {
@@ -254,6 +324,21 @@
 .ec-xy-node__img-panel {
   margin-top: 8px;
   width: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ec-xy-node__img-panel.is-open {
+  flex: 1 1 0;
+  min-height: 28px;
+}
+
+.ec-xy-node.has-image .ec-xy-node__img-panel.is-open {
+  flex: 1 1 28px;
+  min-height: 28px;
 }
 
 .ec-xy-node__img-toggle {
@@ -338,17 +423,85 @@
   transform: rotate(180deg);
 }
 
+.ec-xy-node__img-panel.is-readonly .ec-xy-node__img-wrap {
+  margin-top: 0;
+}
+
+.ec-xy-node__img-panel.is-readonly.is-open .ec-xy-node__img-wrap {
+  display: flex;
+}
+
 .ec-xy-node__img-wrap {
   position: relative;
-  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  max-width: 100%;
+  flex: 1 1 0;
+  min-height: 24px;
+  min-width: 0;
+  box-sizing: border-box;
+  background: transparent;
+  overflow: hidden;
+}
+
+.ec-xy-node.has-image .ec-xy-node__img-wrap {
+  flex: 1 1 24px;
+  min-height: 24px;
+}
+
+.ec-xy-node--balloon .ec-xy-node__img-wrap {
+  background: transparent;
 }
 
 .ec-xy-node__img {
   display: block;
   width: 100%;
-  max-height: 140px;
-  object-fit: cover;
-  border-radius: 10px;
+  height: 100%;
+  min-width: 20px;
+  min-height: 20px;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  object-position: center;
+  border-radius: 0;
+  flex-shrink: 0;
+}
+
+/* Anexo pequeno: esconde extras para a imagem continuar visível */
+@container (max-height: 130px) {
+  .ec-xy-node.has-image .ec-xy-node__desc-add,
+  .ec-xy-node.has-image .ec-xy-node__img-actions {
+    display: none !important;
+  }
+
+  .ec-xy-node.has-image .ec-xy-node__img-toggle {
+    max-height: 22px !important;
+    padding: 2px 6px !important;
+    font-size: 0.62rem;
+  }
+
+  .ec-xy-node.has-image {
+    padding: 8px 10px;
+  }
+
+  .ec-xy-node.has-image .ec-xy-node__title {
+    font-size: 0.82rem;
+    line-height: 1.1;
+  }
+}
+
+@container (max-height: 90px) {
+  .ec-xy-node.has-image .ec-xy-node__img-toggle {
+    display: none !important;
+  }
+
+  .ec-xy-node.has-image .ec-xy-node__desc,
+  .ec-xy-node.has-image .ec-xy-node__desc-add {
+    display: none !important;
+  }
 }
 
 .ec-xy-node__img-add {
@@ -386,7 +539,10 @@
   flex-wrap: wrap;
   gap: 6px;
   justify-content: center;
+  width: 100%;
+  max-width: 100%;
   margin-top: 8px;
+  box-sizing: border-box;
 }
 
 .ec-xy-node__img-actions .ec-xy-tb-btn {
@@ -401,6 +557,7 @@
   background: #fff !important;
   border: 2px solid #111 !important;
   opacity: 0;
+  z-index: 3;
   pointer-events: auto !important;
 }
 

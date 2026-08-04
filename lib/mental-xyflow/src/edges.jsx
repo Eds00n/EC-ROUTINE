@@ -8,9 +8,18 @@ import {
   getStraightPath,
   Position,
   useReactFlow,
+  useStore,
   useStoreApi,
 } from '@xyflow/react';
 import { getEdgeParams, defaultMarker } from './utils.js';
+
+function useLiteEdges() {
+  return useStore(
+    (state) =>
+      state.panDragging ||
+      [...state.nodeLookup.values()].some((node) => node.dragging),
+  );
+}
 
 function EdgeToolbarActions({ id, label, animated }) {
   const { setEdges, deleteElements } = useReactFlow();
@@ -122,34 +131,39 @@ export const FloatingEdge = memo(function FloatingEdge({
   animated,
   selected,
 }) {
+  const lite = useLiteEdges();
   const store = useStoreApi();
   const { nodeLookup } = store.getState();
-  const sourceNode = nodeLookup?.get?.(source);
-  const targetNode = nodeLookup?.get?.(target);
 
   let path;
-  let labelX;
-  let labelY;
+  let labelX = (sourceX + targetX) / 2;
+  let labelY = (sourceY + targetY) / 2;
 
-  if (sourceNode && targetNode) {
-    const p = getEdgeParams(sourceNode, targetNode);
-    [path, labelX, labelY] = getBezierPath({
-      sourceX: p.sx,
-      sourceY: p.sy,
-      targetX: p.tx,
-      targetY: p.ty,
-      sourcePosition: p.sourcePos,
-      targetPosition: p.targetPos,
-    });
+  if (lite) {
+    [path] = getStraightPath({ sourceX, sourceY, targetX, targetY });
   } else {
-    [path, labelX, labelY] = getBezierPath({
-      sourceX,
-      sourceY,
-      targetX,
-      targetY,
-      sourcePosition,
-      targetPosition,
-    });
+    const sourceNode = nodeLookup?.get?.(source);
+    const targetNode = nodeLookup?.get?.(target);
+    if (sourceNode && targetNode) {
+      const p = getEdgeParams(sourceNode, targetNode);
+      [path, labelX, labelY] = getBezierPath({
+        sourceX: p.sx,
+        sourceY: p.sy,
+        targetX: p.tx,
+        targetY: p.ty,
+        sourcePosition: p.sourcePos,
+        targetPosition: p.targetPos,
+      });
+    } else {
+      [path, labelX, labelY] = getBezierPath({
+        sourceX,
+        sourceY,
+        targetX,
+        targetY,
+        sourcePosition,
+        targetPosition,
+      });
+    }
   }
 
   const text = label || data?.label || '';
@@ -163,9 +177,10 @@ export const FloatingEdge = memo(function FloatingEdge({
         markerStart={undefined}
         style={style}
         className={selected ? 'ec-xy-edge is-selected' : 'ec-xy-edge'}
+        interactionWidth={lite ? 8 : 20}
       />
-      {text ? <LabelBadge label={text} x={labelX} y={labelY} /> : null}
-      {selected ? <EdgeToolbarActions id={id} label={text} animated={animated} /> : null}
+      {!lite && text ? <LabelBadge label={text} x={labelX} y={labelY} /> : null}
+      {!lite && selected ? <EdgeToolbarActions id={id} label={text} animated={animated} /> : null}
     </>
   );
 });

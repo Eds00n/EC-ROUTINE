@@ -5,20 +5,119 @@ import {
   NodeResizer,
   NodeToolbar,
   useReactFlow,
+  useStore,
 } from '@xyflow/react';
+import { freezeNodeDimensions, readNodeDimensions } from './utils.js';
 
 const MAX_NODE_IMAGE_BYTES = 20 * 1024 * 1024;
 
-/** Imagem com Bearer para /api/attachments (src direto não manda token). */
-function AuthAwareImage({ src, nodeId }) {
+function dataUrlToFile(dataUrl, name) {
+  if (!dataUrl || dataUrl.indexOf('data:') !== 0) return null;
+  try {
+    const parts = dataUrl.split(',');
+    const meta = parts[0] || '';
+    const b64 = parts[1] || '';
+    const mime = (meta.match(/data:([^;]+)/) || [])[1] || 'image/png';
+    const bin = atob(b64);
+    const arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i += 1) arr[i] = bin.charCodeAt(i);
+    return new File([arr], name || 'image.png', { type: mime });
+  } catch (_) {
+    return null;
+  }
+}
+
+function uploadNodeImageFile(setNodes, nodeId, file, imageData) {
+  if (!file || !nodeId) return;
+  const uploadFn =
+    typeof window !== 'undefined' && typeof window.uploadMentalImage === 'function'
+      ? window.uploadMentalImage
+      : null;
+  if (!uploadFn) return;
+  uploadFn(file)
+    .then((ref) => {
+      if (!ref) return;
+      setNodes((ns) =>
+        ns.map((n) =>
+          n.id === nodeId
+            ? {
+                ...n,
+                data: {
+                  ...n.data,
+                  image: { attachmentId: ref.attachmentId, url: ref.url },
+                  imageData: n.data?.imageData || imageData || '',
+                },
+              }
+            : n,
+        ),
+      );
+    })
+    .catch(() => {});
+}
+
+function askRemoveImageConfirm() {
+  if (typeof window !== 'undefined' && typeof window.openEcConfirmModal === 'function') {
+    return window.openEcConfirmModal({
+      title: 'Remover imagem?',
+      message: 'Tem certeza que deseja remover a imagem deste anexo?',
+      confirmLabel: 'Remover',
+      cancelLabel: 'Cancelar',
+    }).then(Boolean);
+  }
+  return Promise.resolve(
+    window.confirm('Tem certeza que deseja remover a imagem deste anexo?'),
+  );
+}
+
+export function applyImageToNode(setNodes, nodeId, file, imageData) {
+  if (!imageData) return;
+  setNodes((ns) =>
+    ns.map((n) =>
+      n.id === nodeId ? { ...n, data: { ...n.data, imageData, image: null } } : n,
+    ),
+  );
+  uploadNodeImageFile(setNodes, nodeId, file || dataUrlToFile(imageData, 'image.png'), imageData);
+}
+
+function nodePropsAreEqual(prev, next) {
+  if (prev.id !== next.id) return false;
+  if (prev.dragging !== next.dragging) return false;
+  if (prev.selected !== next.selected) return false;
+  return prev.data === next.data;
+}
+
+function resolveImageFetchUrl(src) {
+  if (!src) return '';
+  if (src.indexOf('data:') === 0 || src.indexOf('blob:') === 0) return src;
+  if (typeof window !== 'undefined' && typeof window.getAttachmentFullUrl === 'function') {
+    return window.getAttachmentFullUrl(src);
+  }
+  if (src.indexOf('http') === 0 || src.indexOf('//') === 0) return src;
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  return `${origin}${src.startsWith('/') ? '' : '/'}${src}`;
+}
+
+/** Imagem com Bearer para /api/attachments; usa base64 local se o anexo falhar. */
+function AuthAwareImage({ src, fallbackData, nodeId, onLoad }) {
   const [displaySrc, setDisplaySrc] = useState('');
 
   useEffect(() => {
     let cancelled = false;
     let objectUrl = '';
 
+    const applyFallback = () => {
+      if (cancelled) return;
+      if (fallbackData && fallbackData.indexOf('data:') === 0) {
+        setDisplaySrc(fallbackData);
+      } else if (src && src.indexOf('data:') === 0) {
+        setDisplaySrc(src);
+      } else {
+        setDisplaySrc('');
+      }
+    };
+
     if (!src) {
-      setDisplaySrc('');
+      applyFallback();
       return undefined;
     }
     if (src.indexOf('data:') === 0 || src.indexOf('blob:') === 0) {
@@ -28,20 +127,17 @@ function AuthAwareImage({ src, nodeId }) {
 
     const needsAuth = src.indexOf('/api/attachments/') !== -1;
     if (!needsAuth) {
-      setDisplaySrc(src);
+      setDisplaySrc(resolveImageFetchUrl(src));
       return undefined;
     }
 
     const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
     if (!token) {
-      setDisplaySrc('');
+      applyFallback();
       return undefined;
     }
 
-    const full =
-      src.indexOf('http') === 0 || src.indexOf('//') === 0
-        ? src
-        : `${window.location.origin}${src.startsWith('/') ? '' : '/'}${src}`;
+    const full = resolveImageFetchUrl(src);
 
     fetch(full, { headers: { Authorization: `Bearer ${token}` } })
       .then((res) => {
@@ -54,7 +150,7 @@ function AuthAwareImage({ src, nodeId }) {
         setDisplaySrc(objectUrl);
       })
       .catch(() => {
-        if (!cancelled) setDisplaySrc('');
+        applyFallback();
       });
 
     return () => {
@@ -65,10 +161,26 @@ function AuthAwareImage({ src, nodeId }) {
         } catch (_) {}
       }
     };
-  }, [src, nodeId]);
+  }, [src, fallbackData, nodeId]);
 
   if (!displaySrc) return null;
-  return <img className="ec-xy-node__img" src={displaySrc} alt="" draggable={false} loading="lazy" decoding="async" />;
+  return (
+    <img
+      className="ec-xy-node__img"
+      src={displaySrc}
+      alt=""
+      draggable={false}
+      loading="lazy"
+      decoding="async"
+      onLoad={onLoad}
+    />
+  );
+}
+
+function useNodeDimensions(id) {
+  return useStore(
+    useCallback((state) => readNodeDimensions(state.nodeLookup.get(id)), [id]),
+  );
 }
 
 function EasyHandles() {
@@ -166,11 +278,23 @@ function EditableTitle({ id, label, editing, readOnly, placeholder }) {
 
   return (
     <div
-      className="ec-xy-node__title"
-      onDoubleClick={(e) => {
+      className="ec-xy-node__title nodrag nopan"
+      role={readOnly ? undefined : 'button'}
+      tabIndex={readOnly ? -1 : 0}
+      onPointerDown={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+      onClick={(e) => {
         if (readOnly) return;
         e.stopPropagation();
         startLabelEdit(setNodes, id);
+      }}
+      onKeyDown={(e) => {
+        if (readOnly) return;
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          e.stopPropagation();
+          startLabelEdit(setNodes, id);
+        }
       }}
     >
       {label || placeholder}
@@ -240,11 +364,23 @@ function EditableDescription({ id, description, editing, readOnly, selected }) {
   if (description) {
     return (
       <div
-        className="ec-xy-node__desc"
-        onDoubleClick={(e) => {
+        className="ec-xy-node__desc nodrag nopan"
+        role={readOnly ? undefined : 'button'}
+        tabIndex={readOnly ? -1 : 0}
+        onPointerDown={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => {
           if (readOnly) return;
           e.stopPropagation();
           startDescEdit(setNodes, id);
+        }}
+        onKeyDown={(e) => {
+          if (readOnly) return;
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            e.stopPropagation();
+            startDescEdit(setNodes, id);
+          }
         }}
       >
         {description}
@@ -252,12 +388,13 @@ function EditableDescription({ id, description, editing, readOnly, selected }) {
     );
   }
 
-  if (!readOnly && selected) {
-    /* Sem nodrag: o cartão inteiro arrasta; clique curto ainda abre edição */
+  if (!readOnly) {
     return (
       <button
         type="button"
-        className="ec-xy-node__desc-add"
+        className="ec-xy-node__desc-add nodrag nopan"
+        onPointerDown={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => {
           e.stopPropagation();
           startDescEdit(setNodes, id);
@@ -300,13 +437,7 @@ function NodeToolbarActions({ id, data, readOnly, selected }) {
       reader.onload = () => {
         const imageData = typeof reader.result === 'string' ? reader.result : '';
         if (!imageData) return;
-        setNodes((ns) =>
-          ns.map((n) =>
-            n.id === id
-              ? { ...n, data: { ...n.data, imageData, image: null } }
-              : n,
-          ),
-        );
+        applyImageToNode(setNodes, id, file, imageData);
       };
       reader.readAsDataURL(file);
     },
@@ -426,14 +557,24 @@ function NodeShell({ id, data, selected, className, children, readOnly, dragging
   const bg = data?.color || undefined;
   const color = data?.fontColor || undefined;
   const editing = !!(data?.editing || data?.editingDesc);
+  const hasImage = !!(data?.image?.url || data?.imageData);
+  const dims = useNodeDimensions(id);
   /* No arraste: some chrome (prop dragging do RF). CSS .is-interacting cobre pan. */
   const showChrome = selected && !readOnly && !dragging;
+  const shellStyle = {
+    background: bg || undefined,
+    color: color || undefined,
+    ...(dragging && dims?.width ? { width: dims.width, minWidth: dims.width } : {}),
+    ...(dragging && dims?.height ? { height: dims.height, minHeight: dims.height } : {}),
+  };
   return (
     <>
       {showChrome ? (
         <NodeResizer
-          minWidth={120}
-          minHeight={44}
+          minWidth={hasImage ? 80 : 120}
+          minHeight={hasImage ? 72 : 44}
+          maxWidth={2400}
+          maxHeight={3200}
           isVisible
           keepAspectRatio={false}
           lineClassName="ec-xy-resize-line"
@@ -444,8 +585,8 @@ function NodeShell({ id, data, selected, className, children, readOnly, dragging
         <NodeToolbarActions id={id} data={data} readOnly={readOnly} selected={selected} />
       ) : null}
       <div
-        className={`ec-xy-node ${className || ''}${selected ? ' is-selected' : ''}${dragging ? ' is-dragging' : ''}${data?.intersecting ? ' is-intersecting' : ''}${editing ? ' is-editing' : ''}`}
-        style={{ background: bg || undefined, color: color || undefined }}
+        className={`ec-xy-node ${className || ''}${selected ? ' is-selected' : ''}${dragging ? ' is-dragging' : ''}${data?.intersecting ? ' is-intersecting' : ''}${editing ? ' is-editing' : ''}${hasImage ? ' has-image' : ''}`}
+        style={shellStyle}
       >
         <EasyHandles />
         <div className="ec-xy-node__body">{children}</div>
@@ -454,15 +595,37 @@ function NodeShell({ id, data, selected, className, children, readOnly, dragging
   );
 }
 
-/** Título + texto abaixo + imagem no final (imagem só carrega ao abrir a setinha) */
+/** Título + texto abaixo + imagem no final */
 function NodeBody({ id, data, readOnly, selected, titlePlaceholder }) {
-  const src = data?.image?.url || data?.imageData || '';
-  const { setNodes } = useReactFlow();
+  const imageUrl = data?.image?.url || '';
+  const imageData = data?.imageData || '';
+  const src = imageUrl || imageData;
+  const { setNodes, getNode } = useReactFlow();
   const fileRef = useRef(null);
-  const [imgOpen, setImgOpen] = useState(false);
+  const [imgOpen, setImgOpen] = useState(() => !!src);
+  const showImageOpen = readOnly || imgOpen;
+
+  const persistNodeSize = useCallback(() => {
+    requestAnimationFrame(() => {
+      const node = getNode(id);
+      if (!node) return;
+      if (node.style?.height && node.style?.width) return;
+      let domRect = null;
+      try {
+        const el = document.querySelector(
+          `.react-flow__node[data-id="${CSS.escape(String(id))}"]`,
+        );
+        if (el) domRect = el.getBoundingClientRect();
+      } catch (_) {}
+      const frozen = freezeNodeDimensions(node, domRect);
+      if (frozen === node) return;
+      setNodes((ns) => ns.map((n) => (n.id === id ? frozen : n)));
+    });
+  }, [getNode, id, setNodes]);
 
   useEffect(() => {
-    if (!src) setImgOpen(false);
+    if (src) setImgOpen(true);
+    else setImgOpen(false);
   }, [src]);
 
   const applyImageFile = useCallback(
@@ -471,14 +634,10 @@ function NodeBody({ id, data, readOnly, selected, titlePlaceholder }) {
       if (file.size > MAX_NODE_IMAGE_BYTES) return;
       const reader = new FileReader();
       reader.onload = () => {
-        const imageData = typeof reader.result === 'string' ? reader.result : '';
-        if (!imageData) return;
-        setImgOpen(false);
-        setNodes((ns) =>
-          ns.map((n) =>
-            n.id === id ? { ...n, data: { ...n.data, imageData, image: null } } : n,
-          ),
-        );
+        const nextData = typeof reader.result === 'string' ? reader.result : '';
+        if (!nextData) return;
+        setImgOpen(true);
+        applyImageToNode(setNodes, id, file, nextData);
       };
       reader.readAsDataURL(file);
     },
@@ -495,12 +654,15 @@ function NodeBody({ id, data, readOnly, selected, titlePlaceholder }) {
   );
 
   const removeImg = useCallback(() => {
-    setImgOpen(false);
-    setNodes((ns) =>
-      ns.map((n) =>
-        n.id === id ? { ...n, data: { ...n.data, imageData: '', image: null } } : n,
-      ),
-    );
+    askRemoveImageConfirm().then((ok) => {
+      if (!ok) return;
+      setImgOpen(false);
+      setNodes((ns) =>
+        ns.map((n) =>
+          n.id === id ? { ...n, data: { ...n.data, imageData: '', image: null } } : n,
+        ),
+      );
+    });
   }, [id, setNodes]);
 
   return (
@@ -520,35 +682,48 @@ function NodeBody({ id, data, readOnly, selected, titlePlaceholder }) {
         selected={selected}
       />
       {src ? (
-        <div className={`ec-xy-node__img-panel nodrag nopan${imgOpen ? ' is-open' : ''}`}>
-          <button
-            type="button"
-            className="ec-xy-node__img-toggle nodrag nopan"
-            aria-expanded={imgOpen}
-            aria-label={imgOpen ? 'Ocultar imagem' : 'Mostrar imagem'}
-            title={imgOpen ? 'Ocultar imagem' : 'Mostrar imagem'}
-            onClick={(e) => {
-              e.stopPropagation();
-              setImgOpen((v) => !v);
-            }}
-          >
-            <span className="ec-xy-node__img-toggle-label">{imgOpen ? 'Ocultar imagem' : 'Ver imagem'}</span>
-            <svg
-              className="ec-xy-node__img-toggle-chevron"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
+        <div
+          className={`ec-xy-node__img-panel nodrag nopan${showImageOpen ? ' is-open' : ''}${readOnly ? ' is-readonly' : ''}`}
+        >
+          {!readOnly ? (
+            <button
+              type="button"
+              className="ec-xy-node__img-toggle nodrag nopan"
+              aria-expanded={showImageOpen}
+              aria-label={showImageOpen ? 'Ocultar imagem' : 'Mostrar imagem'}
+              title={showImageOpen ? 'Ocultar imagem' : 'Mostrar imagem'}
+              onClick={(e) => {
+                e.stopPropagation();
+                setImgOpen((v) => !v);
+              }}
             >
-              <path d="M6 9l6 6 6-6" />
-            </svg>
-          </button>
-          {imgOpen ? (
-            <div className="ec-xy-node__img-wrap">
-              <AuthAwareImage src={src} nodeId={id} />
+              <span className="ec-xy-node__img-toggle-label">
+                {showImageOpen ? 'Ocultar imagem' : 'Ver imagem'}
+              </span>
+              <svg
+                className="ec-xy-node__img-toggle-chevron"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+          ) : null}
+          {showImageOpen ? (
+            <>
+              <div className="ec-xy-node__img-wrap">
+                <AuthAwareImage
+                  src={imageUrl || imageData}
+                  fallbackData={imageData}
+                  nodeId={id}
+                  onLoad={persistNodeSize}
+                />
+              </div>
               {!readOnly && selected ? (
                 <div className="ec-xy-node__img-actions">
                   <button
@@ -583,7 +758,7 @@ function NodeBody({ id, data, readOnly, selected, titlePlaceholder }) {
                 onChange={onFile}
                 onClick={(e) => e.stopPropagation()}
               />
-            </div>
+            </>
           ) : (
             <input
               ref={fileRef}
@@ -642,7 +817,7 @@ export const CenterNode = memo(function CenterNode({ id, data, selected, draggin
       <NodeBody id={id} data={data} readOnly={readOnly} selected={selected} titlePlaceholder="Centro" />
     </NodeShell>
   );
-});
+}, nodePropsAreEqual);
 
 export const BranchNode = memo(function BranchNode({ id, data, selected, dragging }) {
   const readOnly = !!data?.readOnly;
@@ -651,7 +826,7 @@ export const BranchNode = memo(function BranchNode({ id, data, selected, draggin
       <NodeBody id={id} data={data} readOnly={readOnly} selected={selected} titlePlaceholder="Nó" />
     </NodeShell>
   );
-});
+}, nodePropsAreEqual);
 
 export const BalloonNode = memo(function BalloonNode({ id, data, selected, dragging }) {
   const readOnly = !!data?.readOnly;
@@ -660,7 +835,7 @@ export const BalloonNode = memo(function BalloonNode({ id, data, selected, dragg
       <NodeBody id={id} data={data} readOnly={readOnly} selected={selected} titlePlaceholder="Texto" />
     </NodeShell>
   );
-});
+}, nodePropsAreEqual);
 
 export const nodeTypes = {
   center: CenterNode,

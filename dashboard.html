@@ -90,7 +90,7 @@
     </style>
     <link rel="stylesheet" href="lib/ec-entry-transition.css?v=20260704cleanup">
     <link rel="stylesheet" href="lib/ec-busy-overlay.css?v=20260614navbusy">
-    <link rel="stylesheet" href="dashboard.css?v=20260716imgToggleHover">
+    <link rel="stylesheet" href="dashboard.css?v=20260803namestep">
     <link rel="stylesheet" href="dashboard-theme.css?v=20260715bibSelect">
     <link rel="stylesheet" href="uiverse-trash-bin.css?v=20260704cleanup">
     <link rel="stylesheet" href="uiverse-download-btn.css?v=20260418styles">
@@ -319,6 +319,16 @@
                     </button>
                 </div>
             </div>
+            <div class="annotation-modal-step annotation-modal-preview annotation-modal-name hidden" id="annotationNameStep">
+                <button type="button" class="annotation-preview-back" id="annotationNameBack" aria-label="Voltar">← Voltar</button>
+                <p class="annotation-preview-task-name" id="annotationNameTaskName"></p>
+                <h3 class="annotation-modal-title" id="annotationNameTitle">Nome da anotação</h3>
+                <p class="annotation-preview-desc" id="annotationNameDesc">Qual nome será esta anotação?</p>
+                <div class="annotation-name-form">
+                    <input type="text" id="annotationNameInput" class="annotation-name-input" maxlength="120" autocomplete="off" spellcheck="false" placeholder="Ex.: Mapa de estudo" aria-label="Nome da anotação">
+                    <button type="button" class="annotation-task-pick-continue" id="annotationNameConfirm">Salvar</button>
+                </div>
+            </div>
             <div class="annotation-modal-step annotation-modal-editor hidden" id="annotationEditorStep">
                 <div class="annotation-modal-title-wrap" id="annotationEditorTitleWrap">
                     <h3 class="annotation-modal-title" id="annotationEditorTitle">Editor</h3>
@@ -416,6 +426,22 @@
             <div class="ec-confirm-modal__actions">
                 <button type="button" class="ec-confirm-modal__btn ec-confirm-modal__btn--ghost" id="ecConfirmCancelBtn">Cancelar</button>
                 <button type="button" class="ec-confirm-modal__btn ec-confirm-modal__btn--danger" id="ecConfirmOkBtn">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="ec-prompt-modal" id="ecPromptModal" hidden role="dialog" aria-modal="true" aria-labelledby="ecPromptModalTitle" aria-describedby="ecPromptModalMessage" aria-hidden="true">
+        <div class="ec-prompt-modal__overlay" id="ecPromptModalOverlay"></div>
+        <div class="ec-prompt-modal__panel" role="document">
+            <div class="ec-prompt-modal__icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 13h4"/><path d="M10 17h7"/></svg>
+            </div>
+            <h2 class="ec-prompt-modal__title" id="ecPromptModalTitle">Nome da anotação</h2>
+            <p class="ec-prompt-modal__message" id="ecPromptModalMessage"></p>
+            <input type="text" class="ec-prompt-modal__input" id="ecPromptModalInput" maxlength="120" autocomplete="off" spellcheck="false" aria-label="Nome da anotação">
+            <div class="ec-prompt-modal__actions">
+                <button type="button" class="ec-prompt-modal__btn ec-prompt-modal__btn--ghost" id="ecPromptCancelBtn">Cancelar</button>
+                <button type="button" class="ec-prompt-modal__btn ec-prompt-modal__btn--primary" id="ecPromptOkBtn">Salvar</button>
             </div>
         </div>
     </div>
@@ -588,11 +614,11 @@
 
     <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
     <script src="trash-bin-button.js?v=20260704cleanup"></script>
-    <link rel="stylesheet" href="lib/mental-xyflow/dist/mental-xyflow.css?v=20260716imgToggleHover">
-    <script src="lib/mental-xyflow/dist/mental-xyflow.iife.js?v=20260716imgToggleHover"></script>
-    <script src="mental-diagram-svg-export.js?v=20260704cleanup"></script>
-    <script src="lib/ec-entry-transition.js?v=20260704cleanup"></script>
-    <script src="lib/ec-busy-overlay.js?v=20260614navbusy"></script>
-    <script src="dashboard.js?v=20260716pendingModal"></script>
+    <link rel="stylesheet" href="lib/mental-xyflow/dist/mental-xyflow.css?v=20260804imgmin">
+    <script src="lib/mental-xyflow/dist/mental-xyflow.iife.js?v=20260804rmimg"></script>
+    <script src="mental-diagram-svg-export.js?v=20260803perf2"></script>
+    <script src="lib/ec-entry-transition.js?v=20260803perf2"></script>
+    <script src="lib/ec-busy-overlay.js?v=20260803perf2"></script>
+    <script src="dashboard.js?v=20260803edit"></script>
 </body>
 </html>

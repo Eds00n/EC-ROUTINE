@@ -24,8 +24,11 @@ import {
   defaultEdgeOptionsFor,
   defaultMarker,
   getClosestEdge,
+  freezeNodeDimensions,
+  normalizeHex6,
+  dotColorForCanvasBg,
 } from './utils.js';
-import { nodeTypes } from './nodes.jsx';
+import { nodeTypes, applyImageToNode } from './nodes.jsx';
 import { edgeTypes, CustomConnectionLine } from './edges.jsx';
 import ContextMenu from './ContextMenu.jsx';
 
@@ -48,7 +51,13 @@ function FlowInner({ initialPayload, readOnly, canvasBg, onReady, confirmDelete 
   edgesRef.current = edges;
   const nodesRef = useRef(nodes);
   nodesRef.current = nodes;
-  const [bg, setBg] = useState(canvasBg || converted.canvasBg || '#3a404a');
+  const [bg, setBg] = useState(() => normalizeHex6(canvasBg || converted.canvasBg) || '#3a404a');
+  const bgDots = useMemo(() => dotColorForCanvasBg(bg), [bg]);
+
+  const applyCanvasBg = useCallback((color) => {
+    const next = normalizeHex6(color) || '#3a404a';
+    setBg(next);
+  }, []);
   const [menu, setMenu] = useState(null);
   const [edgeType, setEdgeType] = useState('smoothstep');
   const [showMiniMap, setShowMiniMap] = useState(false);
@@ -56,34 +65,43 @@ function FlowInner({ initialPayload, readOnly, canvasBg, onReady, confirmDelete 
   const connectStartRef = useRef(null);
   const reconnectOkRef = useRef(true);
   const flowRef = useRef(null);
+  const lastPasteTargetRef = useRef(null);
   const { fitView, getNodes, getEdges, screenToFlowPosition, deleteElements, getNode } =
     useReactFlow();
 
   const flash = useCallback(() => {}, []);
 
-  /** Colar imagem (Ctrl+V) no nó selecionado */
+  const resolvePasteTargetId = useCallback(() => {
+    const nodes = getNodes().filter((n) => !(n.data && n.data.readOnly));
+    if (!nodes.length) return null;
+
+    const active = document.activeElement;
+    const fromActive = active?.closest?.('.react-flow__node[data-id]');
+    if (fromActive) {
+      const id = fromActive.getAttribute('data-id');
+      if (id && nodes.some((n) => n.id === id)) return id;
+    }
+
+    const selected = nodes.filter((n) => n.selected);
+    if (selected.length) return selected[0].id;
+
+    if (lastPasteTargetRef.current && nodes.some((n) => n.id === lastPasteTargetRef.current)) {
+      return lastPasteTargetRef.current;
+    }
+
+    if (nodes.length === 1) return nodes[0].id;
+    return null;
+  }, [getNodes]);
+
+  /** Colar imagem (Ctrl+V) no anexo selecionado ou focado */
   useEffect(() => {
     if (readOnly) return undefined;
     const onPaste = (event) => {
       const active = document.activeElement;
       const tag = active && active.tagName ? active.tagName.toUpperCase() : '';
-      // Não intercepta colar texto dentro dos campos de edição
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || (active && active.isContentEditable)) {
-        const items = event.clipboardData && event.clipboardData.items;
-        let hasImage = false;
-        if (items) {
-          for (let i = 0; i < items.length; i += 1) {
-            if (items[i].type && items[i].type.indexOf('image/') === 0) {
-              hasImage = true;
-              break;
-            }
-          }
-        }
-        if (!hasImage) return;
-      }
-
       const items = event.clipboardData && event.clipboardData.items;
       if (!items || !items.length) return;
+
       let file = null;
       for (let i = 0; i < items.length; i += 1) {
         if (items[i].type && items[i].type.indexOf('image/') === 0) {
@@ -91,32 +109,34 @@ function FlowInner({ initialPayload, readOnly, canvasBg, onReady, confirmDelete 
           break;
         }
       }
-      if (!file) return;
+      if (!file) {
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || (active && active.isContentEditable)) return;
+        return;
+      }
       if (file.size > 20 * 1024 * 1024) return;
 
-      const selected = getNodes().filter((n) => n.selected && !(n.data && n.data.readOnly));
-      if (selected.length !== 1) return;
+      const modal = document.getElementById('annotationModal');
+      if (!modal || modal.classList.contains('hidden')) return;
+      if (!modal.classList.contains('annotation-modal--mental')) return;
+      if (!window._annotationMentalUseXyflow) return;
+
+      const targetId = resolvePasteTargetId();
+      if (!targetId) return;
 
       event.preventDefault();
-      const targetId = selected[0].id;
+      event.stopPropagation();
       const reader = new FileReader();
       reader.onload = () => {
         const imageData = typeof reader.result === 'string' ? reader.result : '';
         if (!imageData) return;
-        setNodes((ns) =>
-          ns.map((n) =>
-            n.id === targetId
-              ? { ...n, data: { ...n.data, imageData, image: null } }
-              : n,
-          ),
-        );
+        applyImageToNode(setNodes, targetId, file, imageData);
       };
       reader.readAsDataURL(file);
     };
 
-    window.addEventListener('paste', onPaste);
-    return () => window.removeEventListener('paste', onPaste);
-  }, [getNodes, readOnly, setNodes]);
+    document.addEventListener('paste', onPaste, true);
+    return () => document.removeEventListener('paste', onPaste, true);
+  }, [readOnly, resolvePasteTargetId, setNodes]);
 
   const cycleEdgeType = useCallback(() => {
     const order = ['floating', 'smoothstep', 'bezier', 'straight'];
@@ -249,7 +269,7 @@ function FlowInner({ initialPayload, readOnly, canvasBg, onReady, confirmDelete 
               data: {
                 ...n.data,
                 image: m.image || null,
-                imageData: m.image && m.image.url ? '' : m.imageData || '',
+                imageData: m.imageData || '',
               },
             };
           }),
@@ -257,7 +277,7 @@ function FlowInner({ initialPayload, readOnly, canvasBg, onReady, confirmDelete 
       },
       addNode: addBranchNode,
       setCanvasBg(color) {
-        if (color) setBg(color);
+        applyCanvasBg(color);
       },
       getCanvasBg() {
         return bg;
@@ -266,7 +286,18 @@ function FlowInner({ initialPayload, readOnly, canvasBg, onReady, confirmDelete 
         fitView({ padding: 0.2 });
       },
     });
-  }, [addBranchNode, bg, fitView, getEdges, getNodes, onReady, setNodes]);
+  }, [addBranchNode, applyCanvasBg, bg, fitView, getEdges, getNodes, onReady, setNodes]);
+
+  useEffect(() => {
+    const canvas = document.getElementById('annotationMentalCanvas');
+    if (canvas) {
+      canvas.style.setProperty('background-color', bg, 'important');
+      canvas.style.backgroundImage = 'none';
+    }
+    if (typeof window !== 'undefined' && window._annotationMentalData) {
+      window._annotationMentalData.canvasBg = bg;
+    }
+  }, [bg]);
 
   useEffect(() => {
     const t = window.setTimeout(() => fitView({ padding: 0.2 }), 40);
@@ -439,9 +470,29 @@ function FlowInner({ initialPayload, readOnly, canvasBg, onReady, confirmDelete 
     if (el) el.classList.toggle('is-interacting', !!active);
   }, []);
 
-  const onNodeDragStart = useCallback(() => {
-    setInteracting(true);
-  }, [setInteracting]);
+  const onNodeClick = useCallback((_evt, node) => {
+    if (node && !(node.data && node.data.readOnly)) {
+      lastPasteTargetRef.current = node.id;
+    }
+  }, []);
+
+  const onNodeDragStart = useCallback(
+    (_evt, node) => {
+      setInteracting(true);
+      if (readOnly || !node) return;
+      const live = getNode(node.id) || node;
+      let domRect = null;
+      try {
+        const sel = `.react-flow__node[data-id="${CSS.escape(String(node.id))}"]`;
+        const el = flowRef.current?.querySelector(sel);
+        if (el) domRect = el.getBoundingClientRect();
+      } catch (_) {}
+      setNodes((ns) =>
+        ns.map((n) => (n.id === live.id ? freezeNodeDimensions(live, domRect) : n)),
+      );
+    },
+    [getNode, readOnly, setInteracting, setNodes],
+  );
 
   const onMoveStart = useCallback(() => {
     setInteracting(true);
@@ -593,8 +644,13 @@ function FlowInner({ initialPayload, readOnly, canvasBg, onReady, confirmDelete 
   const onPaneClick = useCallback(() => setMenu(null), []);
 
   return (
-    <div className="ec-xy-root" style={{ background: bg }} ref={flowRef}>
+    <div
+      className="ec-xy-root"
+      style={{ background: bg, '--ec-xy-canvas-bg': bg }}
+      ref={flowRef}
+    >
       <ReactFlow
+        style={{ backgroundColor: bg }}
         nodes={nodes}
         edges={edges}
         onNodesChange={readOnly ? undefined : onNodesChange}
@@ -606,6 +662,7 @@ function FlowInner({ initialPayload, readOnly, canvasBg, onReady, confirmDelete 
         onNodesDelete={onNodesDelete}
         onBeforeDelete={onBeforeDelete}
         onNodeDoubleClick={onNodeDoubleClick}
+        onNodeClick={onNodeClick}
         onNodeDragStart={onNodeDragStart}
         onNodeDragStop={onNodeDragStop}
         onMoveStart={onMoveStart}
@@ -641,13 +698,13 @@ function FlowInner({ initialPayload, readOnly, canvasBg, onReady, confirmDelete 
         preventScrolling
         minZoom={0.2}
         maxZoom={2.5}
-        nodeDragThreshold={1}
+        nodeDragThreshold={8}
       >
         <Background
           id="ec-xy-dots"
           gap={28}
           size={1}
-          color="rgba(255,255,255,0.14)"
+          color={bgDots}
           style={{ transition: 'opacity 0.12s ease' }}
         />
         {showMiniMap ? <MiniMap pannable zoomable nodeStrokeWidth={2} /> : null}
@@ -709,14 +766,15 @@ function FlowInner({ initialPayload, readOnly, canvasBg, onReady, confirmDelete 
               >
                 <span
                   className="ec-xy-bg-swatch"
-                  style={{ background: /^#[0-9a-fA-F]{6}$/.test(bg) ? bg : '#3a404a' }}
+                  style={{ background: bg }}
                   aria-hidden="true"
                 />
                 <input
                   type="color"
                   className="ec-xy-bg-input-hit"
-                  value={/^#[0-9a-fA-F]{6}$/.test(bg) ? bg : '#3a404a'}
-                  onChange={(e) => setBg(e.target.value)}
+                  value={bg}
+                  onChange={(e) => applyCanvasBg(e.target.value)}
+                  onInput={(e) => applyCanvasBg(e.target.value)}
                   onClick={(e) => e.stopPropagation()}
                   title="Cor de fundo do canvas"
                 />

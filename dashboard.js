@@ -132,6 +132,240 @@ function openEcConfirmModal(options) {
 
 window.openEcConfirmModal = openEcConfirmModal;
 
+var _ecPromptResolver = null;
+var _ecPromptEventsBound = false;
+var _ecPromptCloseTimer = null;
+
+function ensureEcPromptModalClosed() {
+    var modal = document.getElementById('ecPromptModal');
+    if (!modal) return;
+    if (_ecPromptCloseTimer) {
+        clearTimeout(_ecPromptCloseTimer);
+        _ecPromptCloseTimer = null;
+    }
+    modal.classList.remove('is-open', 'is-closing');
+    modal.hidden = true;
+    modal.setAttribute('aria-hidden', 'true');
+}
+
+function closeEcPromptModal(result) {
+    var modal = document.getElementById('ecPromptModal');
+    var resolve = _ecPromptResolver;
+    _ecPromptResolver = null;
+    if (!modal || modal.hidden || !modal.classList.contains('is-open')) {
+        ensureEcPromptModalClosed();
+        if (typeof resolve === 'function') resolve(result);
+        return;
+    }
+    modal.classList.add('is-closing');
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden', 'true');
+    if (_ecPromptCloseTimer) clearTimeout(_ecPromptCloseTimer);
+    _ecPromptCloseTimer = window.setTimeout(function () {
+        _ecPromptCloseTimer = null;
+        ensureEcPromptModalClosed();
+    }, 160);
+    if (typeof resolve === 'function') resolve(result);
+}
+
+function setupEcPromptModalEvents() {
+    if (_ecPromptEventsBound) return;
+    _ecPromptEventsBound = true;
+    var modal = document.getElementById('ecPromptModal');
+    if (!modal) return;
+    ensureEcPromptModalClosed();
+    modal.addEventListener('click', function (e) {
+        if (e.target.closest('#ecPromptOkBtn')) {
+            e.preventDefault();
+            var input = document.getElementById('ecPromptModalInput');
+            closeEcPromptModal(input ? input.value : '');
+            return;
+        }
+        if (e.target.closest('#ecPromptCancelBtn') || e.target.closest('#ecPromptModalOverlay')) {
+            e.preventDefault();
+            closeEcPromptModal(null);
+        }
+    });
+    document.addEventListener('keydown', function (e) {
+        var openModal = document.getElementById('ecPromptModal');
+        if (!openModal || !openModal.classList.contains('is-open')) return;
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            closeEcPromptModal(null);
+            return;
+        }
+        if (e.key === 'Enter') {
+            var input = document.getElementById('ecPromptModalInput');
+            if (input && (e.target === input || input.contains(e.target))) {
+                e.preventDefault();
+                closeEcPromptModal(input.value);
+            }
+        }
+    });
+}
+
+/** Modal com input no tema do app (substitui window.prompt para nome da anotação). */
+function openEcPromptModal(options) {
+    options = options || {};
+    setupEcPromptModalEvents();
+    var modal = document.getElementById('ecPromptModal');
+    if (!modal) {
+        var fallback = window.prompt(options.message || options.title || '', options.defaultValue || '');
+        return Promise.resolve(fallback);
+    }
+    if (_ecPromptResolver) {
+        var prev = _ecPromptResolver;
+        _ecPromptResolver = null;
+        prev(null);
+    }
+    var titleEl = document.getElementById('ecPromptModalTitle');
+    var messageEl = document.getElementById('ecPromptModalMessage');
+    var inputEl = document.getElementById('ecPromptModalInput');
+    var okBtn = document.getElementById('ecPromptOkBtn');
+    var cancelBtn = document.getElementById('ecPromptCancelBtn');
+    var iconWrap = modal.querySelector('.ec-prompt-modal__icon');
+    if (titleEl) titleEl.textContent = options.title || 'Nome';
+    if (messageEl) messageEl.textContent = options.message || '';
+    if (inputEl) {
+        inputEl.value = options.defaultValue != null ? String(options.defaultValue) : '';
+        inputEl.placeholder = options.placeholder || '';
+    }
+    if (okBtn) okBtn.textContent = options.confirmLabel || 'Salvar';
+    if (cancelBtn) cancelBtn.textContent = options.cancelLabel || 'Cancelar';
+    if (iconWrap) iconWrap.innerHTML = '<i data-lucide="file-text"></i>';
+    modal.hidden = false;
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+    var lucideLib = typeof lucide !== 'undefined' ? lucide : (typeof Lucide !== 'undefined' ? Lucide : null);
+    if (lucideLib && lucideLib.createIcons) lucideLib.createIcons();
+    window.setTimeout(function () {
+        if (inputEl) {
+            inputEl.focus();
+            inputEl.select();
+        }
+    }, 0);
+    return new Promise(function (resolve) {
+        _ecPromptResolver = resolve;
+    });
+}
+
+window.openEcPromptModal = openEcPromptModal;
+
+function getSuggestedAnnotationSaveName() {
+    var suggestedName = '';
+    if (
+        annotationModalContext.viewItem &&
+        annotationModalContext.viewItem.annotations &&
+        typeof annotationModalContext.viewAnnIndex === 'number'
+    ) {
+        var ann = annotationModalContext.viewItem.annotations[annotationModalContext.viewAnnIndex];
+        if (ann && ann.name) suggestedName = String(ann.name).trim();
+    }
+    if (!suggestedName && annotationModalContext.task && annotationModalContext.annotationDate) {
+        var listForDate = getTaskAnnotationsListForDate(
+            annotationModalContext.task,
+            annotationModalContext.annotationDate
+        );
+        if (listForDate && listForDate.length > 0) {
+            suggestedName = String(listForDate[listForDate.length - 1].name || '').trim();
+        }
+    }
+    return suggestedName;
+}
+
+function promptAnnotationSaveName(suggestedName) {
+    return showAnnotationNameStep(suggestedName);
+}
+
+window.promptAnnotationSaveName = promptAnnotationSaveName;
+
+var _annotationNameStepResolver = null;
+
+function hideAnnotationNameStep() {
+    var step = document.getElementById('annotationNameStep');
+    var editorStep = document.getElementById('annotationEditorStep');
+    var modal = document.getElementById('annotationModal');
+    if (step) step.classList.add('hidden');
+    if (editorStep) editorStep.classList.remove('hidden');
+    if (modal) modal.classList.remove('annotation-modal--naming');
+}
+
+function resolveAnnotationNameStep(value) {
+    var resolve = _annotationNameStepResolver;
+    _annotationNameStepResolver = null;
+    hideAnnotationNameStep();
+    if (typeof resolve === 'function') resolve(value);
+}
+
+function confirmAnnotationNameStep() {
+    var input = document.getElementById('annotationNameInput');
+    var suggested = getSuggestedAnnotationSaveName();
+    var raw = input ? String(input.value || '').trim() : '';
+    resolveAnnotationNameStep(raw || suggested || 'Anotação');
+}
+
+function cancelAnnotationNameStep() {
+    resolveAnnotationNameStep(null);
+}
+
+function showAnnotationNameStep(suggestedName) {
+    var step = document.getElementById('annotationNameStep');
+    var editorStep = document.getElementById('annotationEditorStep');
+    var taskPickStep = document.getElementById('annotationTaskPickStep');
+    var previewStep = document.getElementById('annotationPreviewStep');
+    var modal = document.getElementById('annotationModal');
+    var input = document.getElementById('annotationNameInput');
+    var taskNameEl = document.getElementById('annotationNameTaskName');
+
+    if (!step || !editorStep) {
+        var fallback =
+            (typeof suggestedName === 'string' ? suggestedName.trim() : '') ||
+            getSuggestedAnnotationSaveName() ||
+            'Anotação';
+        return Promise.resolve(fallback);
+    }
+
+    if (_annotationNameStepResolver) {
+        var prev = _annotationNameStepResolver;
+        _annotationNameStepResolver = null;
+        prev(null);
+    }
+
+    var suggested =
+        (typeof suggestedName === 'string' ? suggestedName.trim() : '') ||
+        getSuggestedAnnotationSaveName() ||
+        '';
+
+    if (taskNameEl) {
+        var taskLabel =
+            annotationModalContext.task && annotationModalContext.task.text
+                ? String(annotationModalContext.task.text).trim()
+                : '';
+        taskNameEl.textContent = taskLabel || 'Tarefa';
+    }
+    if (input) {
+        input.value = suggested;
+    }
+    if (taskPickStep) taskPickStep.classList.add('hidden');
+    if (previewStep) previewStep.classList.add('hidden');
+    editorStep.classList.add('hidden');
+    if (modal) modal.classList.add('annotation-modal--naming');
+    step.classList.remove('hidden');
+    playAnnotationStepEnter(step);
+
+    return new Promise(function (resolve) {
+        _annotationNameStepResolver = resolve;
+        window.setTimeout(function () {
+            if (input) {
+                input.focus();
+                input.select();
+            }
+        }, 60);
+    });
+}
+
+window.showAnnotationNameStep = showAnnotationNameStep;
+
 function confirmMentalDiagramDelete(params) {
     params = params || {};
     var nodes = params.nodes || [];
@@ -457,8 +691,13 @@ function syncEcRoutineThemeToggle() {
 function getAttachmentFullUrl(url) {
     if (!url || typeof url !== 'string') return '';
     if (url.indexOf('http') === 0 || url.indexOf('data:') === 0) return url;
-    return getApiBaseUrl() + (url.indexOf('/') === 0 ? '' : '/') + url;
+    var base = getApiBaseUrl();
+    if (!base && typeof window !== 'undefined' && window.location && window.location.origin) {
+        base = window.location.origin;
+    }
+    return base + (url.indexOf('/') === 0 ? '' : '/') + url;
 }
+if (typeof window !== 'undefined') window.getAttachmentFullUrl = getAttachmentFullUrl;
 
 /** Corrige foto guardada só como nome.jpeg ou URL na raiz da API (evita 404 no console). */
 function normalizeProfilePictureRef(raw) {
@@ -747,6 +986,10 @@ async function uploadMentalImage(file) {
         if (json && json.attachmentId && json.url) return { attachmentId: json.attachmentId, url: json.url };
     } catch (e) {}
     return null;
+}
+
+if (typeof window !== 'undefined') {
+    window.uploadMentalImage = uploadMentalImage;
 }
 
 async function waitForMentalImageUploads() {
@@ -1252,7 +1495,6 @@ async function uploadLegacyBase64InMental() {
         var ref = await uploadMentalImage(file);
         if (ref) {
             node.image = { attachmentId: ref.attachmentId, url: ref.url };
-            delete node.imageData;
         }
     }
 }
@@ -6946,6 +7188,7 @@ function openAnnotationViewer(item, annIndex) {
 
 function switchAnnotationViewerToEdit() {
     annotationModalContext.viewOnly = false;
+    annotationModalContext.startBlank = false;
     var modal = document.getElementById('annotationModal');
     if (modal) modal.classList.remove('annotation-modal--view-only');
     var downloadSlotEdit = document.getElementById('annotationModalDownloadSlot');
@@ -6970,6 +7213,21 @@ function switchAnnotationViewerToEdit() {
     if (cadernoToolbar) cadernoToolbar.style.display = '';
     var digitalContent = document.getElementById('annotationDigitalContent');
     if (digitalContent) digitalContent.setAttribute('contenteditable', 'true');
+
+    var type = annotationModalContext.type;
+    if (type === 'mental') {
+        var mentalCanvas = document.getElementById('annotationMentalCanvas');
+        if (mentalCanvas) mentalCanvas.style.pointerEvents = 'auto';
+        var xyHost = document.getElementById('annotationMentalXyflowHost');
+        if (xyHost) xyHost.style.pointerEvents = 'auto';
+        if (typeof initAnnotationMental === 'function') initAnnotationMental();
+        var lucideLib = typeof lucide !== 'undefined' ? lucide : (typeof Lucide !== 'undefined' ? Lucide : null);
+        if (lucideLib && lucideLib.createIcons) lucideLib.createIcons();
+    } else if (type === 'caderno') {
+        if (typeof initAnnotationCaderno === 'function') initAnnotationCaderno();
+    } else if (type === 'digitalizando') {
+        if (typeof initAnnotationDigitalizing === 'function') initAnnotationDigitalizing();
+    }
 }
 
 function closeAnnotationViewer() {
@@ -7425,8 +7683,12 @@ function showAnnotationTaskPickStep(dateStr) {
     var taskPickStep = document.getElementById('annotationTaskPickStep');
     var previewStep = document.getElementById('annotationPreviewStep');
     var editorStep = document.getElementById('annotationEditorStep');
+    var nameStep = document.getElementById('annotationNameStep');
+    var modal = document.getElementById('annotationModal');
     if (editorStep) editorStep.classList.add('hidden');
     if (previewStep) previewStep.classList.add('hidden');
+    if (nameStep) nameStep.classList.add('hidden');
+    if (modal) modal.classList.remove('annotation-modal--naming');
     if (taskPickStep) {
         taskPickStep.classList.remove('hidden');
         playAnnotationStepEnter(taskPickStep);
@@ -7438,9 +7700,11 @@ function showAnnotationTypePickStep() {
     var taskPickStep = document.getElementById('annotationTaskPickStep');
     var previewStep = document.getElementById('annotationPreviewStep');
     var editorStep = document.getElementById('annotationEditorStep');
+    var nameStep = document.getElementById('annotationNameStep');
     var previewTaskName = document.getElementById('annotationPreviewTaskName');
     var previewTitle = document.getElementById('annotationPreviewTitle');
     var dateStr = annotationModalContext.annotationDate || getLocalDateStr(new Date());
+    var modal = document.getElementById('annotationModal');
 
     if (previewTaskName) {
         var taskLabel = (annotationModalContext.task && annotationModalContext.task.text)
@@ -7454,6 +7718,8 @@ function showAnnotationTypePickStep() {
     }
 
     if (editorStep) editorStep.classList.add('hidden');
+    if (nameStep) nameStep.classList.add('hidden');
+    if (modal) modal.classList.remove('annotation-modal--naming');
     if (taskPickStep) taskPickStep.classList.add('hidden');
     if (previewStep) {
     previewStep.classList.remove('hidden');
@@ -7576,7 +7842,10 @@ async function autosaveMentalDiagramOnExit() {
         var ann = annotationModalContext.viewItem.annotations[annotationModalContext.viewAnnIndex];
         if (ann && ann.name) saveName = String(ann.name).trim();
     }
-    if (!saveName) saveName = generateRandomDiagramName();
+    if (!saveName) {
+        saveName = await promptAnnotationSaveName('');
+        if (saveName === null) return { cancelled: true };
+    }
 
     showAnnotationSavingOverlay('Salvando automaticamente…');
     try {
@@ -7620,13 +7889,20 @@ function closeAnnotationModal() {
         if (typeof document.activeElement !== 'undefined' && modal.contains(document.activeElement)) {
             try { document.activeElement.blur(); } catch (_) {}
         }
-        modal.classList.remove('annotation-modal--mental', 'annotation-modal--caderno', 'annotation-modal--digitalizando', 'annotation-modal--view-only');
+        modal.classList.remove('annotation-modal--mental', 'annotation-modal--caderno', 'annotation-modal--digitalizando', 'annotation-modal--view-only', 'annotation-modal--naming');
         modal.classList.add('hidden');
         modal.setAttribute('aria-hidden', 'true');
         var taskPickStep = document.getElementById('annotationTaskPickStep');
         var previewStep = document.getElementById('annotationPreviewStep');
+        var nameStep = document.getElementById('annotationNameStep');
         if (taskPickStep) taskPickStep.classList.add('hidden');
         if (previewStep) previewStep.classList.add('hidden');
+        if (nameStep) nameStep.classList.add('hidden');
+        if (_annotationNameStepResolver) {
+            var nameResolve = _annotationNameStepResolver;
+            _annotationNameStepResolver = null;
+            nameResolve(null);
+        }
         var actions = modal.querySelector('.annotation-modal-actions');
         if (actions) {
             actions.querySelectorAll('.annotation-btn-cancel, .annotation-btn-save').forEach(function(b) { b.style.display = ''; });
@@ -7666,11 +7942,13 @@ function showAnnotationEditor(type) {
     annotationModalContext.type = type;
     const taskPickStep = document.getElementById('annotationTaskPickStep');
     const previewStep = document.getElementById('annotationPreviewStep');
+    const nameStep = document.getElementById('annotationNameStep');
     const editorStep = document.getElementById('annotationEditorStep');
     const titleEl = document.getElementById('annotationEditorTitle');
     if (!editorStep) return;
     if (taskPickStep) taskPickStep.classList.add('hidden');
     if (previewStep) previewStep.classList.add('hidden');
+    if (nameStep) nameStep.classList.add('hidden');
     editorStep.classList.remove('hidden');
     playAnnotationStepEnter(editorStep);
     var taskName = (annotationModalContext.task && annotationModalContext.task.text) ? String(annotationModalContext.task.text).trim() : 'Tarefa';
@@ -7686,6 +7964,7 @@ function showAnnotationEditor(type) {
     if (mentalPanel) mentalPanel.classList.toggle('hidden', type !== 'mental');
     const modal = document.getElementById('annotationModal');
     if (modal) {
+        modal.classList.remove('annotation-modal--naming');
         modal.classList.remove('annotation-modal--mental', 'annotation-modal--caderno', 'annotation-modal--digitalizando');
         if (type === 'mental') modal.classList.add('annotation-modal--mental');
         else if (type === 'caderno') modal.classList.add('annotation-modal--caderno');
@@ -7950,6 +8229,9 @@ function initAnnotationMental() {
         if (mentalCanvas) mentalCanvas.style.pointerEvents = 'auto';
         window._annotationMentalData = data;
         window._annotationMentalUseXyflow = true;
+        if (typeof console !== 'undefined' && console.info) {
+            console.info('[EC Routine] Diagrama: motor XYFlow (otimizado). Se estiver lento, faça Ctrl+Shift+R.');
+        }
         window._annotationMentalXyflowApi = window.EcMentalXyflow.mount(xyHost, {
             data: data,
             readOnly: !!annotationModalContext.viewOnly,
@@ -7960,6 +8242,11 @@ function initAnnotationMental() {
     }
 
     window._annotationMentalUseXyflow = false;
+    if (typeof console !== 'undefined' && console.warn) {
+        console.warn(
+            '[EC Routine] Diagrama: modo LEGADO (lento). Verifique se lib/mental-xyflow/dist/mental-xyflow.iife.js carrega (404?) e use Ctrl+Shift+R.'
+        );
+    }
     if (editorMental) editorMental.classList.remove('is-xyflow');
     if (xyHost) {
         xyHost.hidden = true;
@@ -10159,7 +10446,7 @@ function makeMentalBranchDraggable(div, container) {
             hideMentalSnapGuides();
         }
 
-            if (typeof drawMentalConnections === 'function') drawMentalConnections();
+            /* Ligações só no soltar — redraw a cada frame deixava texto/anexo “travado”. */
         }
 
         function onMove(e) {
@@ -11256,11 +11543,17 @@ function setupAnnotationModal() {
     const saveBtn = document.getElementById('annotationBtnSave');
     async function requestCloseAnnotationModal() {
         if (!modal || modal.classList.contains('hidden')) return;
+        var nameStep = document.getElementById('annotationNameStep');
+        if (nameStep && !nameStep.classList.contains('hidden')) {
+            cancelAnnotationNameStep();
+            return;
+        }
         var editorStep = document.getElementById('annotationEditorStep');
         var editorOpen = editorStep && !editorStep.classList.contains('hidden');
         if (editorOpen && annotationModalContext.type === 'mental' && !annotationModalContext.viewOnly) {
             try {
-                await autosaveMentalDiagramOnExit();
+                var autosaveResult = await autosaveMentalDiagramOnExit();
+                if (autosaveResult && autosaveResult.cancelled) return;
             } catch (err) {
                 console.error(err);
             }
@@ -11279,6 +11572,11 @@ function setupAnnotationModal() {
         closeAnnotationModal();
     }
     async function handleAnnotationHostBack() {
+        var nameStep = document.getElementById('annotationNameStep');
+        if (nameStep && !nameStep.classList.contains('hidden')) {
+            cancelAnnotationNameStep();
+            return;
+        }
         var previewStep = document.getElementById('annotationPreviewStep');
         var taskPickStep = document.getElementById('annotationTaskPickStep');
         var previewVisible = previewStep && !previewStep.classList.contains('hidden');
@@ -11359,10 +11657,34 @@ function setupAnnotationModal() {
             showAnnotationTypePickStep();
         });
     }
+    var nameConfirmBtn = document.getElementById('annotationNameConfirm');
+    var nameBackBtn = document.getElementById('annotationNameBack');
+    var nameInput = document.getElementById('annotationNameInput');
+    if (nameConfirmBtn) {
+        nameConfirmBtn.addEventListener('click', function () {
+            confirmAnnotationNameStep();
+        });
+    }
+    if (nameBackBtn) {
+        nameBackBtn.addEventListener('click', function () {
+            cancelAnnotationNameStep();
+        });
+    }
+    if (nameInput) {
+        nameInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                confirmAnnotationNameStep();
+            }
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                cancelAnnotationNameStep();
+            }
+        });
+    }
     if (saveBtn) {
         saveBtn.addEventListener('click', async function() {
             const type = annotationModalContext.type;
-            showAnnotationSavingOverlay('Salvando…');
             try {
             var data;
             if (type === 'mental') {
@@ -11371,18 +11693,9 @@ function setupAnnotationModal() {
                 data = getAnnotationDataFromEditors();
             }
             if (!type) { closeAnnotationModal(); return; }
-            var suggestedName = '';
-            if (annotationModalContext.viewItem && annotationModalContext.viewItem.annotations && typeof annotationModalContext.viewAnnIndex === 'number') {
-                var ann = annotationModalContext.viewItem.annotations[annotationModalContext.viewAnnIndex];
-                if (ann && ann.name) suggestedName = ann.name;
-            }
-            if (!suggestedName && annotationModalContext.task && annotationModalContext.annotationDate) {
-                var listForDate = getTaskAnnotationsListForDate(annotationModalContext.task, annotationModalContext.annotationDate);
-                if (listForDate && listForDate.length > 0) suggestedName = listForDate[listForDate.length - 1].name || '';
-            }
-            var saveName = prompt('Qual nome será esta anotação?', suggestedName);
+            var saveName = await promptAnnotationSaveName('');
             if (saveName === null) return;
-            saveName = (typeof saveName === 'string' && saveName.trim()) ? saveName.trim() : (suggestedName || 'Anotação');
+            showAnnotationSavingOverlay('Salvando…');
             const annotationDate = annotationModalContext.annotationDate || getLocalDateStr(new Date());
             if (saveBtn) {
                 saveBtn.disabled = true;

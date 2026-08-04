@@ -9245,7 +9245,53 @@ html:has(body.annotation-modal-open) {
 
 .annotation-preview-card .annotation-preview-thumb,
 .annotation-preview-card-stack,
-.annotation-preview-card .annotation-preview-hint,
+.annotation-preview-card .annotation-preview-hint {
+    display: none !important;
+}
+
+/* Passo: nome da anotação (tema do usuário, igual escolha de tipo) */
+#annotationModal.annotation-modal--naming {
+    background-color: var(--ec-body-bg, #ffffff);
+}
+.annotation-modal-name {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: min(100%, 100dvh);
+    padding: clamp(20px, 4vw, 48px) clamp(16px, 4vw, 32px);
+    box-sizing: border-box;
+}
+.annotation-name-form {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    width: min(100%, 26rem);
+    margin: 0 auto;
+}
+.annotation-name-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 13px 16px;
+    border-radius: 12px;
+    border: 1px solid var(--ec-input-border, rgba(0, 0, 0, 0.12));
+    background: var(--ec-input-bg, #fafafa);
+    color: var(--ec-heading, #18181b);
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 500;
+}
+.annotation-name-input:focus {
+    outline: none;
+    border-color: var(--ec-focus-ring, rgba(0, 0, 0, 0.35));
+    box-shadow: 0 0 0 3px rgba(161, 161, 170, 0.22);
+}
+html[data-theme="dark"] .annotation-name-input {
+    background: var(--ec-input-bg, #18181b);
+    border-color: var(--ec-input-border, #3f3f46);
+    color: var(--ec-heading, #fafafa);
+}
 .annotation-preview-dev-note {
     display: none !important;
 }
@@ -10812,6 +10858,135 @@ html:not([data-theme="dark"]) .ec-confirm-modal__message {
     color: rgba(24, 24, 27, 0.55);
 }
 html:not([data-theme="dark"]) .ec-confirm-modal__btn--ghost {
+    color: rgba(24, 24, 27, 0.65);
+    border-color: rgba(0, 0, 0, 0.12);
+}
+
+/* Modal de prompt (nome da anotação — tema do usuário) */
+.ec-prompt-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 12005;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    box-sizing: border-box;
+}
+.ec-prompt-modal.is-open {
+    display: flex;
+}
+.ec-prompt-modal[hidden] {
+    display: none !important;
+}
+.ec-prompt-modal__overlay {
+    position: absolute;
+    inset: 0;
+    background: var(--ec-profile-overlay, rgba(0, 0, 0, 0.72));
+    backdrop-filter: blur(4px);
+}
+.ec-prompt-modal__panel {
+    position: relative;
+    z-index: 1;
+    width: min(420px, 100%);
+    padding: 24px 22px 18px;
+    border-radius: 16px;
+    border: 1px solid var(--ec-border, rgba(255, 255, 255, 0.1));
+    background: var(--ec-surface, #141414);
+    color: var(--ec-heading, #fafafa);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+    text-align: center;
+}
+.ec-prompt-modal__icon {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 10px;
+    color: var(--ec-muted, #a1a1aa);
+}
+.ec-prompt-modal__icon svg {
+    width: 40px;
+    height: 40px;
+}
+.ec-prompt-modal__title {
+    margin: 0 0 8px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1.22rem;
+    font-weight: 700;
+}
+.ec-prompt-modal__message {
+    margin: 0 0 14px;
+    font-size: 0.9rem;
+    line-height: 1.45;
+    color: var(--ec-muted, rgba(255, 255, 255, 0.55));
+}
+.ec-prompt-modal__input {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0 0 18px;
+    padding: 11px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--ec-input-border, rgba(255, 255, 255, 0.12));
+    background: var(--ec-input-bg, rgba(255, 255, 255, 0.06));
+    color: var(--ec-heading, #fafafa);
+    font-family: inherit;
+    font-size: 0.95rem;
+    text-align: left;
+}
+.ec-prompt-modal__input:focus {
+    outline: none;
+    border-color: var(--ec-focus-ring, rgba(255, 255, 255, 0.35));
+    box-shadow: 0 0 0 2px rgba(161, 161, 170, 0.25);
+}
+.ec-prompt-modal__actions {
+    display: flex;
+    gap: 10px;
+}
+.ec-prompt-modal__btn {
+    flex: 1;
+    min-height: 42px;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid var(--ec-border, rgba(255, 255, 255, 0.12));
+    font-family: inherit;
+}
+.ec-prompt-modal__btn--ghost {
+    background: transparent;
+    color: var(--ec-muted, rgba(255, 255, 255, 0.7));
+}
+.ec-prompt-modal__btn--ghost:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--ec-heading, #fff);
+}
+.ec-prompt-modal__btn--primary {
+    background: var(--ec-btn-primary-bg, #f4f4f5);
+    border-color: var(--ec-btn-primary-bg, #f4f4f5);
+    color: var(--ec-routine-count-fg, #18181b);
+}
+.ec-prompt-modal__btn--primary:hover {
+    background: var(--ec-btn-primary-hover, #e4e4e7);
+    border-color: var(--ec-btn-primary-hover, #e4e4e7);
+}
+html:not([data-theme="dark"]) .ec-prompt-modal__panel {
+    background: var(--ec-surface, #ffffff);
+    border-color: rgba(0, 0, 0, 0.1);
+    color: #18181b;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.14);
+}
+html:not([data-theme="dark"]) .ec-prompt-modal__overlay {
+    background: rgba(15, 23, 42, 0.45);
+}
+html:not([data-theme="dark"]) .ec-prompt-modal__message {
+    color: rgba(24, 24, 27, 0.55);
+}
+html:not([data-theme="dark"]) .ec-prompt-modal__input {
+    background: var(--ec-input-bg, #fafafa);
+    border-color: var(--ec-input-border, rgba(0, 0, 0, 0.12));
+    color: #18181b;
+}
+html:not([data-theme="dark"]) .ec-prompt-modal__btn--ghost {
     color: rgba(24, 24, 27, 0.65);
     border-color: rgba(0, 0, 0, 0.12);
 }
